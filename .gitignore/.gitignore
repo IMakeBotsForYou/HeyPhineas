@@ -1,0 +1,11 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+
+venv/*
+req.txt
+losthtml.txt
+static/js/jquery-3.6.0.min.js
+.idea/*
+keys.py
+database/data.db
