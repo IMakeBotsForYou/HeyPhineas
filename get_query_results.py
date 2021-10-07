@@ -9,6 +9,13 @@ class results:
         self.results = r
 
     def get(self):
+
+        data = {}
+
+        for r in results:
+            json_vr = r.to_json()
+            data[json_vr["id"]] = json_vr
+
         return self.results
 
     def sort_by_rating(self):
@@ -19,11 +26,11 @@ class results:
                 return r.rating
 
         self.results.sort(key=rating)
-        return self.results
+        return self.get()
 
     def sort_by_name(self):
         self.results.sort(key=lambda r: r.name)
-        return self.results
+        return self.get()
 
     def append(self, item):
         self.results.append(item)
@@ -33,13 +40,14 @@ class results:
 
 
 class Result_man:
-    def __init__(self, place_id, url, close_to, name, icon, rating, local_phone_number, website, open_periods):
+    def __init__(self, place_id, url, close_to, name, icon, rating, local_phone_number, website, open_periods, location):
         self.id = place_id
         self.name = name
         self.icon = icon
         self.url = url
         self.rating = float(rating) if rating else "N/A"
         # self.rating_count = rating[1]
+        self.location = location
         self.local_phone_number = local_phone_number
         self.website = website
         self.images = []
@@ -82,6 +90,7 @@ class Result_man:
     def to_json(self):
         return {
             'id': self.id,
+            'location': self.location,
             'name': self.name,
             'icon': self.icon,
             'close_to': self.vicinity,
@@ -112,6 +121,9 @@ class query:
                 query_results += r
 
         for place in query_results:
+
+            data_points = ["name", "icon", "place_id"]
+
             try:
                 name = place["name"]
                 icon = place["icon"]
@@ -154,17 +166,21 @@ class query:
                 open_now = "opening_hours" not in place
                 periods = None
 
-            i = 0
-            if open_now and i < limit:
-                i += 1
+            try:
+                location = place["location"]["lat"], place["location"]["lng"]
+            except:
+                location = [0, 0]
+
+            if open_now:
                 try:
                     if rating > self.rating_min:
                         self.results.append(
                             Result_man(place_id, url, close_to, name, icon, rating, local_phone_number, website,
-                                       periods))
+                                       periods, location))
                 except:
                     self.results.append(
-                        Result_man(place_id, url, close_to, name, icon, None, local_phone_number, website, periods))
+                        Result_man(place_id, url, close_to, name, icon,
+                                   None, local_phone_number, website, periods, location))
 
 
 def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", page_token=None, APIKEY=apikey, limit=-1):
@@ -184,52 +200,49 @@ def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", pag
 
     response = get(url)
     res = json.loads(response.text)
+    resses = []
 
-    # for result in res["results"]:
-    #     info = {}
-    #     for dat in ["name", "icon", "place_id", "opening_hours", "rating", "vicinity", "website"]:
-    #         try:
-    #             info[dat] = result[dat]
-    #         except KeyError:
-    #             continue
-    #     resses.append(info)
+    api_responds = res["results"][:limit]
+    geometry = ["location"]
+    for result in api_responds:
+        info = {}
+        for dat in ["name", "icon", "place_id", "opening_hours", "rating", "vicinity", "website", "location"]:
+            try:
+                if dat in geometry:
+                    info[dat] = result["geometry"][dat]
+                else:
+                    info[dat] = result[dat]
+            except KeyError:
+                continue
+        resses.append(info)
     # icon,place_id,name,opening_hours,rating,formatted_phone_number,vicinity,website,url
 
-    ids = [r["place_id"] for r in res["results"]]
 
-    ids = ids[:limit]
-
-    resses = []
-    for p_id in ids:
-        response = get(
-            f"https://maps.googleapis.com/maps/api/place/details/json?place_id={p_id}&fields=icon,place_id,name,opening_hours,rating,formatted_phone_number,vicinity,website,url&key={apikey}")
-        res = json.loads(response.text)
-        try:
-            resses.append(res["result"])
-        except Exception as e:
-            print(e)
+    # for p_id in ids:
+    #     response = get(
+    #         f"https://maps.googleapis.com/maps/api/place/details/json?place_id={p_id}&fields=icon,place_id,name,opening_hours,rating,formatted_phone_number,vicinity,website,url&key={apikey}")
+    #     res = json.loads(response.text)
+    #     try:
+    #         resses.append(res["result"])
+    #     except Exception as e:
+    #         print(e)
 
     next_page_token = res.get("next_page_token", None)
     return resses, next_page_token
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
 from datetime import datetime
 
 gmaps = googlemaps.Client(key=apikey)
 
-# Request directions via public transit
-now = datetime.now()
 
-locations = ["סטימצקי, Herzl Street, רחובות"]
+def get_name(lat, lng):
+    gecoded = gmaps.reverse_geocode((lat, lng))
+    print(gecoded)
 
-markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
-           + r for i, r in enumerate(locations)]
-
-
-gmaps_results = gmaps.directions(origin="כיכר המרכבה, Rehovot",
-                           destination="קניון רחובות، Bilu Street, Rehovot",
-                           waypoints=locations,
-                           departure_time=now)
 
 
 def decode_polyline(polyline_str):
@@ -266,38 +279,53 @@ def decode_polyline(polyline_str):
     return coordinates
 
 
-marker_points = []
-waypoints = []
+def draw_route(dest, waypoints, name, current_location=(31.894756, 34.809322)):
+    # Request directions via public transit
+    now = datetime.now()
 
-# extract the location points from the previous directions function
+    # locations = ["סטימצקי, Herzl Street, רחובות"]
 
-for leg in gmaps_results[0]["legs"]:
-    leg_start_loc = leg["start_location"]
-    marker_points.append(f'{leg_start_loc["lat"]},{leg_start_loc["lng"]}')
-    for step in leg["steps"]:
-        end_loc = step["end_location"]
-        waypoints.append(f'{end_loc["lat"]},{end_loc["lng"]}')
-last_stop = gmaps_results[0]["legs"][-1]["end_location"]
-marker_points.append(f'{last_stop["lat"]},{last_stop["lng"]}')
+    markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
+               + r for i, r in enumerate(waypoints)]
+    # "כיכר המרכבה, Rehovot"
+    # dest "קניון רחובות، Bilu Street, Rehovot"
 
-markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
-           + r for i, r in enumerate(marker_points)]
+    gmaps_results = gmaps.directions(origin=current_location,
+                               destination=dest,
+                               waypoints=waypoints,
+                               departure_time=now)
+
+    marker_points = []
+    waypoints = []
+
+    # extract the location points from the previous directions function
+
+    for leg in gmaps_results[0]["legs"]:
+        leg_start_loc = leg["start_location"]
+        marker_points.append(f'{leg_start_loc["lat"]},{leg_start_loc["lng"]}')
+        for step in leg["steps"]:
+            end_loc = step["end_location"]
+            waypoints.append(f'{end_loc["lat"]},{end_loc["lng"]}')
+    last_stop = gmaps_results[0]["legs"][-1]["end_location"]
+    marker_points.append(f'{last_stop["lat"]},{last_stop["lng"]}')
+
+    markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
+               + r for i, r in enumerate(marker_points)]
 
 
-ma = str(markers[2:-2])
-# print(f"https://maps.googleapis.com/maps/api/staticmap?&center={waypoints[0]}&scale=2&zoom=13&size=640,640&format=jpg&maptype=roadmap&markers={ma}&path=" + "color:0x0000ff|weight:2|" + "|".join(waypoints))
+    ma = str(markers[2:-2])
+    # print(f"https://maps.googleapis.com/maps/api/staticmap?&center={waypoints[0]}&scale=2&zoom=13&size=640,640&format=jpg&maptype=roadmap&markers={ma}&path=" + "color:0x0000ff|weight:2|" + "|".join(waypoints))
 
-result_map = gmaps.static_map(
-    center=waypoints[0],
-    scale=10,
-    zoom=15,
-    size=[640, 640],
-    format="jpg",
-    maptype="roadmap",
-    markers=markers,
-    path="color:0x0000ff|weight:2|" + "|".join(waypoints))
+    result_map = gmaps.static_map(
+        center=waypoints[0],
+        scale=10,
+        zoom=15,
+        size=[640, 640],
+        format="jpg",
+        maptype="roadmap",
+        markers=markers,
+        path="color:0x0000ff|weight:2|" + "|".join(waypoints))
 
-
-with open("driving_route_map.jpg", "wb") as img:
-    for chunk in result_map:
-        img.write(chunk)
+    with open(f"static/{name}_route_map.jpg", "wb") as img:
+        for chunk in result_map:
+            img.write(chunk)

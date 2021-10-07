@@ -197,12 +197,12 @@ class Database:
 
 
 my_db = None
-
-
+#
+#
 def main():
     global my_db
     my_db = Database("database/data")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+    # main()

@@ -1,8 +1,10 @@
 from get_query_results import *
 from flask_socketio import SocketIO, emit
 from flask import *
+import googlemaps
 import database_wrapper
 from time import time
+from keys import *
 from threading import Thread, Event
 from engineio.payload import Payload
 Payload.max_decode_packets = 1000
@@ -40,7 +42,7 @@ def create_party(user, members=None):
 
 
 def join_party(owner):
-    parties[owner]["members"].append({"name": owner, "sid": connected_member[owner]["sid"]})
+    parties[owner]["members"].append({"name": owner, "sid": connected_members[owner]["sid"]})
 
 
 def disconnect_user_from_party(user):
@@ -73,7 +75,7 @@ def parse_action(command):
         db['ex'].send_message(title=f"You and {session['user']} are now friends!",
                               desc=f"{session['user']} has accepted your friend request.",
                               message_sender=session["user"], receiver=request, messagetype="ignore",
-                              action=action)
+                              action="ignore")
         emit_to(requester, 'notif', '/comms', 'notification!')
 
     if command_name == "join_party":
@@ -205,18 +207,23 @@ def main_page():
             if receiver in connected_members:
                 emit_to(receiver, "notif", "/comms")
                 # emit('notif', namespace="/comms", room=connected_members[receiver]['sid'])
+        elif "search_place" in request.form:
+            radius = int(request.form["radius"]) * 1000
+            lat, lng = 31.9034937, 34.8131821
+            rating_min = request.form["min_rating"]
+            tp = request.form["type"]
+            limit = int(request.form["limit"])
+            print(radius, rating_min, tp)
+            query_res = query((lat, lng), radius, rating_min, tp)
+            query_res.get_all_pages(limit)
+            session["results"] = query_res.results.get()
+            session["results_rating"] = query_res.results.sort_by_rating()
+            session["results_name"] = query_res.results.sort_by_name()
+        elif "get_map" in request.form:
+            # todo add self location
+            place_id = request.form["place_location"]
+            draw_route(name=session["user"], waypoints=[], dest=session[results]["place_id"]["location"])
 
-        radius = int(request.form["radius"]) * 1000
-        lat, lng = 31.9034937, 34.8131821
-        rating_min = request.form["min_rating"]
-        tp = request.form["type"]
-        limit = int(request.form["limit"])
-        print(radius, rating_min, tp)
-        query_res = query((lat, lng), radius, rating_min, tp)
-        query_res.get_all_pages(limit)
-        session["results"] = [a.to_json() for a in query_res.results.get()]
-        session["results_rating"] = [a.to_json() for a in query_res.results.sort_by_rating()]
-        session["results_name"] = [a.to_json() for a in query_res.results.sort_by_name()]
         return render_template("main.html", async_mode=socketio.async_mode)
     else:
         session["results"] = []
@@ -304,4 +311,4 @@ if __name__ == '__main__':
     # initialize database
     db = {"ex": database_wrapper.my_db}
 
-    socketio.run(app, host="0.0.0.0", port=8080)
+    socketio.run(app, host="localhost", port=8080)
