@@ -1,0 +1,65 @@
+{% extends "log_reg_temp.html" %}
+{% block title %}GITGUDHUB Inbox{% endblock %}
+{% block form %}
+<br><br><h1 class="white" style="text-align:center;">Inbox</h1><br><br>
+<div class="notification">
+<script src="/static/js/socket.js"></script>
+<form name="action_form" id="action_form" method="POST" action="#">
+    <input id="accept" type="text" name="accept" hidden/>
+    <input id="mark-as-read" type="text" name="mark_as_read" hidden/>
+    <button type="button" id="sort_by_name" style="text-align: center;">Send message</button>
+    {% with messages = session['inbox_messages'] %}
+        {% if messages %}
+            {% for id, title, content, sender, type in messages %}
+                <button type="button" class="collapsible">{{title}}</button>
+                <div class="content white">
+                    <div><p id="message_content_{{id}}" style="margin: 0 0 14px 0;"><b>Message from {{sender}}:</b><br>{{content}}</p></div>
+                        <div style="margin: 0 auto;">
+                            {% if type == "question" %}
+                                <button class="form-button" id="confirm-button_{{id}}" style="float: left; color: #000;" >Accept</button>
+                                <script>
+                                 $("#confirm-button_{{id}}").click(function(e) {
+                                   document.getElementById('accept').value = "{{id}}";
+                                   document.action_form.submit()
+                                   console.log(document.getElementById('accept').value)
+                                });
+                                </script>
+                            {% endif %}
+                             <button class="form-button" id="close-button_{{id}}" style="float: left;color: #000;" >Mark as read</button>
+                            <script>
+                                 $("#close-button_{{id}}").click(function(e) {
+                                   document.getElementById('mark-as-read').value = "{{id}}";
+                                   document.action_form.submit();
+                                });
+                            </script>
+                        </div>
+                    </div>
+                <br><br>
+                <script>
+                    var x = document.getElementById("message_content_{{id}}");
+                    x.innerHTML = `Message from {{sender}}:</b><br>{{content}}</p>`.replace("\\n", "<pre>").replace("\n", "<pre>");
+                </script>
+            {% endfor %}
+        {% else %}
+            <h1 class="white">No messages</h1>
+        {% endif %}
+    {% endwith %}
+</form>
+</div>
+
+<script>
+var coll = document.getElementsByClassName("collapsible");
+var i;
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+</script>
+{% endblock %}

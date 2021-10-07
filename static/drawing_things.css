@@ -1,0 +1,355 @@
+div.drawing_box {
+    position: absolute;
+    margin-left: 20px;
+    height: 80%;
+    width: 80%;
+}
+.ui-draggable, .ui-droppable {
+	background-position: top;
+}
+.right-man{
+    position: absolute;
+    z-index: 50;
+    right: 0;
+    top: 15%;
+    width: 30%;
+    height: 80%
+    text-align: right;
+}
+
+div.select {
+    position: relative;
+    right: 0;
+    top: 10px;
+    height: 65px;
+    width: 100%;
+    z-index: 50;
+}
+
+.commit_info{
+    position: relative;
+    left: 10px;
+}
+
+.landscape {
+  height: 100%;
+  width: 80%;
+}
+
+.action_button {
+	background:linear-gradient(to bottom, #768d87 5%, #6c7c7c 100%);
+	background-color:#768d87;
+	position: relative;
+	margin: 0 auto;
+	border-radius:17px;
+	border:3px solid #566963;
+	cursor:pointer;
+	color:#ffffff;
+	font-size:16px;
+	font-weight:bold;
+	padding:11px 23px;
+	text-decoration:none;
+	text-shadow:0px -1px 0px #2b665e;
+	font-family: Varela Round;
+    width: 100%;
+}
+.action_button:hover {
+	background:linear-gradient(to bottom, #6c7c7c 5%, #768d87 100%);
+	background-color:#6c7c7c;
+}
+.action_button:active {
+	position:relative;
+}
+.middle-panel{
+  position:relative;
+  margin: 0 auto;
+  width: 30%;
+  padding: 22px 22px 22px 22px;
+  border-radius: 5px;
+  background: #282e33;
+  border-top: 3px solid #434a52;
+  border-bottom: 3px solid #434a52;
+  align-items: center;
+  text-align:center;
+  z-index: 2;
+}
+
+.display_option_button{
+font-family: Varela Round;
+font-size:18px;
+font-weight:bold;
+  position:relative;
+  padding: 25px 25px 25px 25px;
+  width: 175px;
+  height: 80px;
+  border-radius: 4px;
+  text-align:center;
+}
+
+.display_on{
+background: #1beac1;
+}
+
+.display_off{
+background: #b3b6b6;
+}
+
+.commit-information-side{
+  position:relative;
+  right: 10%;
+  width: 95%;
+  padding: 22px 22px 22px 22px;
+  border-radius: 5px;
+  background: #282e33;
+  border-top: 3px solid #434a52;
+  border-bottom: 3px solid #434a52;
+  align-items: center;
+  text-align:center;
+  z-index: 50;
+}
+
+
+#actions {
+  position:relative;
+  right: 10%;
+  width: 95%;
+  padding: 22px 22px 22px 22px;
+  border-radius: 5px;
+  background: #282e33;
+  border-top: 3px solid #434a52;
+  border-bottom: 3px solid #434a52;
+  align-items: center;
+  text-align:center;
+}
+
+.lisa{
+  border: 3px solid #0f0;
+  position: relative;
+  z-index: 1;
+  left:0;top:0;
+}
+
+.graph_man{
+  position: relative;
+}
+
+.overflow-man {
+  overflow: auto;
+}
+
+.form-button{
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family: Varela Round;
+	font-size:13px;
+	font-weight:bold;
+	padding:6px 12px;
+	text-decoration:none;
+}
+
+.close-button{
+	background:linear-gradient(to bottom, #e67a73 5%, #e67a73 100%);
+	background-color:#e67a73;
+}
+.close-button:hover {
+	background:linear-gradient(to bottom, #e67a73 5%, #e67a73 100%);
+	background-color:#e67a73;
+}
+.close-button:active {
+	position:relative;
+	top:1px;
+}
+
+.confirm-commit{
+	background:linear-gradient(to bottom, #77b55a 5%, #72b352 100%);
+	background-color:#77b55a;
+}
+.confirm-commit:hover {
+	background:linear-gradient(to bottom, #72b352 5%, #77b55a 100%);
+	background-color:#72b352;
+}
+.confirm-commit:active {
+	position:relative;
+	top:1px;
+}
+
+.graph_cell{
+width: 60%;
+height: 92%;
+float: left;
+padding: 10px 10px 10px 10px;
+
+}
+.border{
+border: 4px dotted blue;
+}
+
+.project_cell{
+width: 100%;
+height: 400px;
+}
+
+.text_cell{
+width: 25%;
+height: 100%;
+float: right;
+}
+
+
+#graph{
+      transform: rotate(0.5deg);
+      position: absolute;
+      z-index: 15;
+      top: 12%;
+      left: 20%;
+      width: 50%;
+      height: 65%;
+      float: right;
+}
+#merge-graph{
+      position: relative;
+      float: left;
+      left: 0;
+      top: 0;
+}
+.small-button-man{
+    font-family: Varela Round;
+    position: absolute;
+    z-index: 20;
+    top: 5%;
+    left: 2%;
+}
+.small-input-man{
+    font-family: Varela Round;
+    position: absolute;
+    z-index: 22;
+    top: 14%;
+    left: 2%;
+}
+
+.list-container { width:100%; height: 100%; overflow-y: auto; float: left; margin-left: 10px;}
+
+.merge-left{
+    position: relative;
+    text-align: left;
+    background-color:#000;
+    color:#fff;
+    width: 45%;
+    float: left;
+}
+
+.merge-right{
+    position: relative;
+    background-color:#000;
+    text-align: left;
+    color:#fff;
+    width: 45%;
+    float: left;
+    right:0px;
+    overflow: auto;
+}
+
+.merge-down{
+    position: relative;
+    background-color:#000;
+    color:#fff;
+    width: 100%;
+    float: left;
+    height: 50px;
+}
+
+.popup{
+    position: absolute;
+    z-index: 1000;
+    display:none;
+    background-color:#000;
+    -webkit-border-radius:15px;
+    -moz-border-radius:15px;
+    color:#fff;
+    padding: 0 10px 10px 10px;
+    width: 25%;
+    margin-top: 5px;
+    margin-left: 35%;
+    text-align: center;
+}
+#merge-popup{
+top: 17%;
+margin-left: 10%;
+margin-right: 10%;
+width:80%;
+}
+.red {
+color: #f33
+}
+.green {
+color: #26e600
+}
+.yellow {
+color: #FFFF19
+}
+
+#commit-popup h2{
+    font-size: 1.2em;
+    font-weight:bold;
+    padding: 10px;
+}
+
+.white{
+color: white;
+}
+
+
+/*the container must be positioned relative:*/
+.autocomplete {
+  position: relative;
+  display: inline-block;
+}
+
+input {
+  border: 1px solid transparent;
+  background-color: #f1f1f1;
+  padding: 10px;
+  font-size: 16px;
+}
+
+input[type=text] {
+  background-color: #f1f1f1;
+  width: 100%;
+}
+
+input[type=submit] {
+  background-color: DodgerBlue;
+  color: #fff;
+  cursor: pointer;
+}
+
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid #d4d4d4;
+  border-bottom: none;
+  border-top: none;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+
+.autocomplete-items div {
+  padding: 10px;
+  cursor: pointer;
+  background-color: #fff;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+/*when hovering an item:*/
+.autocomplete-items div:hover {
+  background-color: #e9e9e9;
+}
+
+/*when navigating through the items using the arrow keys:*/
+.autocomplete-active {
+  background-color: DodgerBlue !important;
+  color: #ffffff;
+}
