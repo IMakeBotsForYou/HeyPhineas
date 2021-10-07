@@ -7,4 +7,5 @@ req.txt
 losthtml.txt
 static/js/jquery-3.6.0.min.js
 .idea/*
-HeyPhinis.rar
+keys.py
+database/data.db
