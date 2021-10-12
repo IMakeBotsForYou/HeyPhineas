@@ -1,0 +1,186 @@
+{% extends "log_reg_temp.html" %}
+{% block title %}Inbox{% endblock %}
+{% block form %}
+<script src="/static/js/socket.js"></script>
+<br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>
+<h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br><br>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<div class="midsdle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
+    <form action="" method="POST">
+        <button type="button" id="create_party" name="create_party" style="text-align: center;">Create party</button>
+        <input type="text" name="user_to_invite" id="user_to_invite" placeholder="Invite User" autocomplete="off">
+    </form>
+    <form action="" method="POST"><br>
+        <input type="text" name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
+        <input type="text" name="radius" id="radius" placeholder="Radius" autocomplete="off"><br><br>
+        <input type="text" name="min_rating" id="min_rating" placeholder="Rating" autocomplete="off"><br><br>
+        <input type="text" name="limit" id="limit" placeholder="Limit" autocomplete="off">
+        <button type="submit" name="search_place" style="text-align: center;">Search</button>
+    </form>
+</div>
+<h1 id="users" class="white" style="color: white;"></h1>
+<button type="button" id="sort_by_name" style="text-align: center;right:0;">Sort by name</button>
+<button type="button" id="sort_by_rating" style="text-align: center;right:0;">Sort by rating</button>
+<button type="button" id="sort_by_distance" style="text-align: center;right:0;">Sort by distance</button>
+<div id="distance_s" style="display: block;">
+{% for place_id in session["results"] %}
+    {% with place = session["results"][place_id] %}
+      <button type="button" id="open" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
+          <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
+           Open right now!<br><br>
+            {{place["location"]}}
+            {% if place["close_to"] %}
+                Vicinity: {{place["close_to"]}}<br>
+            {% endif %}
+            {% if place["rating"] %}
+            Rating: {{place["rating"]}}<br>
+              {% endif %}<br>
+            {% if place["website"] %}
+              <b>Website</b><br>{{place["website"]}}<br>
+              {% endif %}<br>
+          {% if place["url"] %}
+              <b>Google Maps</b><br>{{place["url"]}}<br>
+              {% endif %}<br>
+          {% if place["open_periods"] %}
+              {%for day in place["open_periods"] %}
+                {{day}}<br>
+              {% endfor %}
+          {% endif %}
+          <form action="" method="POST"><br>
+                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}" name="get_map" style="text-align: center;">Get Map</button>
+          </form>
+          {% if 'route map' in session %}
+            <img src="static/{{session['name']}}_route_map.jpg">
+          {% endif %}
+
+          </div>
+    {% endwith %}
+{% endfor %}
+</div>
+<div id="distance_r" style="display: none;">
+{% for place_id in session["results_rating"] %}
+    {% with place = session["results_rating"][place_id] %}
+      <button type="button" id="rating" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
+                    <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
+           Open right now!<br><br>
+            {{place["location"]}}
+            {% if place["close_to"] %}
+                Vicinity: {{place["close_to"]}}<br>
+            {% endif %}
+            {% if place["rating"] %}
+            Rating: {{place["rating"]}}<br>
+              {% endif %}<br>
+            {% if place["website"] %}
+              <b>Website</b><br>{{place["website"]}}<br>
+              {% endif %}<br>
+          {% if place["url"] %}
+              <b>Google Maps</b><br>{{place["url"]}}<br>
+              {% endif %}<br>
+          {% if place["open_periods"] %}
+              {%for day in place["open_periods"] %}
+                {{day}}<br>
+              {% endfor %}
+          {% endif %}
+          <form action="" method="POST"><br>
+                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_1" name="get_map" style="text-align: center;">Get Map</button>
+          </form>
+          {% if 'route map' in session %}
+            <img src="static/{{session['name']}}_route_map.jpg">
+          {% endif %}
+
+          </div>
+    {% endwith %}
+{% endfor %}
+</div>
+<div id="distance_n" style="display: none;">
+{% for place_id in session["results_name"] %}
+    {% with place = session["results_name"][place_id] %}
+      <button type="button" id="name_btn" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
+                   <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
+           Open right now!<br><br>
+            {{place["location"]}}
+            {% if place["close_to"] %}
+                Vicinity: {{place["close_to"]}}<br>
+            {% endif %}
+            {% if place["rating"] %}
+            Rating: {{place["rating"]}}<br>
+              {% endif %}<br>
+            {% if place["website"] %}
+              <b>Website</b><br>{{place["website"]}}<br>
+              {% endif %}<br>
+          {% if place["url"] %}
+              <b>Google Maps</b><br>{{place["url"]}}<br>
+              {% endif %}<br>
+          {% if place["open_periods"] %}
+              {%for day in place["open_periods"] %}
+                {{day}}<br>
+              {% endfor %}
+          {% endif %}
+          <form action="" method="POST"><br>
+                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_2" name="get_map" style="text-align: center;">Get Map</button>
+          </form>
+          {% if 'route map' in session %}
+            <img src="static/{{session['name']}}_route_map.jpg">
+          {% endif %}
+
+          </div>
+    {% endwith %}
+{% endfor %}
+</div>
+
+<script>
+
+
+var coll = document.getElementsByClassName("collapsible");
+console.log(coll);
+var i;
+
+
+var nb = document.getElementById("sort_by_name");
+var rb = document.getElementById("sort_by_rating");
+var db = document.getElementById("sort_by_distance");
+
+var nc = document.getElementById("distance_n");
+var rc = document.getElementById("distance_r");
+var dc = document.getElementById("distance_s");
+
+
+
+nb.addEventListener("click", function() {
+    if (nc.style.display === "none") {
+      rc.style.display = "none";
+      dc.style.display = "none";
+      nc.style.display = "block";
+    }
+})
+rb.addEventListener("click", function() {
+    if (rc.style.display === "none") {
+      rc.style.display = "block";
+      dc.style.display = "none";
+      nc.style.display = "none";
+    }
+})
+
+db.addEventListener("click", function() {
+    if (dc.style.display === "none") {
+      rc.style.display = "none";
+      dc.style.display = "block";
+      nc.style.display = "none";
+    }
+})
+
+
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+
+}
+</script>
+{% endblock %}

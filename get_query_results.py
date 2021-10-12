@@ -2,6 +2,7 @@ import googlemaps
 from keys import *
 from requests import get
 import json
+import gmaps as map_maker
 
 
 class results:
@@ -12,11 +13,11 @@ class results:
 
         data = {}
 
-        for r in results:
+        for r in self.results:
             json_vr = r.to_json()
             data[json_vr["id"]] = json_vr
 
-        return self.results
+        return data
 
     def sort_by_rating(self):
         def rating(r):
@@ -39,8 +40,9 @@ class results:
     #     self.results.sort(key=lambda r: r.name)
 
 
-class Result_man:
-    def __init__(self, place_id, url, close_to, name, icon, rating, local_phone_number, website, open_periods, location):
+class Place:
+    def __init__(self, place_id, url, close_to, name, icon, rating, local_phone_number, website, open_periods,
+                 location):
         self.id = place_id
         self.name = name
         self.icon = icon
@@ -53,36 +55,6 @@ class Result_man:
         self.images = []
         self.vicinity = close_to
         self.open_periods = open_periods
-
-        # self.fix_open()
-
-    def fix_open(self):
-        pass
-        # days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        # new = {}
-        # if not self.open_periods:
-        #     return
-        #
-        # getday = compile(r"/w+")
-        # for i, day in enumerate(self.open_periods):
-        #     d = getday.search(day).group()
-        #     self.open_periods[d] = self.open_periods[i][len(d)+1:]
-        # return
-        #
-        # # for period in self.open_periods:
-        # #     for time in period:
-        # #
-        # #         index = period[time]["day"]
-        # #
-        # #         correct_day = days[index]
-        # #         correct_time = period[time]["time"][:2] +":"+ period[time]["time"][2:]
-        # #
-        # #         if time == "closed":
-        # #             new[correct_day] = {"closed": correct_time, "open": None}
-        # #         else:
-        # #             new[correct_day] = {"open": correct_time, "closed": None}
-
-        # self.open_periods = new
 
     def add_images(self, images):
         self.images.append(images)
@@ -175,12 +147,12 @@ class query:
                 try:
                     if rating > self.rating_min:
                         self.results.append(
-                            Result_man(place_id, url, close_to, name, icon, rating, local_phone_number, website,
-                                       periods, location))
+                            Place(place_id, url, close_to, name, icon, rating, local_phone_number, website,
+                                  periods, location))
                 except:
                     self.results.append(
-                        Result_man(place_id, url, close_to, name, icon,
-                                   None, local_phone_number, website, periods, location))
+                        Place(place_id, url, close_to, name, icon,
+                              None, local_phone_number, website, periods, location))
 
 
 def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", page_token=None, APIKEY=apikey, limit=-1):
@@ -217,7 +189,6 @@ def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", pag
         resses.append(info)
     # icon,place_id,name,opening_hours,rating,formatted_phone_number,vicinity,website,url
 
-
     # for p_id in ids:
     #     response = get(
     #         f"https://maps.googleapis.com/maps/api/place/details/json?place_id={p_id}&fields=icon,place_id,name,opening_hours,rating,formatted_phone_number,vicinity,website,url&key={apikey}")
@@ -233,7 +204,8 @@ def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", pag
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
+
+
 from datetime import datetime
 
 gmaps = googlemaps.Client(key=apikey)
@@ -242,7 +214,6 @@ gmaps = googlemaps.Client(key=apikey)
 def get_name(lat, lng):
     gecoded = gmaps.reverse_geocode((lat, lng))
     print(gecoded)
-
 
 
 def decode_polyline(polyline_str):
@@ -291,41 +262,48 @@ def draw_route(dest, waypoints, name, current_location=(31.894756, 34.809322)):
     # dest "קניון רחובות، Bilu Street, Rehovot"
 
     gmaps_results = gmaps.directions(origin=current_location,
-                               destination=dest,
-                               waypoints=waypoints,
-                               departure_time=now)
+                                     destination=dest,
+                                     waypoints=waypoints,
+                                     departure_time=now)
 
     marker_points = []
     waypoints = []
-
     # extract the location points from the previous directions function
-
+    distance = 0
     for leg in gmaps_results[0]["legs"]:
         leg_start_loc = leg["start_location"]
         marker_points.append(f'{leg_start_loc["lat"]},{leg_start_loc["lng"]}')
         for step in leg["steps"]:
+            distance += step["distance"]["value"]
             end_loc = step["end_location"]
             waypoints.append(f'{end_loc["lat"]},{end_loc["lng"]}')
     last_stop = gmaps_results[0]["legs"][-1]["end_location"]
-    marker_points.append(f'{last_stop["lat"]},{last_stop["lng"]}')
+    # marker_points.append(f'{last_stop["lat"]},{last_stop["lng"]}')
+    marker_points.append((last_stop["lat"], last_stop["lng"]))
 
-    markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
-               + r for i, r in enumerate(marker_points)]
+    # markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
+    #            + r for i, r in enumerate(marker_points)]
 
+    # distance /= 1000
 
-    ma = str(markers[2:-2])
-    # print(f"https://maps.googleapis.com/maps/api/staticmap?&center={waypoints[0]}&scale=2&zoom=13&size=640,640&format=jpg&maptype=roadmap&markers={ma}&path=" + "color:0x0000ff|weight:2|" + "|".join(waypoints))
+    fig = map_maker.figure()
+    markers = map_maker.marker_layer(marker_points)
+    fig.add_layer(markers)
+    print(fig)
 
-    result_map = gmaps.static_map(
-        center=waypoints[0],
-        scale=10,
-        zoom=15,
-        size=[640, 640],
-        format="jpg",
-        maptype="roadmap",
-        markers=markers,
-        path="color:0x0000ff|weight:2|" + "|".join(waypoints))
+    # marks = mark
 
-    with open(f"static/{name}_route_map.jpg", "wb") as img:
-        for chunk in result_map:
-            img.write(chunk)
+    #
+    # result_map = gmaps.static_map(
+    #     center=waypoints[0],
+    #     scale=10,
+    #     zoom=15,
+    #     size=[640, 640],
+    #     format="jpg",
+    #     maptype="roadmap",
+    #     markers=markers,
+    #     path="color:0x0000ff|weight:2|" + "|".join(waypoints))
+    #
+    # with open(f"static/{name}_route_map.jpg", "wb") as img:
+    #     for chunk in result_map:
+    #         img.write(chunk)
