@@ -8,3 +8,4 @@ losthtml.txt
 static/js/jquery-3.6.0.min.js
 .idea/*
 HeyPhinis.rar
+.pre-commit-config.yaml

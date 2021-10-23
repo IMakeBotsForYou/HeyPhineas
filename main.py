@@ -5,8 +5,11 @@ import googlemaps
 import database_wrapper
 from time import time
 from keys import *
+import os
 from threading import Thread, Event
 from engineio.payload import Payload
+import pymongo
+
 Payload.max_decode_packets = 1000
 __author__ = 'Rock'
 last_time_pings_checked = time()
@@ -16,6 +19,15 @@ connected_members = {
 parties = {
 
 }
+points_of_interest = {
+
+}
+client = pymongo.MongoClient(
+    "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+#
+db = client.HeyPhinis
+poi = db.points_of_interest
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 # app.config['DEBUG'] = True
@@ -59,7 +71,16 @@ def home():
     # If user is logged in
     if "user" not in session:
         return redirect(url_for("login"))
+    for key in list(session.keys()):
+        if key != "user":
+            session.pop(key)
     return render_template("main.html")
+
+
+@app.route("/static/favicon.ico")  # 2 add get for favicon
+def fav():
+    print(os.path.join(app.root_path, 'static'))
+    return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
 
 
 def get_party_members(owner):
@@ -176,7 +197,7 @@ def emit_to(user: str, event_name: str, namespace: str, message=None):
 def main_page():
     session["time"] = int(time())
     if "user" not in session:
-        return redirect(url_for(f"repos"))
+        return redirect(url_for(f"login"))
 
     if request.method == "POST":
 
@@ -208,7 +229,7 @@ def main_page():
                 emit_to(receiver, "notif", "/comms")
                 # emit('notif', namespace="/comms", room=connected_members[receiver]['sid'])
         elif "search_place" in request.form:
-            radius = int(request.form["radius"]) * 1000
+            radius = float(request.form["radius"]) * 1000
             lat, lng = 31.9034937, 34.8131821
             rating_min = request.form["min_rating"]
             tp = request.form["type"]
@@ -219,10 +240,20 @@ def main_page():
             session["results"] = query_res.results.get()
             session["results_rating"] = query_res.results.sort_by_rating()
             session["results_name"] = query_res.results.sort_by_name()
+
         elif "get_map" in request.form:
             # todo add self location
-            place_id = request.form["place_location"]
-            draw_route(name=session["user"], waypoints=[], dest=session[results]["place_id"]["location"])
+            place_id = request.form["get_map"]
+            data = session["results"][place_id]
+            if place_id not in points_of_interest:
+                data["interest"] = 1
+                data["_id"] = place_id
+                poi.add_one(data)
+            else:
+                points_of_interest[place_id]["interest"] += 1
+
+            coordinates = session["results"][place_id]["location"]
+            draw_route(name=session["user"], waypoints=[], dest=coordinates)
 
         return render_template("main.html", async_mode=socketio.async_mode)
     else:
@@ -250,12 +281,12 @@ def broadcast_userdiff():
     fr = db["ex"].get_friends(session["user"]).split(", ")
     session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
                               'offline': [friend for friend in fr if friend not in connected_members]}
-# try:wtf
+    # try:wtf
     emit_to(session["user"], 'friend_data', "/comms", message=session["friend_data"])
     emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]},
          namespace='/comms')
     print("Data:")
-    print("\n".join([f"{name}, {int(time())-connected_members[name]['last ping']}" for name in connected_members]))
+    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in connected_members]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
 
@@ -271,7 +302,7 @@ def check_ping(*args):
     print(f"ponged by {user}, {user} sees: {' '.join(args[0])}")
     connected_members[user]["last ping"] = int(time())
     # # # # #
-    if time()-last_time_pings_checked > 2:
+    if time() - last_time_pings_checked > 2:
         for username in connected_members.copy():
             print(username, connected_members[username]["sid"])
             if int(time()) - connected_members[username]["last ping"] > 1:  # one minute

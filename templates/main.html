@@ -2,9 +2,10 @@
 {% block title %}Inbox{% endblock %}
 {% block form %}
 <script src="/static/js/socket.js"></script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+
 <br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>
 <h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br><br>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
 <div class="midsdle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
     <form action="" method="POST">
         <button type="button" id="create_party" name="create_party" style="text-align: center;">Create party</button>
@@ -18,12 +19,36 @@
         <button type="submit" name="search_place" style="text-align: center;">Search</button>
     </form>
 </div>
+    <div id="floating-panel">
+      <b>End: </b>
+      <select id="end">
+        <option value="ביתספר דה שליט">דה שליט</option>
+        <option value="הקניון רחובות">
+          הקיניון
+        </option>
+      </select>
+    </div>
+    <div id="map"></div>
+    &nbsp;
+    <div id="warnings-panel"></div>
+
+
+<script src="/static/js/maplogic.js"></script>
+<script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2"
+        async
+></script>
+<!--      async-->
+
+
 <h1 id="users" class="white" style="color: white;"></h1>
 <button type="button" id="sort_by_name" style="text-align: center;right:0;">Sort by name</button>
 <button type="button" id="sort_by_rating" style="text-align: center;right:0;">Sort by rating</button>
 <button type="button" id="sort_by_distance" style="text-align: center;right:0;">Sort by distance</button>
+
 <div id="distance_s" style="display: block;">
-{% for place in session["results"] %}
+{% for place_id in session["results"] %}
+    {% with place = session["results"][place_id] %}
       <button type="button" id="open" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
           <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
            Open right now!<br><br>
@@ -46,34 +71,28 @@
               {% endfor %}
           {% endif %}
           <form action="" method="POST"><br>
-                <input hidden type="text" id="place_location_{{place['id']}}" name="place_location" id="plc_loc">
-                <button type="submit" id="get_map_btn_{{place['id']}}" name="get_map" style="text-align: center;">Get Map</button>
-                <script>
-                $("#get_map_btn_{{place['id']}}").click(function(e) {
-                    $("#place_location_{{place['id']}}").value = {{place['id']}}
-                })
-                </script>
+                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}" name="get_map" style="text-align: center;">Get Map</button>
           </form>
           {% if 'route map' in session %}
-            <img src="{{session['route_map']}}">
+            <img src="static/{{session['name']}}_route_map.jpg">
           {% endif %}
 
           </div>
+    {% endwith %}
 {% endfor %}
 </div>
 <div id="distance_r" style="display: none;">
-{% for place in session["results_rating"] %}
+{% for place_id in session["results_rating"] %}
+    {% with place = session["results_rating"][place_id] %}
       <button type="button" id="rating" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
-          <div class="content cen" style="display: none; color:#fff; background-color:#23272a;">
+                    <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
            Open right now!<br><br>
+            {{place["location"]}}
             {% if place["close_to"] %}
                 Vicinity: {{place["close_to"]}}<br>
             {% endif %}
             {% if place["rating"] %}
             Rating: {{place["rating"]}}<br>
-              {% endif %}<br>
-            {% if place["number"] %}
-              <b>Who to call?</b> {{place["number"]}}<br>
               {% endif %}<br>
             {% if place["website"] %}
               <b>Website</b><br>{{place["website"]}}<br>
@@ -86,22 +105,29 @@
                 {{day}}<br>
               {% endfor %}
           {% endif %}
+          <form action="" method="POST"><br>
+                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_1" name="get_map" style="text-align: center;">Get Map</button>
+          </form>
+          {% if 'route map' in session %}
+            <img src="static/{{session['name']}}_route_map.jpg">
+          {% endif %}
+
           </div>
+    {% endwith %}
 {% endfor %}
 </div>
 <div id="distance_n" style="display: none;">
-{% for place in session["results_name"] %}
+{% for place_id in session["results_name"] %}
+    {% with place = session["results_name"][place_id] %}
       <button type="button" id="name_btn" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
-          <div class="content cen" style="display: none;  color:#fff; background-color:#23272a;">
+                   <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
            Open right now!<br><br>
+            {{place["location"]}}
             {% if place["close_to"] %}
                 Vicinity: {{place["close_to"]}}<br>
             {% endif %}
             {% if place["rating"] %}
             Rating: {{place["rating"]}}<br>
-              {% endif %}<br>
-            {% if place["number"] %}
-              <b>Who to call?</b> {{place["number"]}}<br>
               {% endif %}<br>
             {% if place["website"] %}
               <b>Website</b><br>{{place["website"]}}<br>
@@ -114,7 +140,14 @@
                 {{day}}<br>
               {% endfor %}
           {% endif %}
+          <form action="" method="POST"><br>
+                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_2" name="get_map" style="text-align: center;">Get Map</button>
+          </form>
+<!--          {% if 'route map' in session %}-->
+<!--            <img src="static/{{session['name']}}_route_map.jpg">-->
+<!--          {% endif %}-->
           </div>
+    {% endwith %}
 {% endfor %}
 </div>
 
