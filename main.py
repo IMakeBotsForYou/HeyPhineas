@@ -8,7 +8,7 @@ from keys import *
 import os
 from threading import Thread, Event
 from engineio.payload import Payload
-import pymongo
+# import pymongo
 
 Payload.max_decode_packets = 1000
 __author__ = 'Rock'
@@ -22,11 +22,12 @@ parties = {
 points_of_interest = {
 
 }
-client = pymongo.MongoClient(
-    "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+
+# client = pymongo.MongoClient(
+#     "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
 #
-db = client.HeyPhinis
-poi = db.points_of_interest
+# db = client.HeyPhinis
+# poi = db.points_of_interest
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -237,23 +238,16 @@ def main_page():
             print(radius, rating_min, tp)
             query_res = query((lat, lng), radius, rating_min, tp)
             query_res.get_all_pages(limit)
+
             session["results"] = query_res.results.get()
+            for result in session["results"]:
+                if result not in points_of_interest:
+                    data = session["results"][result]
+                    data["interest"] = 0
+                    points_of_interest[result] = data
+
             session["results_rating"] = query_res.results.sort_by_rating()
             session["results_name"] = query_res.results.sort_by_name()
-
-        elif "get_map" in request.form:
-            # todo add self location
-            place_id = request.form["get_map"]
-            data = session["results"][place_id]
-            if place_id not in points_of_interest:
-                data["interest"] = 1
-                data["_id"] = place_id
-                poi.add_one(data)
-            else:
-                points_of_interest[place_id]["interest"] += 1
-
-            coordinates = session["results"][place_id]["location"]
-            draw_route(name=session["user"], waypoints=[], dest=coordinates)
 
         return render_template("main.html", async_mode=socketio.async_mode)
     else:
@@ -323,6 +317,22 @@ def logged_on_users():
         "current party": None
     }
     broadcast_userdiff()
+
+
+@socketio.on('interested', namespace="/comms")
+def interest(data):
+    def sort_em(poi):
+        # print(poi[0], points_of_interest[poi[1]]['interest'])
+        return points_of_interest[poi[1]]['interest']
+    if data not in points_of_interest:
+        return
+    points_of_interest[data]["interest"] += 1
+    places = [(points_of_interest[place]['name'], place) for place in points_of_interest]
+    places.sort(key=sort_em, reverse=True)
+
+    best_3 = ",   ".join([f"{ob[0]}" for ob in places][:3])
+
+    emit_to(session["user"], 'best_3_locations', "/comms", message=best_3)
 
 
 @socketio.on('disconnect', namespace='/comms')

@@ -11,9 +11,12 @@ var socket = null;
 var in_party = false;
 var leader_of_party = false;
 
+
+
+
 $(document).ready(function(){
     //connect to the socket server.
-    var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
+    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 
 //    timesocket.on('current time', function(msg) {
     function ping_every_second(){
@@ -31,11 +34,9 @@ $(document).ready(function(){
         if (typeof(msg.amount) != "undefined"){
         current_users_online = msg.amount;
         } else {
-        console.log(123123123);
-        }
-        console.log(msg);
         online_users = msg.names;
         console.log(current_users_online);
+        }
 //        if (typeof(current_users_online) != "undefined"){
         $('#users_online').html(`${current_users_online} User(s) Online`);
 //        }
@@ -88,6 +89,10 @@ $(document).ready(function(){
         $('#inbox').html(`Inbox`);
     });
 
+    socket.on('best_3_locations', function(msg) {
+        $('#recommended').html(msg);
+    });
+
     $("#create_party").on("click", function() {
          if (!in_party){
             in_party = true;
@@ -100,4 +105,5 @@ $(document).ready(function(){
             socket.emit("left_party", 'foo');
         }
     });
+
 });

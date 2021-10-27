@@ -18,43 +18,36 @@ function showSteps(directionResult, markerArray, stepDisplay, map) {
   }
 }
 
+
+var onChangeHandler = null;
+
 function initMap() {
-      const markerArray = [];
-      // Instantiate a directions service.
-      const directionsService = new google.maps.DirectionsService();
-      // Create a map and center it on Manhattan.
-      const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 13,
-        center: { lat: 31.894756, lng: 34.809322 },
-      });
-      // Create a renderer for directions and bind it to the map.
-      const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
-      // Instantiate an info window to hold step text.
-      const stepDisplay = new google.maps.InfoWindow();
+  const markerArray = [];
+  // Instantiate a directions service.
+  const directionsService = new google.maps.DirectionsService();
+  // Create a map and center it on Manhattan.
+  const map = new google.maps.Map(document.getElementById("map"), {
+    zoom: 13,
+    center: { lat: 31.894756, lng: 34.809322 },
+  });
+  // Create a renderer for directions and bind it to the map.
+  const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+  // Instantiate an info window to hold step text.
+  const stepDisplay = new google.maps.InfoWindow();
 
-      // Display the route between the initial start and end selections.
-      calculateAndDisplayRoute(
-        directionsRenderer,
-        directionsService,
-        markerArray,
-        stepDisplay,
-        map
-      );
-
-      // Listen to change events from the start and end lists.
-      const onChangeHandler = function () {
-        calculateAndDisplayRoute(
-          directionsRenderer,
-          directionsService,
-          markerArray,
-          stepDisplay,
-          map
-        );
-      };
-
-//      document.getElementById("start").addEventListener("change", onChangeHandler);
-      document.getElementById("end").addEventListener("change", onChangeHandler);
+  onChangeHandler = function () {
+    calculateAndDisplayRoute(
+      directionsRenderer,
+      directionsService,
+      markerArray,
+      stepDisplay,
+      map
+    );
+};
+  // Listen to change events from the start and end lists.
+  directionsRenderer.setMap(map); // Existing map object displays directions
 }
+
 function calculateAndDisplayRoute(
   directionsRenderer,
   directionsService,
@@ -69,19 +62,31 @@ function calculateAndDisplayRoute(
 
   // Retrieve the start and end locations and create a DirectionsRequest using
   // WALKING directions.
+  a = document.getElementById("secret_end").value;
+  console.log("Secret");
+  console.log(a);
+  if (a == "")
+    return;
+  var latlng = a.split(", ");
+  var lat_ = parseFloat(latlng[0]);
+  var lng_ = parseFloat(latlng[1]);
+
   directionsService
     .route({
-      origin: "ביתספר בכור לוי",
-      destination: document.getElementById("end").value,
+      origin: "הנשיא הראשון 52",
+      destination: { lat: lat_, lng: lng_ },
       travelMode: google.maps.TravelMode.WALKING,
     })
     .then((result) => {
       // Route the directions and pass the response to a function to create
       // markers for each step.
+      var directionsData = result.routes[0] // Get data about the mapped route
       document.getElementById("warnings-panel").innerHTML =
-        "<b>" + result.routes[0].warnings + "</b>";
+        "<b>" + directionsData.warnings + "</b>";
       directionsRenderer.setDirections(result);
       showSteps(result, markerArray, stepDisplay, map);
+      document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
+
     })
     .catch((e) => {
       window.alert("Directions request failed due to " + e);

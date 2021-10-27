@@ -2,7 +2,7 @@ import googlemaps
 from keys import *
 from requests import get
 import json
-import gmaps as map_maker
+# import gmaps as map_maker
 
 
 class results:
@@ -36,8 +36,8 @@ class results:
     def append(self, item):
         self.results.append(item)
 
-    # def sort_by_distance(self):
-    #     self.results.sort(key=lambda r: r.name)
+    def sort_by_distance(self):
+        self.results.sort(key=lambda r: r.name)
 
 
 class Place:
@@ -92,10 +92,9 @@ class query:
             if r:
                 query_results += r
 
+        print("\n\n\n", query_results, "\n\n\n")
         for place in query_results:
-
-            data_points = ["name", "icon", "place_id"]
-
+            # data_points = ["name", "icon", "place_id"]
             try:
                 name = place["name"]
                 icon = place["icon"]
@@ -143,17 +142,16 @@ class query:
             except:
                 location = [0, 0]
 
-            if open_now:
-                try:
-                    if rating > self.rating_min:
-                        self.results.append(
-                            Place(place_id, url, close_to, name, icon, rating, local_phone_number, website,
-                                  periods, location))
-                except:
+            # if open_now:
+            if not rating:
+                rating = 5
+            try:
+                if float(rating) > float(self.rating_min):
                     self.results.append(
-                        Place(place_id, url, close_to, name, icon,
-                              None, local_phone_number, website, periods, location))
-
+                        Place(place_id, url, close_to, name, icon, rating, local_phone_number, website,
+                              periods, location))
+            except Exception as e:
+                print(e)
 
 def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", page_token=None, APIKEY=apikey, limit=-1):
     lat, lng = loc
@@ -286,10 +284,10 @@ def draw_route(dest, waypoints, name, current_location=(31.894756, 34.809322)):
 
     # distance /= 1000
 
-    fig = map_maker.figure()
-    markers = map_maker.marker_layer(marker_points)
-    fig.add_layer(markers)
-    print(fig)
+    # fig = map_maker.figure()
+    # markers = map_maker.marker_layer(marker_points)
+    # fig.add_layer(markers)
+    # print(fig)
 
     # marks = mark
 
