@@ -31,6 +31,7 @@ $(document).ready(function(){
     const createClock = setInterval(ping_every_second, 1000);
     //update online user count
     socket.on('user_diff', function(msg) {
+//        alert("User diff")
         if (typeof(msg.amount) != "undefined"){
         current_users_online = msg.amount;
         } else {

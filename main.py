@@ -80,7 +80,7 @@ def home():
 
 @app.route("/static/favicon.ico")  # 2 add get for favicon
 def fav():
-    print(os.path.join(app.root_path, 'static'))
+    print(os.path.join(app.root_path, '../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static'))
     return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
 
 
@@ -275,7 +275,7 @@ def broadcast_userdiff():
     fr = db["ex"].get_friends(session["user"]).split(", ")
     session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
                               'offline': [friend for friend in fr if friend not in connected_members]}
-    # try:wtf
+
     emit_to(session["user"], 'friend_data', "/comms", message=session["friend_data"])
     emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]},
          namespace='/comms')
@@ -332,7 +332,8 @@ def interest(data):
 
     best_3 = ",   ".join([f"{ob[0]}" for ob in places][:3])
 
-    emit_to(session["user"], 'best_3_locations', "/comms", message=best_3)
+    [emit_to(user=user, event_name="best_3_locations", namespace="/comms", message=best_3)
+     for user in connected_members]
 
 
 @socketio.on('disconnect', namespace='/comms')
@@ -352,4 +353,4 @@ if __name__ == '__main__':
     # initialize database
     db = {"ex": database_wrapper.my_db}
 
-    socketio.run(app, host="localhost", port=8080)
+    socketio.run(app, host="0.0.0.0", port=8080)

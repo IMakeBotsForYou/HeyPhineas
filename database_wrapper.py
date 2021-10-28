@@ -61,7 +61,7 @@ class Database:
         self.data = sqlite3.connect(self.path, check_same_thread=False)
         self.cursor = self.data.cursor()
         self.parties = []
-        with open('static/users.js', 'w') as f:
+        with open('../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def get_all_names(self):
@@ -152,7 +152,7 @@ class Database:
             self.add("users", reformat(name, password, libraries))
 
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
-        with open('static/users.js', 'w') as f:
+        with open('../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "name"))}')
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
 
@@ -188,7 +188,7 @@ class Database:
         except IndexError:
             print(f"User {name} isn't registered!")
 
-        with open('static/users.js', 'w') as f:
+        with open('../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "name"))}')
 
     def close(self):
