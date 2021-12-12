@@ -98,7 +98,8 @@ $(document).ready(function(){
          if (!in_party){
             in_party = true;
             leader_of_party = true;
-            socket.emit("joined", "__self__");
+            user_to_invite = $("user_to_invite").val()
+            socket.emit("joined", "__self__|" + user_to_invite);
         } else {
         //temporary
             in_party = false;

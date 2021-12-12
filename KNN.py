@@ -15,7 +15,7 @@ class KNN:
                 }
         '''
         self.values: dict = vls
-        self.labels = [value[0] for value in self.values]
+        self.labels = list(self.values.keys())
         self.distances: np.array[tuple[any, float]] = np.array([])
         self.k: int = k
         self.origin = None
@@ -67,5 +67,5 @@ if __name__ == "__main__":
     knn = KNN(values, 3)
     knn.set_origin("Dan")
     print(knn.run())
-    # knn.run()
+    knn.run()
 

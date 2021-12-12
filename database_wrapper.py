@@ -68,6 +68,7 @@ class Database:
         return self.get("users", "username")
 
     def send_message(self, title, desc, sender, receiver, messagetype, action):
+        print("added", title, desc)
         self.add("messages (title, content, sender, receiver, type, action)",
                  reformat(title, desc, sender, receiver, messagetype, action))
 
@@ -143,8 +144,8 @@ class Database:
         s += f" WHERE {condition}" if condition else " WHERE 1=1"
         self.execute(s)
 
-    def add_user(self, name, password):
-        self.add("users (username, password, )", reformat(name, password, []))
+    def add_user(self, name, password, friends="", interests="parks|0|restaurant|0|"):
+        self.add("users (username, password, friends, interests)", reformat(name, password, friends, interests))
 
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
         with open('static/users.js', 'w') as f:
@@ -198,8 +199,8 @@ my_db = None
 
 def main():
     global my_db
-    my_db = Database("database/data")
 
+    my_db = Database("database/data")
     # my_db.remove_user("Guy", "123")
     # print(my_db.get_users())
 
@@ -207,3 +208,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    names = ["Mike", "Manor", "Liza", "Maya", "Yakov"]
+    import random
+    for name in names:
+        my_db.add_user(name, "123", random.choice(names))

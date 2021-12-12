@@ -188,7 +188,7 @@ def register():
         else:
             session['user'] = user
             db['ex'].add_user(user, password)
-            return redirect(url_for(f"/"))
+            return redirect("/")
         return render_template("register.html")
     else:
         return render_template("register.html")
@@ -204,36 +204,7 @@ def main_page():
     if "user" not in session:
         return redirect(url_for(f"login"))
 
-    if request.method == "POST":
-
-        if "user_to_invite" in request.form or "friend_request" in request.form:
-            receiver = request.form["user_to_invite"]
-            message_desc = "No Description"
-            message_type = "question"
-            message_sender = session["user"]
-            message_title = ""
-            action = ""
-
-            if "user_to_invite" in request.form:
-                # message_title = f'Hey {receiver}, {session["user"]} invited you to their party!'
-                # if "current_party" not in session:
-                #     session['current_party'] = create_party(session["user"])
-                # action = "join_party/" + session["user"]
-                message_title = f'Friend request from {session["user"]}!'
-                action = "accept_friend_request/" + session["user"]
-                message_desc = f'{session["user"]} sent you a friend request.'
-                receiver = request.form["user_to_invite"]
-
-            elif "friend_request" in request.form:
-                pass
-                message_title = f'Friend request from {session["user"]}!'
-                action = "accept_friend_request/" + session["user"]
-
-            db['ex'].send_message(message_title, message_desc, message_sender, receiver, message_type, action)
-            if receiver in connected_members:
-                emit_to(receiver, "notif", "/comms")
-                # emit('notif', namespace="/comms", room=connected_members[receiver]['sid'])
-        elif "search_place" in request.form:
+        if "search_place" in request.form:
             radius = float(request.form["radius"]) * 1000
             lat, lng = 31.9034937, 34.8131821
             rating_min = request.form["min_rating"]
@@ -304,7 +275,7 @@ def check_ping(*args):
     if time() - last_time_pings_checked > 2:
         for username in connected_members.copy():
             print(username, connected_members[username]["sid"])
-            if int(time()) - connected_members[username]["last ping"] > 1:  # one minute
+            if int(time()) - connected_members[username]["last ping"] > 2:
                 del connected_members[username]
                 broadcast_userdiff()
         last_time_pings_checked = time()
@@ -355,14 +326,24 @@ def logged_on_users():
 
 @socketio.on('joined', namespace='/comms')
 def party(data):
-    if data == "__self__":
+    print(data)
+    if data[:10] == "__self__":
         create_party(session["user"])
-    print(parties)
-
 
 if __name__ == '__main__':
+    from KNN import KNN
     database_wrapper.main()
     # initialize database
+
+    vls = {}
+
     db = {"ex": database_wrapper.my_db}
+    print(db["ex"].get("users", "username, interests"))
+    for user in db["ex"].get("users", "username"):
+        interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
+        vls[user] = interests.split("|")[1::2]
+    knn = KNN(vls=vls)
+    print(vls)
+    db["knn"] = knn
 
     socketio.run(app, host="0.0.0.0", port=8080)
