@@ -22,6 +22,9 @@ parties = {
 points_of_interest = {
 
 }
+user_data = {
+
+}
 
 # client = pymongo.MongoClient(
 #     "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
@@ -80,7 +83,7 @@ def home():
 
 @app.route("/static/favicon.ico")  # 2 add get for favicon
 def fav():
-    print(os.path.join(app.root_path, '../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static'))
+    print(os.path.join(app.root_path, 'static'))
     return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
 
 
@@ -94,6 +97,7 @@ def parse_action(command):
     if command_name == "accept_friend_request":
         requester = args[1]
         db["ex"].make_friends(requester, session["user"])
+        user_data[session['user']]["friends"].append(requester)
         db['ex'].send_message(title=f"You and {session['user']} are now friends!",
                               desc=f"{session['user']} has accepted your friend request.",
                               message_sender=session["user"], receiver=request, messagetype="ignore",
@@ -179,12 +183,12 @@ def register():
             flash('Name must be longer than 1 character.', category='error')
         elif password != confirm:
             flash('Passwords don\'t match.', category='error')
-        elif len(password) < 7:
-            flash('Password must be at least 7 characters.', category='error')
+        # elif len(password) < 7:
+        #     flash('Password must be at least 7 characters.', category='error')
         else:
             session['user'] = user
-            db['ex'].add_user(user, password, [])
-            return redirect(url_for(f"repos"))
+            db['ex'].add_user(user, password)
+            return redirect(url_for(f"/"))
         return render_template("register.html")
     else:
         return render_template("register.html")
@@ -243,7 +247,7 @@ def main_page():
             for result in session["results"]:
                 if result not in points_of_interest:
                     data = session["results"][result]
-                    data["interest"] = 0
+                    data["interest"] = {session["user"]: 0}
                     points_of_interest[result] = data
 
             session["results_rating"] = query_res.results.sort_by_rating()
@@ -272,6 +276,7 @@ def logout():
 
 def broadcast_userdiff():
     # update friends data
+    print(session["user"])
     fr = db["ex"].get_friends(session["user"]).split(", ")
     session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
                               'offline': [friend for friend in fr if friend not in connected_members]}
@@ -316,6 +321,12 @@ def logged_on_users():
         "sid": request.sid,
         "current party": None
     }
+    if session['user'] not in user_data:
+        user_data[session['user']] = {
+            "interests": {},
+            "friends": {},
+            "visited_locations": {}
+        }
     broadcast_userdiff()
 
 
@@ -323,10 +334,11 @@ def logged_on_users():
 def interest(data):
     def sort_em(poi):
         # print(poi[0], points_of_interest[poi[1]]['interest'])
-        return points_of_interest[poi[1]]['interest']
+        location_interest = points_of_interest[poi[1]]['interest']
+        return sum([location_interest[user] for user in location_interest])
     if data not in points_of_interest:
         return
-    points_of_interest[data]["interest"] += 1
+    points_of_interest[data]["interest"][session["user"]] += 1
     places = [(points_of_interest[place]['name'], place) for place in points_of_interest]
     places.sort(key=sort_em, reverse=True)
 

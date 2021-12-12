@@ -61,7 +61,7 @@ class Database:
         self.data = sqlite3.connect(self.path, check_same_thread=False)
         self.cursor = self.data.cursor()
         self.parties = []
-        with open('../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static/users.js', 'w') as f:
+        with open('static/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def get_all_names(self):
@@ -143,17 +143,12 @@ class Database:
         s += f" WHERE {condition}" if condition else " WHERE 1=1"
         self.execute(s)
 
-    def add_user(self, name, password, libraries=None):
-        if libraries is None:
-            libraries = [-1]
-        if isinstance(libraries, list):
-            self.add("users", reformat(name, password, ', '.join(int2st(libraries))))
-        else:
-            self.add("users", reformat(name, password, libraries))
+    def add_user(self, name, password):
+        self.add("users (username, password, )", reformat(name, password, []))
 
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
-        with open('../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static/users.js', 'w') as f:
-            f.write(f'var users = {json.dumps(self.get("users", "name"))}')
+        with open('static/users.js', 'w') as f:
+            f.write(f'var users = {json.dumps(self.get("users", "username"))}')
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
 
     def make_friends(self, user1, user2):
@@ -181,15 +176,15 @@ class Database:
 
     def remove_user(self, name, password):
         try:
-            if password == self.execute(f'SELECT password FROM users WHERE name="{name}"', 1)[0][0]:
-                self.data.execute(f'DELETE FROM users WHERE name="{name}"')
-            else:
-                print("Wrong password, you can't do that.")
+            # if password == self.execute(f'SELECT password FROM users WHERE username="{name}"', 1)[0][0]:
+            self.data.execute(f'DELETE FROM users WHERE username="{name}"')
+            # else:
+            #     print("Wrong password, you can't do that.")
         except IndexError:
             print(f"User {name} isn't registered!")
 
-        with open('../../Downloads/HeyPhinis-main (1)/HeyPhinis-main/static/users.js', 'w') as f:
-            f.write(f'var users = {json.dumps(self.get("users", "name"))}')
+        with open('static/users.js', 'w') as f:
+            f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def close(self):
         print("Finished")
@@ -199,10 +194,16 @@ class Database:
 my_db = None
 #
 #
+
+
 def main():
     global my_db
     my_db = Database("database/data")
 
+    # my_db.remove_user("Guy", "123")
+    # print(my_db.get_users())
 
-# if __name__ == "__main__":
-    # main()
+
+
+if __name__ == "__main__":
+    main()
