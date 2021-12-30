@@ -54,6 +54,8 @@ def create_party(user, members=None):
     for m in members:
         connected_members[m]["current party"] = user
 
+    session['party_members'] = members.copy()
+    session["current_party"] = user
     return parties[user]
 
 
@@ -64,10 +66,13 @@ def join_party(owner):
 def disconnect_user_from_party(user):
     # first we update the local data
     current_leader = connected_members[user]["current party"]
+    if user == session["user"]:
+        session["current_party"] = None
     members = parties[current_leader]["members"]
     members = filter(lambda member: members["name"] != user, members)
-    [emit_to(user=user, event_name="user_left_party", namespace="/comms", message=session["user"])
-     for user in members]
+    session['party_members'] = members
+    [emit_to(user=usr, event_name="user_left_party", namespace="/comms", message=session["user"])
+     for usr in members]
 
 
 @app.route("/")
@@ -204,31 +209,31 @@ def main_page():
     if "user" not in session:
         return redirect(url_for(f"login"))
 
-        if "search_place" in request.form:
-            radius = float(request.form["radius"]) * 1000
-            lat, lng = 31.9034937, 34.8131821
-            rating_min = request.form["min_rating"]
-            tp = request.form["type"]
-            limit = int(request.form["limit"])
-            print(radius, rating_min, tp)
-            query_res = query((lat, lng), radius, rating_min, tp)
-            query_res.get_all_pages(limit)
-
-            session["results"] = query_res.results.get()
-            for result in session["results"]:
-                if result not in points_of_interest:
-                    data = session["results"][result]
-                    data["interest"] = {session["user"]: 0}
-                    points_of_interest[result] = data
-
-            session["results_rating"] = query_res.results.sort_by_rating()
-            session["results_name"] = query_res.results.sort_by_name()
-
-        return render_template("main.html", async_mode=socketio.async_mode)
-    else:
-        session["results"] = []
-        session["results_rating"] = []
-        session["results_name"] = []
+    # if "search_place" in request.form:
+    #     radius = float(request.form["radius"]) * 1000
+    #     lat, lng = 31.9034937, 34.8131821
+    #     rating_min = request.form["min_rating"]
+    #     tp = request.form["type"]
+    #     limit = int(request.form["limit"])
+    #     print(radius, rating_min, tp)
+    #     query_res = query((lat, lng), radius, rating_min, tp)
+    #     query_res.get_all_pages(limit)
+    #
+    #     session["results"] = query_res.results.get()
+    #     for result in session["results"]:
+    #         if result not in points_of_interest:
+    #             data = session["results"][result]
+    #             data["interest"] = {session["user"]: 0}
+    #             points_of_interest[result] = data
+    #
+    #     session["results_rating"] = query_res.results.sort_by_rating()
+    #     session["results_name"] = query_res.results.sort_by_name()
+    #
+    #     return render_template("main.html", async_mode=socketio.async_mode)
+    # else:
+    #     session["results"] = []
+    #     session["results_rating"] = []
+    #     session["results_name"] = []
 
     return render_template("main.html")
 
@@ -326,9 +331,12 @@ def logged_on_users():
 
 @socketio.on('joined', namespace='/comms')
 def party(data):
-    print(data)
-    if data[:10] == "__self__":
+    if "current_party" not in session:
+        session["current_party"] = None
+    if data == "__self__" and session["current_party"] is None:
         create_party(session["user"])
+        print(123, session['party_members'])
+
 
 if __name__ == '__main__':
     from KNN import KNN

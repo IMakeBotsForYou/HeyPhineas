@@ -6,6 +6,7 @@ var party_users = [];
 var friends = {
 
 }
+var user = "";
 var socket = null;
 
 var in_party = false;
@@ -93,18 +94,23 @@ $(document).ready(function(){
     socket.on('best_3_locations', function(msg) {
         $('#recommended').html(msg);
     });
-
+    var a = document.getElementById("members_panel")
     $("#create_party").on("click", function() {
-         if (!in_party){
-            in_party = true;
-            leader_of_party = true;
-            user_to_invite = $("user_to_invite").val()
-            socket.emit("joined", "__self__|" + user_to_invite);
-        } else {
-        //temporary
-            in_party = false;
-            leader_of_party = false;
-            socket.emit("left_party", 'foo');
+        socket.emit("joined", "__self__");
+        if (!in_party){
+           in_party = true;
+           leader_of_party = true;
+           socket.emit("joined", "__self__");
+           a.innerHTML += `<span style="color:red">${user}</span><span style="color:white"> (owner)</span><br>`
+           a.style.visibility = 'visible';
+       } else {
+           //temporary
+           in_party = false;
+           leader_of_party = false;
+           socket.emit("left_party", 'foo');
+           a.innerHTML = '<h2 class="white">Party Members</h2>' +  +
+           `<button type="submit" name="search_place" class="action_button" style="height:50px;width:50px;">Search</button>`;
+           a.style.visibility = 'hidden';
         }
     });
 
