@@ -56,11 +56,12 @@ def create_party(user, members=None):
 
     session['party_members'] = members.copy()
     session["current_party"] = user
+
     return parties[user]
 
 
 def join_party(owner):
-    parties[owner]["members"].append({"name": owner, "sid": connected_members[owner]["sid"]})
+    parties[owner]["members"].append({"name": session['user'], "sid": connected_members[session['user']]["sid"]})
 
 
 def disconnect_user_from_party(user):
@@ -71,7 +72,7 @@ def disconnect_user_from_party(user):
     members = parties[current_leader]["members"]
     members = filter(lambda member: members["name"] != user, members)
     session['party_members'] = members
-    [emit_to(user=usr, event_name="user_left_party", namespace="/comms", message=session["user"])
+    [emit_to(user=usr, event_name="user_left_party", namespace="/comms", message=user)
      for usr in members]
 
 
@@ -105,15 +106,15 @@ def parse_action(command):
         user_data[session['user']]["friends"].append(requester)
         db['ex'].send_message(title=f"You and {session['user']} are now friends!",
                               desc=f"{session['user']} has accepted your friend request.",
-                              message_sender=session["user"], receiver=request, messagetype="ignore",
+                              sender=session["user"], receiver=request, messagetype="ignore",
                               action="ignore")
         emit_to(requester, 'notif', '/comms', 'notification!')
 
     if command_name == "join_party":
         party_owner = args[1]
-        [emit_to(user=user, event_name="user_joined_party", namespace="/comms", message=session["user"])
-         for user in get_party_members(party_owner)]
         join_party(party_owner)
+        [emit_to(user=user, event_name="user_joined_party", namespace="/comms", message=get_party_members(party_owner))
+         for user in get_party_members(party_owner)]
 
 
 @app.route("/inbox", methods=["POST", "GET"])
@@ -121,7 +122,6 @@ def inbox():
     if "user" not in session:
         return redirect(url_for("register"))
 
-    # emit('reset_notifs', namespace="/comms", room=connected_members[session['user']]['sid'])
     try:
         emit_to(session['user'], "reset_notifs", "/comms")
     except KeyError:
@@ -200,7 +200,10 @@ def register():
 
 
 def emit_to(user: str, event_name: str, namespace: str, message=None):
-    emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
+    try:
+        emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
+    except:
+        pass
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -263,6 +266,20 @@ def broadcast_userdiff():
     print("Data:")
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in connected_members]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
+
+
+@socketio.on('left_party', namespace='/comms')
+def leave_party(data):
+    disconnect_user_from_party(data)
+
+
+@socketio.on('invite_user', namespace='/comms')
+def invite_user(username):
+    db['ex'].send_message(title=f"{session['user']} invites you to a party",
+                          desc=f"{session['user']} has started a party, and wants you to join!",
+                          sender=session["user"], receiver=username, messagetype="question",
+                          action=f"join_party/{session['user']}")
+    emit_to(username, 'notif', '/comms', 'notification!')
 
 
 @socketio.on('ping', namespace='/comms')
@@ -346,12 +363,12 @@ if __name__ == '__main__':
     vls = {}
 
     db = {"ex": database_wrapper.my_db}
-    print(db["ex"].get("users", "username, interests"))
-    for user in db["ex"].get("users", "username"):
-        interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
-        vls[user] = interests.split("|")[1::2]
-    knn = KNN(vls=vls)
-    print(vls)
-    db["knn"] = knn
+    # print(db["ex"].get("users", "username, interests"))
+    # for user in db["ex"].get("users", "username"):
+    #     interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
+    #     vls[user] = interests.split("|")[1::2]
+    # knn = KNN(vls=vls)
+    # print(vls)
+    # db["knn"] = knn
 
     socketio.run(app, host="0.0.0.0", port=8080)
