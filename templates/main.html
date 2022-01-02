@@ -9,6 +9,10 @@
 
 <div class="middle-panel" id="members_panel" style="position:absolute;left:2%;top:10%;margin: 0 auto;width: 15%;visibility:hidden;">
     <h2 class="white">Party Members</h2>
+    <button id="invite_user">
+        <span class="fa fa-user-plus"></span>
+    </button><br><br>
+<!--     Members go here      -->
 </div>
 
 <div class="middle-panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
@@ -166,45 +170,59 @@
 <!--{% endfor %}-->
 </div>
 
+<div class="popup" id="invite_user_popup" style="display: none;">
+    <input type="text" id="invite_user_input" placeholder="ayo user naaaeme ye" autocomplete="off"/><br><br>
+    <button type="button" id="user_invite_close">close</button>
+</div>
 <script>
 
 user = "{{session['user']}}";
 var coll = document.getElementsByClassName("collapsible");
 var i;
 
-/*
-var nb = document.getElementById("sort_by_name");
-var rb = document.getElementById("sort_by_rating");
-var db = document.getElementById("sort_by_distance");
+var invite_user = document.getElementById("invite_user");
+var invite_user_close = document.getElementById("user_invite_close");
+var popup = document.getElementById ("invite_user_popup");
+invite_user.addEventListener ("click", function() {
+    popup.style.display = "block";
+});
 
-var nc = document.getElementById("distance_n");
-var rc = document.getElementById("distance_r");
-var dc = document.getElementById("distance_s");
-
-
-
-nb.addEventListener("click", function() {
-    if (nc.style.display === "none") {
-      rc.style.display = "none";
-      dc.style.display = "none";
-      nc.style.display = "block";
-    }
-})
-rb.addEventListener("click", function() {
-    if (rc.style.display === "none") {
-      rc.style.display = "block";
-      dc.style.display = "none";
-      nc.style.display = "none";
-    }
+invite_user_close.addEventListener ("click", function() {
+    popup.style.display = "none";
 })
 
-db.addEventListener("click", function() {
-    if (dc.style.display === "none") {
-      rc.style.display = "none";
-      dc.style.display = "block";
-      nc.style.display = "none";
-    }
-})*/
+<!--/*-->
+<!--var nb = document.getElementById("sort_by_name");-->
+<!--var rb = document.getElementById("sort_by_rating");-->
+<!--var db = document.getElementById("sort_by_distance");-->
+
+<!--var nc = document.getElementById("distance_n");-->
+<!--var rc = document.getElementById("distance_r");-->
+<!--var dc = document.getElementById("distance_s");-->
+
+
+<!--nb.addEventListener("click", function() {-->
+<!--    if (nc.style.display === "none") {-->
+<!--      rc.style.display = "none";-->
+<!--      dc.style.display = "none";-->
+<!--      nc.style.display = "block";-->
+<!--    }-->
+<!--})-->
+<!--rb.addEventListener("click", function() {-->
+<!--    if (rc.style.display === "none") {-->
+<!--      rc.style.display = "block";-->
+<!--      dc.style.display = "none";-->
+<!--      nc.style.display = "none";-->
+<!--    }-->
+<!--})-->
+
+<!--db.addEventListener("click", function() {-->
+<!--    if (dc.style.display === "none") {-->
+<!--      rc.style.display = "none";-->
+<!--      dc.style.display = "block";-->
+<!--      nc.style.display = "none";-->
+<!--    }-->
+<!--})*/-->
 
 
 for (i = 0; i < coll.length; i++) {
