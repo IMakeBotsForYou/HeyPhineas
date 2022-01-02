@@ -19,8 +19,7 @@ function autocomplete(inp, arr) {
       for (i = 0; i < arr.length; i++) {
         /*check if the item starts with the same letters as the text field value:*/
         if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
-          console.log(arr[i].substr(0, val.length))
-          /*create a DIV element for each matching element:*/
+                  /*create a DIV element for each matching element:*/
           b = document.createElement("DIV");
           b.style.color = "black";
           /*make the matching letters bold:*/

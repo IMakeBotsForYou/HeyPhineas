@@ -1,20 +1,42 @@
 {% extends "log_reg_temp.html" %}
 {% block title %}Inbox{% endblock %}
 {% block form %}
-<script src="/static/js/socket.js"></script>
 <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
- <link rel="stylesheet" href="/static/drawing_things.css">
+<script src="/static/js/socket.js"></script>
+<script src="/static/js/buttons.js"></script>
+<link rel="stylesheet" href="/static/drawing_things.css">
 <br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>
 <h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br><br>
+<script>
+user = "{{session['user']}}";
+</script>
+<div class="popup" id="invite_user_popup">
+    <h2>
+        Invite user
+    </h2>
+    <div>
+        <form method="POST" autocomplete="off" action="" id="add_user_form" style="margin: 0 auto;">
+        <div class="autocomplete" style="position: relative;">
+            <input id="invite_user_input" type="text" name="user_to_add" placeholder="Username">
+
+        </div><br><br>
+          <input class="form-button confirm-commit" id="confirm_invite" type="button" style="float: left;" value="Invite"/>
+          <button type="button" class="form-button close-button" id="user_invite_close" style="float: right;" value="Close">Close</button>
+        </form>
+    </div>
+ </div>
 
 <div class="middle-panel" id="members_panel" style="position:absolute;left:2%;top:10%;margin: 0 auto;width: 15%;visibility:hidden;">
     <h2 class="white">Party Members</h2>
+    <button type="button" id="invite_user">
+        <span class="fa fa-user-plus"></span>
+    </button><br><br>
+<!--     Members go here      -->
 </div>
 
 <div class="middle-panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
     <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>
 </div>
-
 <div class="middle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
     <form action="" method="POST"><br>
         <input type="text" name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
@@ -166,58 +188,4 @@
 <!--{% endfor %}-->
 </div>
 
-<script>
-
-user = "{{session['user']}}";
-var coll = document.getElementsByClassName("collapsible");
-var i;
-
-/*
-var nb = document.getElementById("sort_by_name");
-var rb = document.getElementById("sort_by_rating");
-var db = document.getElementById("sort_by_distance");
-
-var nc = document.getElementById("distance_n");
-var rc = document.getElementById("distance_r");
-var dc = document.getElementById("distance_s");
-
-
-
-nb.addEventListener("click", function() {
-    if (nc.style.display === "none") {
-      rc.style.display = "none";
-      dc.style.display = "none";
-      nc.style.display = "block";
-    }
-})
-rb.addEventListener("click", function() {
-    if (rc.style.display === "none") {
-      rc.style.display = "block";
-      dc.style.display = "none";
-      nc.style.display = "none";
-    }
-})
-
-db.addEventListener("click", function() {
-    if (dc.style.display === "none") {
-      rc.style.display = "none";
-      dc.style.display = "block";
-      nc.style.display = "none";
-    }
-})*/
-
-
-for (i = 0; i < coll.length; i++) {
-  coll[i].addEventListener("click", function() {
-    this.classList.toggle("active");
-    var content = this.nextElementSibling;
-    if (content.style.display === "block") {
-      content.style.display = "none";
-    } else {
-      content.style.display = "block";
-    }
-  });
-
-}
-</script>
 {% endblock %}

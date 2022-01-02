@@ -55,23 +55,24 @@ def create_party(user, members=None):
         connected_members[m]["current party"] = user
 
     session['party_members'] = members.copy()
-    session["current_party"] = user
+    session["current party"] = user
     return parties[user]
 
 
-def join_party(owner):
-    parties[owner]["members"].append({"name": owner, "sid": connected_members[owner]["sid"]})
+def join_party(owner, username):
+    parties[owner]["members"].append({"name": username, "sid": connected_members[username]["sid"]})
+    connected_members[username]["current party"] = owner
 
 
 def disconnect_user_from_party(user):
     # first we update the local data
     current_leader = connected_members[user]["current party"]
     if user == session["user"]:
-        session["current_party"] = None
+        session["current party"] = None
     members = parties[current_leader]["members"]
-    members = filter(lambda member: members["name"] != user, members)
+    members = list(filter(lambda member: members["name"] != user, members))
     session['party_members'] = members
-    [emit_to(user=usr, event_name="user_left_party", namespace="/comms", message=session["user"])
+    [emit_to(user=usr, event_name="update_party_members", namespace="/comms", message=members)
      for usr in members]
 
 
@@ -92,8 +93,13 @@ def fav():
     return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
 
 
-def get_party_members(owner):
-    return [user["name"] for user in parties[owner]["members"]]
+def get_party_members(username):
+    try:
+        x = connected_members[username]["current party"]
+        print("party members", username, [user["name"] for user in parties[x]["members"]])
+        return [user["name"] for user in parties[x]["members"]]
+    except KeyError:
+        return []
 
 
 def parse_action(command):
@@ -111,9 +117,11 @@ def parse_action(command):
 
     if command_name == "join_party":
         party_owner = args[1]
-        [emit_to(user=user, event_name="user_joined_party", namespace="/comms", message=session["user"])
-         for user in get_party_members(party_owner)]
-        join_party(party_owner)
+        join_party(party_owner, session['user'])
+        [emit_to(user=party_member, event_name="update_party_members", namespace="/comms",
+                 message=get_party_members(party_owner))
+         for party_member in get_party_members(party_owner)]
+        print("joined party", get_party_members(session['user']))
 
 
 @app.route("/inbox", methods=["POST", "GET"])
@@ -131,8 +139,8 @@ def inbox():
         message_id = request.form['accept'] + request.form['mark_as_read']
         reaction = 'accept' if request.form['accept'] != "" else 'mark_as_read'
         # first grab the message to see what we need to do with it
-        title, content, sender, receiver, msg_type, action = \
-            db['ex'].get('messages', '*', f'id={message_id}', first=False)[0][1:]
+        _id, title, content, sender, receiver, msg_type, action = \
+            db['ex'].get('messages', '*', f'id={message_id}', first=False)[0]
         print(f"{reaction}: {title} | {msg_type}")
         if reaction != "mark_as_read":
             parse_action(action)
@@ -306,6 +314,13 @@ def logged_on_users():
     broadcast_userdiff()
 
 
+@socketio.on('party_members_list_get', namespace='/comms')
+def get_party_memb():
+    print(session['user'], "REQUESTED DATA\n", [x for x in connected_members], get_party_members(session['user']))
+    emit_to(session['user'], "online_members_get", '/comms', [x for x in connected_members])
+    emit_to(session['user'], "party_members_list_get", '/comms', get_party_members(session['user']))
+
+
 @socketio.on('interested', namespace="/comms")
 def interest(data):
     def sort_em(poi):
@@ -329,13 +344,22 @@ def logged_on_users():
     broadcast_userdiff()
 
 
+@socketio.on('invite_user', namespace='/comms')
+def invite_user(reciever):
+    print(reciever)
+    db['ex'].send_message(title=f"Party invite from {session['user']}!",
+                          desc=f"{session['user']} has invited you to join their party, wanna hang out?",
+                          sender=session["user"], receiver=reciever, messagetype="question",
+                          action=f"join_party/{session['user']}")
+    emit_to(reciever, 'notif', '/comms', 'notification!')
+
+
 @socketio.on('joined', namespace='/comms')
 def party(data):
-    if "current_party" not in session:
-        session["current_party"] = None
-    if data == "__self__" and session["current_party"] is None:
+    if "current party" not in session:
+        session["current party"] = None
+    if data == "__self__" and session["current party"] is None:
         create_party(session["user"])
-        print(123, session['party_members'])
 
 
 if __name__ == '__main__':
