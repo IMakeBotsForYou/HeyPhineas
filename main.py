@@ -1,13 +1,18 @@
-from get_query_results import *
 from flask_socketio import SocketIO, emit
 from flask import *
-import googlemaps
 import database_wrapper
 from time import time
-from keys import *
 import os
-from threading import Thread, Event
 from engineio.payload import Payload
+import os
+from time import time
+
+from engineio.payload import Payload
+from flask import *
+from flask_socketio import SocketIO, emit
+
+import database_wrapper
+
 # import pymongo
 
 Payload.max_decode_packets = 1000
@@ -40,38 +45,42 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 
+def random_location():
+    return random.randint(30, 40), random.randint(30, 40)
+
+
+def get_party_members(user):
+    return [x for x in
+            db['ex'].get_party_members(
+                owner=db['ex'].get('users', 'current_party', f'username="{user}"')[0])
+            if x != ""]
+
+
 def create_party(user, members=None):
     if members is None:
         members = []
-    if user not in members:
-        members.append(user)
 
-    parties[user] = {
-        "creator": {"name": user, "sid": connected_members[user]["sid"]},
-        "members": [{"name": u, "sid": connected_members[u]["sid"]} for u in members]
-    }
-
+    # parties[user] = {
+    #     "creator": {"name": user, "sid": connected_members[user]["sid"]},
+    #     "members": [{"name": u, "sid": connected_members[u]["sid"]} for u in members]
+    # }
+    db['ex'].create_party(user)
+    print('123123123')
     for m in members:
-        connected_members[m]["current party"] = user
-
-    session['party_members'] = members.copy()
-    session["current party"] = user
-    return parties[user]
+        db['ex'].add_to_party(owner=user, user_to_add=m)
+    print(f"created party for {user}")
 
 
 def join_party(owner, username):
-    parties[owner]["members"].append({"name": username, "sid": connected_members[username]["sid"]})
-    connected_members[username]["current party"] = owner
+    db['ex'].add_to_party(owner=owner, user_to_add=username)
 
 
 def disconnect_user_from_party(user):
     # first we update the local data
-    current_leader = connected_members[user]["current party"]
-    if user == session["user"]:
-        session["current party"] = None
-    members = parties[current_leader]["members"]
-    members = list(filter(lambda member: members["name"] != user, members))
-    session['party_members'] = members
+    current_leader = db['ex'].get('users', 'current_party', condition=f'username="{user}"')
+    print('disconnecting', user, 'from', current_leader)
+    db['ex'].remove_from_party(owner=current_leader, user_to_remove=user)
+    members = get_party_members(current_leader)
     [emit_to(user=usr, event_name="update_party_members", namespace="/comms", message=members)
      for usr in members]
 
@@ -91,15 +100,6 @@ def home():
 def fav():
     print(os.path.join(app.root_path, 'static'))
     return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
-
-
-def get_party_members(username):
-    try:
-        x = connected_members[username]["current party"]
-        print("party members", username, [user["name"] for user in parties[x]["members"]])
-        return [user["name"] for user in parties[x]["members"]]
-    except KeyError:
-        return []
 
 
 def parse_action(command):
@@ -166,6 +166,8 @@ def login():
                 session['user'] = user
                 # create the instance folder
                 session['is_admin'] = user == db['ex'].admin
+                # lat, lng = random_location()
+                # session['loc'] = lat, loc
                 return redirect("/")
         except:
             flash("Either the name, or the password are wrong.")
@@ -208,7 +210,10 @@ def register():
 
 
 def emit_to(user: str, event_name: str, namespace: str, message=None):
-    emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
+    try:
+        emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
+    except Exception as e:
+        print(e)
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -316,9 +321,10 @@ def logged_on_users():
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
-    print(session['user'], "REQUESTED DATA\n", [x for x in connected_members], get_party_members(session['user']))
-    emit_to(session['user'], "online_members_get", '/comms', [x for x in connected_members])
-    emit_to(session['user'], "party_members_list_get", '/comms', get_party_members(session['user']))
+    emit_to(user=session['user'], event_name="party_members_list_get",
+            namespace='/comms', message=get_party_members(session['user']))
+    emit_to(user=session['user'], event_name="online_members_get",
+            namespace='/comms', message=[x for x in connected_members])
 
 
 @socketio.on('interested', namespace="/comms")
@@ -346,7 +352,7 @@ def logged_on_users():
 
 @socketio.on('invite_user', namespace='/comms')
 def invite_user(reciever):
-    print(reciever)
+    print("inviting", reciever)
     db['ex'].send_message(title=f"Party invite from {session['user']}!",
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=reciever, messagetype="question",
@@ -356,10 +362,26 @@ def invite_user(reciever):
 
 @socketio.on('joined', namespace='/comms')
 def party(data):
-    if "current party" not in session:
-        session["current party"] = None
-    if data == "__self__" and session["current party"] is None:
+    if 'current party' not in session:
+        session['current party'] = 0
+    if data == "__self__":
+        print("creating party for ",session['user'])
         create_party(session["user"])
+
+
+@socketio.on('left_party', namespace='/comms')
+def party(data):
+    if 'current party' not in session:
+        session['current party'] = 0
+    if data == "__self__":
+        leader = db['ex'].get('users',
+                              'current_party',
+                              condition=f'username={session["user"]}')
+        if leader == session['user']:
+            for member in get_party_members(session['user']):
+                db['ex'].remove_from_party(session["user"], member)
+        else:
+            db['ex'].remove_from_party(leader, session["user"])
 
 
 if __name__ == '__main__':

@@ -20,19 +20,18 @@ $(document).ready(function(){
 
     function update_party_members(data){
        var a = document.getElementById("members_panel")
-       a.innerHTML = party_text;
-       a.innerHTML += `<span style="color:red">${user}</span><span style="color:white"> (owner)</span><br>`;
+       console.log(data)
        if (data.length == 0){
             return;
        }
+       a.innerHTML = party_text;
+       a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
        a.style.visibility = 'visible';
        leader_of_party = data[0] == user;
 
 
        for(let i = 1; i < data.length; i++){
-           if (data[i] != user){
-               a.innerHTML += `<p class="white">${data[i]}</p><br>`
-           }
+           a.innerHTML += `<p class="white">${data[i]}</p><br>`
        }
     }
 
@@ -47,6 +46,7 @@ $(document).ready(function(){
     });
 
     if(window.location.href.split("/")[3] == ''){
+        console.log('emitted partymemberslistget');
         socket.emit('party_members_list_get')
     }
 

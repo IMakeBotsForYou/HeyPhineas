@@ -81,6 +81,37 @@ class Database:
             a = self.get(na, "id")
             self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
+    def create_party(self, user):
+        if len(self.get('parties', 'creator', condition=f'creator="{user}"')) > 0:
+            # first we delete the party that already exists
+            self.remove('parties', condition=f'creator="{user}"')
+        self.add('parties', reformat(user, ""))
+        self.add_to_party(user, user)
+
+    def add_to_party(self, owner, user_to_add):
+        members = self.get('parties', 'members', condition=f'creator="{owner}"')
+        if len(members) == 0:
+            members = []
+        else:
+            members = members[0].split(", ")
+        members.append(user_to_add)
+        members = list({x for x in [a for a in members if a != ""]})  # remove dupes
+        self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
+        self.edit('users', 'current_party', newvalue=owner, condition=f'username="{user_to_add}"')
+
+    def remove_from_party(self, owner, user_to_remove):
+        members = self.get('parties', 'members', condition=f'creator="{owner}"', first=False)[0].split(", ")
+        members.remove(user_to_remove)
+        self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
+        self.edit('users', 'current_party', newvalue="", condition=f'username="{user_to_remove}"')
+
+    def get_party_members(self, owner):
+        a = self.get('parties', 'members', condition=f'creator="{owner}"')
+        if len(a) == 0:
+            return []
+        else:
+            return a[0].split(", ")
+
     def get_messages(self, user=None):
         mes = self.get('messages', '*', condition=f'receiver="{user}"' if user else None, first=False)
         ret = {"status": "empty", "messages": {}}
@@ -129,6 +160,7 @@ class Database:
     def add(self, table, values):
         # try:
         self.fix_seq()
+        print(F"INSERT INTO {table} VALUES {values}")
         self.data.execute(F"INSERT INTO {table} VALUES {values}")
         self.fix_seq()
         # except Exception as e:
