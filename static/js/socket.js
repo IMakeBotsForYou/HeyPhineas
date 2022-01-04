@@ -6,17 +6,19 @@ var party_users = [];
 var friends = {
 
 }
-var socket = null;
+var lat = 0;
+var lng = 0;
+var socket = 0;
 
 var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
 var leader_of_party = false;
 
+//connect to the socket server.
+socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 
 $(document).ready(function(){
-    //connect to the socket server.
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 
     function update_party_members(data){
        var a = document.getElementById("members_panel")
@@ -24,6 +26,7 @@ $(document).ready(function(){
        if (data.length == 0){
             return;
        }
+
        a.innerHTML = party_text;
        a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
        a.style.visibility = 'visible';
@@ -33,6 +36,13 @@ $(document).ready(function(){
        for(let i = 1; i < data.length; i++){
            a.innerHTML += `<p class="white">${data[i]}</p><br>`
        }
+
+       socket.emit('get_coords_of_party')
+    }
+
+    if(window.location.href.split("/")[3] == ''){
+        console.log('emitted partymemberslistget');
+        socket.emit('party_members_list_get')
     }
 
     socket.on('party_members_list_get', function(data){
@@ -45,10 +55,10 @@ $(document).ready(function(){
         autocomplete(document.getElementById("invite_user_input"), online_users);
     });
 
-    if(window.location.href.split("/")[3] == ''){
-        console.log('emitted partymemberslistget');
-        socket.emit('party_members_list_get')
-    }
+
+
+
+    socket.emit('party_members_list_get')
 
 
     function ping_every_second(){
@@ -85,6 +95,8 @@ $(document).ready(function(){
             });
         });
     });
+
+
 
     socket.on('update_party_members', function(data){
        update_party_members(data);

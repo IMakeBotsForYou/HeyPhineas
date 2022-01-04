@@ -5,7 +5,8 @@ from time import time
 import os
 from engineio.payload import Payload
 import os
-from time import time
+import random
+from time import time, sleep
 
 from engineio.payload import Payload
 from flask import *
@@ -46,14 +47,12 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 
 def random_location():
-    return random.randint(30, 40), random.randint(30, 40)
+    return random.uniform(31.2, 31.8), random.uniform(34.0, 35.0)
 
 
 def get_party_members(user):
-    return [x for x in
-            db['ex'].get_party_members(
-                owner=db['ex'].get('users', 'current_party', f'username="{user}"')[0])
-            if x != ""]
+    return db['ex'].get_party_members(
+            owner=db['ex'].get('users', 'current_party', f'username="{user}"')[0])
 
 
 def create_party(user, members=None):
@@ -93,6 +92,7 @@ def home():
     for key in list(session.keys()):
         if key != "user":
             session.pop(key)
+
     return render_template("main.html")
 
 
@@ -166,10 +166,10 @@ def login():
                 session['user'] = user
                 # create the instance folder
                 session['is_admin'] = user == db['ex'].admin
-                # lat, lng = random_location()
-                # session['loc'] = lat, loc
+
                 return redirect("/")
-        except:
+        except Exception as e:
+            flash(e)
             flash("Either the name, or the password are wrong.")
             return render_template("login.html")
     else:
@@ -209,7 +209,7 @@ def register():
         return render_template("register.html")
 
 
-def emit_to(user: str, event_name: str, namespace: str, message=None):
+def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None):
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
     except Exception as e:
@@ -270,9 +270,8 @@ def broadcast_userdiff():
     session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
                               'offline': [friend for friend in fr if friend not in connected_members]}
 
-    emit_to(session["user"], 'friend_data', "/comms", message=session["friend_data"])
-    emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]},
-         namespace='/comms')
+    emit_to(session["user"], 'friend_data', message=session["friend_data"])
+    emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
     print("Data:")
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in connected_members]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
@@ -299,6 +298,27 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
 
+@socketio.on('get_coords_of_party', namespace='/comms')
+def get_coords_of_party():
+
+
+    members = get_party_members(session['user'])
+    data = []
+
+    for member in members:
+        try:
+
+            lat, lng = random_location()
+            connected_members[member]["loc"] = lat, lng
+
+            data.append((member, connected_members[member]["loc"]))
+        except Exception as e:
+            print(connected_members)
+            print('error', e)
+    emit_to(session['user'], 'party_member_coords', '/comms',
+            message=data)
+
+
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
     # request.sid
@@ -316,15 +336,17 @@ def logged_on_users():
             "friends": {},
             "visited_locations": {}
         }
+    lat, lng = random_location()
+    connected_members[session['user']]["loc"] = lat, lng
     broadcast_userdiff()
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
     emit_to(user=session['user'], event_name="party_members_list_get",
-            namespace='/comms', message=get_party_members(session['user']))
+            message=get_party_members(session['user']))
     emit_to(user=session['user'], event_name="online_members_get",
-            namespace='/comms', message=[x for x in connected_members])
+            message=[x for x in connected_members])
 
 
 @socketio.on('interested', namespace="/comms")
@@ -341,7 +363,7 @@ def interest(data):
 
     best_3 = ",   ".join([f"{ob[0]}" for ob in places][:3])
 
-    [emit_to(user=user, event_name="best_3_locations", namespace="/comms", message=best_3)
+    [emit_to(user=user, event_name="best_3_locations", message=best_3)
      for user in connected_members]
 
 
@@ -357,7 +379,7 @@ def invite_user(reciever):
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=reciever, messagetype="question",
                           action=f"join_party/{session['user']}")
-    emit_to(reciever, 'notif', '/comms', 'notification!')
+    emit_to(reciever, 'notif','notification!')
 
 
 @socketio.on('joined', namespace='/comms')

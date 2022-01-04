@@ -1,6 +1,6 @@
 import sqlite3
 import json
-
+import threading
 
 def st2int(array):
     return [int(x) for x in array]
@@ -55,7 +55,7 @@ def reformat(*args):
 
 class Database:
     def __init__(self, path):
-
+        self.lock = threading.Lock()
         self.admin = "Dan Lvov"
         self.path = path.split(".")[0] + '.db'
         self.data = sqlite3.connect(self.path, check_same_thread=False)
@@ -83,8 +83,11 @@ class Database:
 
     def create_party(self, user):
         if len(self.get('parties', 'creator', condition=f'creator="{user}"')) > 0:
-            # first we delete the party that already exists
+            for member in self.get_party_members(user):
+                print('removing', member)
+                self.remove_from_party(user, member)
             self.remove('parties', condition=f'creator="{user}"')
+
         self.add('parties', reformat(user, ""))
         self.add_to_party(user, user)
 
@@ -100,7 +103,7 @@ class Database:
         self.edit('users', 'current_party', newvalue=owner, condition=f'username="{user_to_add}"')
 
     def remove_from_party(self, owner, user_to_remove):
-        members = self.get('parties', 'members', condition=f'creator="{owner}"', first=False)[0].split(", ")
+        members = self.get('parties', 'members', condition=f'creator="{owner}"')[0].split(", ")
         members.remove(user_to_remove)
         self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
         self.edit('users', 'current_party', newvalue="", condition=f'username="{user_to_remove}"')
@@ -147,14 +150,23 @@ class Database:
         :param fetch: Number to of results to return
         :return: The results
         """
-        self.cursor.execute(line)
-        if not fetch or fetch == -1:
-            ret = self.cursor.fetchall()
-            self.data.commit()
-            return ret
-        else:
-            ret = self.cursor.fetchmany(fetch)
-            self.data.commit()
+        ret = None
+        try:
+            self.lock.acquire(True)
+
+            self.cursor.execute(line)
+            if not fetch or fetch == -1:
+                ret = self.cursor.fetchall()
+                self.data.commit()
+
+            else:
+                ret = self.cursor.fetchmany(fetch)
+                self.data.commit()
+            # do something
+        finally:
+            self.lock.release()
+            if ret is None:
+                print(f"Returning None, {line}")
             return ret
 
     def add(self, table, values):

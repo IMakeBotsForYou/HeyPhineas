@@ -19,17 +19,37 @@ function showSteps(directionResult, markerArray, stepDisplay, map) {
 }
 
 
+
+
+
+
 var onChangeHandler = null;
 
 function initMap() {
   const markerArray = [];
   // Instantiate a directions service.
   const directionsService = new google.maps.DirectionsService();
-  // Create a map and center it on Manhattan.
+
+  // Create a map and center it on my house.
   const map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 13,
+    zoom: 8,
     center: { lat: 31.894756, lng: 34.809322 },
   });
+
+  socket.on('party_member_coords', function(data){
+    for(let i = 0; i < data.length; i++){
+        console.log(data);
+        var name = data[i][0];
+        var latlng = data[i][1];
+        var myLatLng = { lat: latlng[0], lng: latlng[1] };
+        new google.maps.Marker({
+            position: myLatLng,
+            title: name,
+            map: map
+        });
+    }
+});
+
   // Create a renderer for directions and bind it to the map.
   const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
   // Instantiate an info window to hold step text.
@@ -43,6 +63,7 @@ function initMap() {
       stepDisplay,
       map
     );
+
 };
   // Listen to change events from the start and end lists.
   directionsRenderer.setMap(map); // Existing map object displays directions
