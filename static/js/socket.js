@@ -6,16 +6,58 @@ var party_users = [];
 var friends = {
 
 }
-var socket = null;
+var lat = 0;
+var lng = 0;
+var socket = 0;
 
 var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
+var members_text = "";
 var in_party = false;
 var leader_of_party = false;
 
+//connect to the socket server.
+socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 
 $(document).ready(function(){
-    //connect to the socket server.
-    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
+    function update_party_members(data){
+       var a = document.getElementById("members_panel")
+       console.log(data)
+       if (data.length == 0){
+            return;
+       }
+
+       a.innerHTML = party_text;
+       a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
+       a.style.visibility = 'visible';
+       leader_of_party = data[0] == user;
+
+
+       for(let i = 1; i < data.length; i++){
+           a.innerHTML += `<p class="white">${data[i]}</p><br>`
+       }
+
+       socket.emit('get_coords_of_party')
+    }
+
+    if(window.location.href.split("/")[3] == ''){
+        console.log('emitted partymemberslistget');
+        socket.emit('party_members_list_get')
+    }
+
+    socket.on('party_members_list_get', function(data){
+        update_party_members(data)
+    });
+
+    socket.on('online_members_get', function(data){
+        online_users = data
+        autocomplete(document.getElementById("invite_user_input"), online_users);
+    });
+
+
+
+
+    socket.emit('party_members_list_get')
+
 
     function ping_every_second(){
         let date = new Date;
@@ -52,26 +94,11 @@ $(document).ready(function(){
         });
     });
 
-    function update_party_members(data){
-       var a = document.getElementById("members_panel")
-       a.innerHTML = party_text;
-       a.innerHTML += `<span style="color:red">${user}</span><span style="color:white"> (owner)</span><br>`;
 
-       leader_of_party = data[0] == user;
-       a.style.visibility = 'visible';
 
-       for(let i = 0; i < data.length; i++){
-           if (data[i] != user){
-               a.innerHTML += `<p class="white">${data[i]}</p><br>`
-           }
-       }
-    }
-
-    socket.on('user_joined_party', function(data){
-       socket.emit("joined", "__self__");
-       update_party_members(data)
+    socket.on('update_party_members', function(data){
+       update_party_members(data);
     });
-
 
     socket.on('friend_data', function(data){
         console.log(data)
@@ -112,38 +139,29 @@ $(document).ready(function(){
         $('#recommended').html(msg);
     });
 
-    socket.on('user_left_party', function(user) {
 
-    });
-
-    var a = document.getElementById("members_panel")
 
     $("#create_party").on("click", function() {
-        socket.emit("joined", "__self__");
+        var a = document.getElementById("members_panel")
         if (!in_party){
-           in_party = true;
-           leader_of_party = true;
+           update_party_members([user])
            socket.emit("joined", "__self__");
-           a.innerHTML += `<span style="color:red">${user}</span><span style="color:white"> (owner)</span><br>`;
            a.style.visibility = 'visible';
        } else {
-           //temporary
            in_party = false;
            leader_of_party = false;
            socket.emit("left_party", 'foo');
            a.innerHTML = party_text;
            a.style.visibility = 'hidden';
+           party_users=[];
         }
     });
 
     $("#confirm_invite").on("click", function() {
-        var a = document.getElementById("invite_user_input")
+        var invite_user_input = document.getElementById("invite_user_input")
         socket.emit('invite_user', invite_user_input.value);
+        console.log(invite_user_input.value);
         $("#invite_user_popup").fadeOut()
         $("#invite_user").prop("disabled", false);
-        party_users = [];
-        socket.emit('left_party', user)
     });
-
-
 });

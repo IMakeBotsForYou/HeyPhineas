@@ -18,7 +18,7 @@ user = "{{session['user']}}";
         <form method="POST" autocomplete="off" action="" id="add_user_form" style="margin: 0 auto;">
         <div class="autocomplete" style="position: relative;">
             <input id="invite_user_input" type="text" name="user_to_add" placeholder="Username">
-            <script>autocomplete(document.getElementById("invite_user_input"), online_users);</script>
+
         </div><br><br>
           <input class="form-button confirm-commit" id="confirm_invite" type="button" style="float: left;" value="Invite"/>
           <button type="button" class="form-button close-button" id="user_invite_close" style="float: right;" value="Close">Close</button>
@@ -37,22 +37,15 @@ user = "{{session['user']}}";
 <div class="middle-panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
     <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>
 </div>
-<div class="middle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
-    <form action="" method="POST"><br>
-        <input type="text" name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
-        <input type="text" name="radius" id="radius" placeholder="Radius" autocomplete="off"><br><br>
-        <input type="text" name="min_rating" id="min_rating" placeholder="Rating" autocomplete="off"><br><br>
-        <input type="text" name="limit" id="limit" placeholder="Limit" autocomplete="off"><br><br>
-        <button type="submit" name="search_place" class="action_button" style="width: 30%;">Search</button>
-    </form>
+
+<div id="floating-panel">
+<input name="secret_end" id="secret_end" hidden>
+<input name="secret_start" id="secret_start" hidden>
 </div>
-    <div id="floating-panel">
-    <input name="secret_end" id="secret_end" hidden>
-    </div>
-    <h3 id="msg" class="white" style="text-align: center;"></h3>
-    <div id="map" style="height:500px; width: 50%; margin-left:25%;"></div>
-    &nbsp;
-    <div id="warnings-panel"></div>
+<h3 id="msg" class="white" style="text-align: center;"></h3>
+<div id="map" style="height:500px; width: 50%; margin-left:27%;"></div>
+&nbsp;
+<div id="warnings-panel"></div>
 
 
 <script src="/static/js/maplogic.js"></script>
@@ -102,7 +95,7 @@ user = "{{session['user']}}";
                 //console.log(document.getElementById("secret_end").value);
                 document.getElementById("secret_end").value = "{{place["location"][0]}}, {{place["location"][1]}}";
                 //a = $("#secret_end").value;
-                onChangeHandler();
+                //onChangeHandler();
 
                 // notify the server that we are interest in this location
                 socket.emit("interested", "{{place['id']}}");
@@ -187,5 +180,13 @@ user = "{{session['user']}}";
 <!--    {% endwith %}-->
 <!--{% endfor %}-->
 </div>
-
+<div class="middle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
+    <form action="" method="POST"><br>
+        <input type="text" name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
+        <input type="text" name="radius" id="radius" placeholder="Radius" autocomplete="off"><br><br>
+        <input type="text" name="min_rating" id="min_rating" placeholder="Rating" autocomplete="off"><br><br>
+        <input type="text" name="limit" id="limit" placeholder="Limit" autocomplete="off"><br><br>
+        <button type="submit" name="search_place" class="action_button" style="width: 30%;">Search</button>
+    </form>
+</div>
 {% endblock %}

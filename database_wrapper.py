@@ -1,6 +1,6 @@
 import sqlite3
 import json
-
+import threading
 
 def st2int(array):
     return [int(x) for x in array]
@@ -55,7 +55,7 @@ def reformat(*args):
 
 class Database:
     def __init__(self, path):
-
+        self.lock = threading.Lock()
         self.admin = "Dan Lvov"
         self.path = path.split(".")[0] + '.db'
         self.data = sqlite3.connect(self.path, check_same_thread=False)
@@ -80,6 +80,40 @@ class Database:
         for na in columns:
             a = self.get(na, "id")
             self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
+
+    def create_party(self, user):
+        if len(self.get('parties', 'creator', condition=f'creator="{user}"')) > 0:
+            for member in self.get_party_members(user):
+                print('removing', member)
+                self.remove_from_party(user, member)
+            self.remove('parties', condition=f'creator="{user}"')
+
+        self.add('parties', reformat(user, ""))
+        self.add_to_party(user, user)
+
+    def add_to_party(self, owner, user_to_add):
+        members = self.get('parties', 'members', condition=f'creator="{owner}"')
+        if len(members) == 0:
+            members = []
+        else:
+            members = members[0].split(", ")
+        members.append(user_to_add)
+        members = list({x for x in [a for a in members if a != ""]})  # remove dupes
+        self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
+        self.edit('users', 'current_party', newvalue=owner, condition=f'username="{user_to_add}"')
+
+    def remove_from_party(self, owner, user_to_remove):
+        members = self.get('parties', 'members', condition=f'creator="{owner}"')[0].split(", ")
+        members.remove(user_to_remove)
+        self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
+        self.edit('users', 'current_party', newvalue="", condition=f'username="{user_to_remove}"')
+
+    def get_party_members(self, owner):
+        a = self.get('parties', 'members', condition=f'creator="{owner}"')
+        if len(a) == 0:
+            return []
+        else:
+            return a[0].split(", ")
 
     def get_messages(self, user=None):
         mes = self.get('messages', '*', condition=f'receiver="{user}"' if user else None, first=False)
@@ -116,27 +150,37 @@ class Database:
         :param fetch: Number to of results to return
         :return: The results
         """
-        self.cursor.execute(line)
-        if not fetch or fetch == -1:
-            ret = self.cursor.fetchall()
-            self.data.commit()
-            return ret
-        else:
-            ret = self.cursor.fetchmany(fetch)
-            self.data.commit()
+        ret = None
+        try:
+            self.lock.acquire(True)
+
+            self.cursor.execute(line)
+            if not fetch or fetch == -1:
+                ret = self.cursor.fetchall()
+                self.data.commit()
+
+            else:
+                ret = self.cursor.fetchmany(fetch)
+                self.data.commit()
+            # do something
+        finally:
+            self.lock.release()
+            if ret is None:
+                print(f"Returning None, {line}")
             return ret
 
     def add(self, table, values):
         # try:
         self.fix_seq()
-        self.data.execute(F"INSERT INTO {table} VALUES {values}")
+        print(F"INSERT INTO {table} VALUES {values}")
+        self.execute(F"INSERT INTO {table} VALUES {values}")
         self.fix_seq()
         # except Exception as e:
         #     print(1, e)
         self.data.commit()
 
     def remove(self, table, condition=None):
-        self.data.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
+        self.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
         self.fix_seq()
 
     def edit(self, table, column, newvalue, condition=None):
@@ -178,7 +222,7 @@ class Database:
     def remove_user(self, name, password):
         try:
             # if password == self.execute(f'SELECT password FROM users WHERE username="{name}"', 1)[0][0]:
-            self.data.execute(f'DELETE FROM users WHERE username="{name}"')
+            self.execute(f'DELETE FROM users WHERE username="{name}"')
             # else:
             #     print("Wrong password, you can't do that.")
         except IndexError:

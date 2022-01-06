@@ -1,13 +1,19 @@
-from get_query_results import *
 from flask_socketio import SocketIO, emit
 from flask import *
-import googlemaps
 import database_wrapper
 from time import time
-from keys import *
 import os
-from threading import Thread, Event
 from engineio.payload import Payload
+import os
+import random
+from time import time, sleep
+
+from engineio.payload import Payload
+from flask import *
+from flask_socketio import SocketIO, emit
+
+import database_wrapper
+
 # import pymongo
 
 Payload.max_decode_packets = 1000
@@ -40,39 +46,41 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 
+def random_location():
+    return random.uniform(31.866, 31.929), random.uniform(34.755, 34.842)
+
+
+def get_party_members(user):
+    return db['ex'].get_party_members(
+            owner=db['ex'].get('users', 'current_party', f'username="{user}"')[0])
+
+
 def create_party(user, members=None):
     if members is None:
         members = []
-    if user not in members:
-        members.append(user)
 
-    parties[user] = {
-        "creator": {"name": user, "sid": connected_members[user]["sid"]},
-        "members": [{"name": u, "sid": connected_members[u]["sid"]} for u in members]
-    }
-
+    # parties[user] = {
+    #     "creator": {"name": user, "sid": connected_members[user]["sid"]},
+    #     "members": [{"name": u, "sid": connected_members[u]["sid"]} for u in members]
+    # }
+    db['ex'].create_party(user)
+    print('123123123')
     for m in members:
-        connected_members[m]["current party"] = user
-
-    session['party_members'] = members.copy()
-    session["current_party"] = user
-
-    return parties[user]
+        db['ex'].add_to_party(owner=user, user_to_add=m)
+    print(f"created party for {user}")
 
 
-def join_party(owner):
-    parties[owner]["members"].append({"name": session['user'], "sid": connected_members[session['user']]["sid"]})
+def join_party(owner, username):
+    db['ex'].add_to_party(owner=owner, user_to_add=username)
 
 
 def disconnect_user_from_party(user):
     # first we update the local data
-    current_leader = connected_members[user]["current party"]
-    if user == session["user"]:
-        session["current_party"] = None
-    members = parties[current_leader]["members"]
-    members = filter(lambda member: members["name"] != user, members)
-    session['party_members'] = members
-    [emit_to(user=usr, event_name="user_left_party", namespace="/comms", message=user)
+    current_leader = db['ex'].get('users', 'current_party', condition=f'username="{user}"')
+    print('disconnecting', user, 'from', current_leader)
+    db['ex'].remove_from_party(owner=current_leader, user_to_remove=user)
+    members = get_party_members(current_leader)
+    [emit_to(user=usr, event_name="update_party_members", namespace="/comms", message=members)
      for usr in members]
 
 
@@ -84,6 +92,7 @@ def home():
     for key in list(session.keys()):
         if key != "user":
             session.pop(key)
+
     return render_template("main.html")
 
 
@@ -91,10 +100,6 @@ def home():
 def fav():
     print(os.path.join(app.root_path, 'static'))
     return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
-
-
-def get_party_members(owner):
-    return [user["name"] for user in parties[owner]["members"]]
 
 
 def parse_action(command):
@@ -106,15 +111,17 @@ def parse_action(command):
         user_data[session['user']]["friends"].append(requester)
         db['ex'].send_message(title=f"You and {session['user']} are now friends!",
                               desc=f"{session['user']} has accepted your friend request.",
-                              sender=session["user"], receiver=request, messagetype="ignore",
+                              message_sender=session["user"], receiver=request, messagetype="ignore",
                               action="ignore")
         emit_to(requester, 'notif', '/comms', 'notification!')
 
     if command_name == "join_party":
         party_owner = args[1]
-        join_party(party_owner)
-        [emit_to(user=user, event_name="user_joined_party", namespace="/comms", message=get_party_members(party_owner))
-         for user in get_party_members(party_owner)]
+        join_party(party_owner, session['user'])
+        [emit_to(user=party_member, event_name="update_party_members", namespace="/comms",
+                 message=get_party_members(party_owner))
+         for party_member in get_party_members(party_owner)]
+        print("joined party", get_party_members(session['user']))
 
 
 @app.route("/inbox", methods=["POST", "GET"])
@@ -122,6 +129,7 @@ def inbox():
     if "user" not in session:
         return redirect(url_for("register"))
 
+    # emit('reset_notifs', namespace="/comms", room=connected_members[session['user']]['sid'])
     try:
         emit_to(session['user'], "reset_notifs", "/comms")
     except KeyError:
@@ -131,8 +139,8 @@ def inbox():
         message_id = request.form['accept'] + request.form['mark_as_read']
         reaction = 'accept' if request.form['accept'] != "" else 'mark_as_read'
         # first grab the message to see what we need to do with it
-        title, content, sender, receiver, msg_type, action = \
-            db['ex'].get('messages', '*', f'id={message_id}', first=False)[0][1:]
+        _id, title, content, sender, receiver, msg_type, action = \
+            db['ex'].get('messages', '*', f'id={message_id}', first=False)[0]
         print(f"{reaction}: {title} | {msg_type}")
         if reaction != "mark_as_read":
             parse_action(action)
@@ -158,8 +166,10 @@ def login():
                 session['user'] = user
                 # create the instance folder
                 session['is_admin'] = user == db['ex'].admin
+
                 return redirect("/")
-        except:
+        except Exception as e:
+            flash(e)
             flash("Either the name, or the password are wrong.")
             return render_template("login.html")
     else:
@@ -199,11 +209,11 @@ def register():
         return render_template("register.html")
 
 
-def emit_to(user: str, event_name: str, namespace: str, message=None):
+def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None):
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
-    except:
-        pass
+    except Exception as e:
+        print(e)
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -260,26 +270,11 @@ def broadcast_userdiff():
     session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
                               'offline': [friend for friend in fr if friend not in connected_members]}
 
-    emit_to(session["user"], 'friend_data', "/comms", message=session["friend_data"])
-    emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]},
-         namespace='/comms')
+    emit_to(session["user"], 'friend_data', message=session["friend_data"])
+    emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
     print("Data:")
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in connected_members]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
-
-
-@socketio.on('left_party', namespace='/comms')
-def leave_party(data):
-    disconnect_user_from_party(data)
-
-
-@socketio.on('invite_user', namespace='/comms')
-def invite_user(username):
-    db['ex'].send_message(title=f"{session['user']} invites you to a party",
-                          desc=f"{session['user']} has started a party, and wants you to join!",
-                          sender=session["user"], receiver=username, messagetype="question",
-                          action=f"join_party/{session['user']}")
-    emit_to(username, 'notif', '/comms', 'notification!')
 
 
 @socketio.on('ping', namespace='/comms')
@@ -303,6 +298,27 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
 
+@socketio.on('get_coords_of_party', namespace='/comms')
+def get_coords_of_party():
+
+    members = get_party_members(session['user'])
+    data = []
+
+    for member in members:
+        try:
+
+            lat, lng = random_location()
+            connected_members[member]["loc"] = lat, lng
+
+            data.append((member, connected_members[member]["loc"]))
+        except Exception as e:
+            print(connected_members)
+            print('error', e)
+
+    [emit_to(member, 'party_member_coords', '/comms',
+            message=data) for member in get_party_members(session['user'])]
+
+
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
     # request.sid
@@ -311,8 +327,7 @@ def logged_on_users():
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
-        "sid": request.sid,
-        "current party": None
+        "sid": request.sid
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
@@ -320,7 +335,17 @@ def logged_on_users():
             "friends": {},
             "visited_locations": {}
         }
+    lat, lng = random_location()
+    connected_members[session['user']]["loc"] = lat, lng
     broadcast_userdiff()
+
+
+@socketio.on('party_members_list_get', namespace='/comms')
+def get_party_memb():
+    emit_to(user=session['user'], event_name="party_members_list_get",
+            message=get_party_members(session['user']))
+    emit_to(user=session['user'], event_name="online_members_get",
+            message=[x for x in connected_members])
 
 
 @socketio.on('interested', namespace="/comms")
@@ -337,7 +362,7 @@ def interest(data):
 
     best_3 = ",   ".join([f"{ob[0]}" for ob in places][:3])
 
-    [emit_to(user=user, event_name="best_3_locations", namespace="/comms", message=best_3)
+    [emit_to(user=user, event_name="best_3_locations", message=best_3)
      for user in connected_members]
 
 
@@ -346,13 +371,38 @@ def logged_on_users():
     broadcast_userdiff()
 
 
+@socketio.on('invite_user', namespace='/comms')
+def invite_user(reciever):
+    print("inviting", reciever)
+    db['ex'].send_message(title=f"Party invite from {session['user']}!",
+                          desc=f"{session['user']} has invited you to join their party, wanna hang out?",
+                          sender=session["user"], receiver=reciever, messagetype="question",
+                          action=f"join_party/{session['user']}")
+    emit_to(reciever, 'notif','notification!')
+
+
 @socketio.on('joined', namespace='/comms')
 def party(data):
-    if "current_party" not in session:
-        session["current_party"] = None
-    if data == "__self__" and session["current_party"] is None:
+    if 'current party' not in session:
+        session['current party'] = 0
+    if data == "__self__":
+        print("creating party for ",session['user'])
         create_party(session["user"])
-        print(123, session['party_members'])
+
+
+@socketio.on('left_party', namespace='/comms')
+def party(data):
+    if 'current party' not in session:
+        session['current party'] = 0
+    if data == "__self__":
+        leader = db['ex'].get('users',
+                              'current_party',
+                              condition=f'username={session["user"]}')
+        if leader == session['user']:
+            for member in get_party_members(session['user']):
+                db['ex'].remove_from_party(session["user"], member)
+        else:
+            db['ex'].remove_from_party(leader, session["user"])
 
 
 if __name__ == '__main__':
@@ -363,12 +413,12 @@ if __name__ == '__main__':
     vls = {}
 
     db = {"ex": database_wrapper.my_db}
-    # print(db["ex"].get("users", "username, interests"))
-    # for user in db["ex"].get("users", "username"):
-    #     interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
-    #     vls[user] = interests.split("|")[1::2]
-    # knn = KNN(vls=vls)
-    # print(vls)
-    # db["knn"] = knn
+    print(db["ex"].get("users", "username, interests"))
+    for user in db["ex"].get("users", "username"):
+        interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
+        vls[user] = interests.split("|")[1::2]
+    knn = KNN(vls=vls)
+    print(vls)
+    db["knn"] = knn
 
     socketio.run(app, host="0.0.0.0", port=8080)
