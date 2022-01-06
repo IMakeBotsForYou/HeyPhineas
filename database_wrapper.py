@@ -173,14 +173,14 @@ class Database:
         # try:
         self.fix_seq()
         print(F"INSERT INTO {table} VALUES {values}")
-        self.data.execute(F"INSERT INTO {table} VALUES {values}")
+        self.execute(F"INSERT INTO {table} VALUES {values}")
         self.fix_seq()
         # except Exception as e:
         #     print(1, e)
         self.data.commit()
 
     def remove(self, table, condition=None):
-        self.data.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
+        self.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
         self.fix_seq()
 
     def edit(self, table, column, newvalue, condition=None):
@@ -222,7 +222,7 @@ class Database:
     def remove_user(self, name, password):
         try:
             # if password == self.execute(f'SELECT password FROM users WHERE username="{name}"', 1)[0][0]:
-            self.data.execute(f'DELETE FROM users WHERE username="{name}"')
+            self.execute(f'DELETE FROM users WHERE username="{name}"')
             # else:
             #     print("Wrong password, you can't do that.")
         except IndexError:

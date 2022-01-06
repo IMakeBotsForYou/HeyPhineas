@@ -40,6 +40,7 @@ user = "{{session['user']}}";
 
 <div id="floating-panel">
 <input name="secret_end" id="secret_end" hidden>
+<input name="secret_start" id="secret_start" hidden>
 </div>
 <h3 id="msg" class="white" style="text-align: center;"></h3>
 <div id="map" style="height:500px; width: 50%; margin-left:27%;"></div>
@@ -94,7 +95,7 @@ user = "{{session['user']}}";
                 //console.log(document.getElementById("secret_end").value);
                 document.getElementById("secret_end").value = "{{place["location"][0]}}, {{place["location"][1]}}";
                 //a = $("#secret_end").value;
-                onChangeHandler();
+                //onChangeHandler();
 
                 // notify the server that we are interest in this location
                 socket.emit("interested", "{{place['id']}}");

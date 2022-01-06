@@ -19,7 +19,6 @@ var leader_of_party = false;
 socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 
 $(document).ready(function(){
-
     function update_party_members(data){
        var a = document.getElementById("members_panel")
        console.log(data)
@@ -46,7 +45,6 @@ $(document).ready(function(){
     }
 
     socket.on('party_members_list_get', function(data){
-        console.log(data)
         update_party_members(data)
     });
 

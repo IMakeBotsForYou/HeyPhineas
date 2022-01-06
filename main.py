@@ -47,7 +47,7 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 
 def random_location():
-    return random.uniform(31.2, 31.8), random.uniform(34.0, 35.0)
+    return random.uniform(31.866, 31.929), random.uniform(34.755, 34.842)
 
 
 def get_party_members(user):
@@ -301,7 +301,6 @@ def check_ping(*args):
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
 
-
     members = get_party_members(session['user'])
     data = []
 
@@ -315,8 +314,9 @@ def get_coords_of_party():
         except Exception as e:
             print(connected_members)
             print('error', e)
-    emit_to(session['user'], 'party_member_coords', '/comms',
-            message=data)
+
+    [emit_to(member, 'party_member_coords', '/comms',
+            message=data) for member in get_party_members(session['user'])]
 
 
 @socketio.on('connect', namespace='/comms')
@@ -327,8 +327,7 @@ def logged_on_users():
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
-        "sid": request.sid,
-        "current party": None
+        "sid": request.sid
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
