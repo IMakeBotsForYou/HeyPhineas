@@ -26,41 +26,48 @@ function showSteps(directionResult, markerArray, stepDisplay, map) {
 
 var onChangeHandler = null;
 var user_locations = {}
+var markerArray = [];
 
 function initMap() {
-      const markerArray = [];
       // Instantiate a directions service.
       const directionsService = new google.maps.DirectionsService();
 
       // Create a map and center it on my house.
       const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 8,
+        zoom: 13,
         center: { lat: 31.894756, lng: 34.809322 },
       });
       socket.on('party_member_coords', function(data){
+        var request_directions = data[0];
+        data = data[1];
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
             var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
+
             if (name in user_locations){
-                if ('marker' in user_locations[name]){
-                    user_locations[name].marker.setPosition(myLatLng);
-                } else {
-                    user_locations[name].marker = new google.maps.Marker({
-                        position: myLatLng,
-                        label: name,
-                        map: map
-                    });
-                }
+                user_locations[name].location = myLatLng;
             } else {
                 user_locations[name] = {"location": myLatLng}
             }
-            if (name == "Dan"){
-                document.getElementById("secret_start").value = `${latlng[0]}, ${latlng[1]}, Dan`;
-            }else{
-                document.getElementById("secret_end").value = `${latlng[0]}, ${latlng[1]}, ${name}`;
+
+            if ('marker' in user_locations[name]){
+                user_locations[name]["marker"].setPosition(myLatLng);
+            } else {
+                user_locations[name]["marker"] = new google.maps.Marker({
+                    position: myLatLng,
+                    label: name,
+                    map: map
+                });
             }
+            if(name == "Dan"){
+                document.getElementById("secret_start").value = name;
+            }else{
+                document.getElementById("secret_end").value = name;
+            }
+            if (request_directions){
             onChangeHandler();
+            }
         }
     });
 
@@ -93,32 +100,16 @@ function calculateAndDisplayRoute(
   stepDisplay,
   map
 ) {
-  // First, remove any existing markers from the map.
-  for (let i = 0; i < markerArray.length; i++) {
-    markerArray[i].setMap(null);
-  }
 
   // Retrieve the start and end locations and create a DirectionsRequest using
   // WALKING directions.
-  secret_end = document.getElementById("secret_end").value;
   secret_start = document.getElementById("secret_start").value;
-  if(secret_end.indexOf(',') == -1 || secret_start.indexOf(',') == -1)
+  secret_end =   document.getElementById("secret_end").value;
+  if(secret_end == '' || secret_start == ''){
     return;
-
-//  if (secret_end == "")
-//    return;
-  var latlng_end = secret_end.split(", ");
-  var lat_1 = parseFloat(latlng_end[0]);
-  var lng_1 = parseFloat(latlng_end[1]);
-
-  origin = { lat: lat_1, lng: lng_1 }
-
-
-  var latlng_start = secret_start.split(", ");
-  var lat_2 = parseFloat(latlng_start[0]);
-  var lng_2 = parseFloat(latlng_start[1]);
-
-  destination = { lat: lat_2, lng: lng_2 }
+  }
+  origin = user_locations[secret_start].location;
+  destination = user_locations[secret_end].location;
 
 
 
@@ -132,40 +123,34 @@ function calculateAndDisplayRoute(
       // Route the directions and pass the response to a function to create
       // markers for each step.
       var directionsData = result.routes[0] // Get data about the mapped route
+      socket.emit('directionsData', directionsData);
       document.getElementById("warnings-panel").innerHTML =
         "<b>" + directionsData.warnings + "</b>";
       directionsRenderer.setDirections(result);
-//      showSteps(result, markerArray, stepDisplay, map);
+      showSteps(result, markerArray, stepDisplay, map);
       document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
 
-      myRoute = result.routes[0].legs[0];
-        path_coords = []
-        for (let i = 0; i < myRoute.steps.length; i++) {
-            step = myRoute.steps[i]
-            for (let j = 0; j < step.path.length; j++){
-                coords = step.path[j];
-                path_coords.push({lat: coords.lat(), lng: coords.lng()});
-            }
-        }
-        name_start = latlng_start[2];
-        var index =0
-        var mark = user_locations[name_start].marker
-        var move_interval = setInterval(function () {
-             mark.setPosition(path_coords[index]);
-             index += 1;
-        }, 50);
-
+//      myRoute = result.routes[0].legs[0];
+//        path_coords = []
+//        for (let i = 0; i < myRoute.steps.length; i++) {
+//            step = myRoute.steps[i]
+//            for (let j = 0; j < step.path.length; j++){
+//                coords = step.path[j];
+//                path_coords.push({lat: coords.lat(), lng: coords.lng()});
+//            }
+//        }
+//          // First, remove any existing markers from the map.
+//        for (let i = 0; i < markerArray.length; i++) {
+//          markerArray[i].setMap(null);
+//        }
+//        name_start = secret_start;
+//        var index =0
+//        var mark = user_locations[name_start].marker
+//        var move_interval = setInterval(function () {
+//             mark.setPosition(path_coords[index]);
+//             index += 1;
+//        }, 50);
     })
-//    .catch((e) => {
-//      window.alert("Directions request failed due to " + e);
-//    });
-
-//    for(let i = 0; i < path_coords.length; i++)
-//    {
-//        await sleep(500);
-//        mark.setPosition(path_coords[i]);
-//    }
-
 }
 
 function attachInstructionText(stepDisplay, marker, text, map) {

@@ -390,6 +390,47 @@ def party(data):
         create_party(session["user"])
 
 
+@socketio.on('directionsData', namespace='/comms')
+def directionsData(data):
+    path_coords = []
+    myroute = data["legs"][0]
+    print(json.dumps(myroute, indent=4))
+    for step in myroute["steps"]:
+        for coords in step["path"]:
+            path_coords.append((coords["lat"], coords["lng"]))
+
+    sessionuser = session['user']
+    leader = db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')[0]
+
+    for coords in path_coords:
+        connected_members[leader]["loc"] = coords
+
+        data = [False, [(member, connected_members[member]["loc"]) for member in get_party_members(sessionuser)]]
+
+        [emit_to(member, 'party_member_coords', '/comms',
+                 message=data) for member in get_party_members(session['user'])]
+
+    #  path_coords = []
+    # //        for (let i = 0; i < myRoute.steps.length; i++) {
+    # //            step = myRoute.steps[i]
+    # //            for (let j = 0; j < step.path.length; j++){
+    # //                coords = step.path[j];
+    # //                path_coords.push({lat: coords.lat(), lng: coords.lng()});
+    # //            }
+    # //        }
+    # //          // First, remove any existing markers from the map.
+    # //        for (let i = 0; i < markerArray.length; i++) {
+    # //          markerArray[i].setMap(null);
+    # //        }
+    # //        name_start = secret_start;
+    # //        var index =0
+    # //        var mark = user_locations[name_start].marker
+    # //        var move_interval = setInterval(function () {
+    # //             mark.setPosition(path_coords[index]);
+    # //             index += 1;
+    # //        }, 50);
+
+
 @socketio.on('left_party', namespace='/comms')
 def party(data):
     if 'current party' not in session:

@@ -94,8 +94,6 @@ $(document).ready(function(){
         });
     });
 
-
-
     socket.on('update_party_members', function(data){
        update_party_members(data);
     });
