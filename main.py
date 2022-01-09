@@ -48,7 +48,9 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 
 def random_location():
-    return random.uniform(31.866, 31.929), random.uniform(34.755, 34.842)
+    # 31.8487019,34.7593424
+    # 31.9261099,34.8612495
+    return random.uniform(31.8487019, 31.9261099), random.uniform(34.7593424, 34.8612495)
 
 
 def get_party_members(username):
@@ -310,10 +312,9 @@ def get_coords_of_party():
 
     for member in members:
         try:
-
-            lat, lng = random_location()
-            connected_members[member]["loc"] = lat, lng
-
+            if session['user'] == get_party_leader(session['user']):
+                lat, lng = random_location()
+                connected_members[member]["loc"] = lat, lng
             data.append((member, connected_members[member]["loc"]))
         except Exception as e:
             print(connected_members)
@@ -328,6 +329,9 @@ def logged_on_users():
     # request.sid
     if 'user' not in session:
         return redirect(url_for("login"))
+    rand_loc = False
+    if session['user'] not in connected_members:
+        rand_loc = True
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
@@ -340,8 +344,9 @@ def logged_on_users():
             "friends": {},
             "visited_locations": {}
         }
-    lat, lng = random_location()
-    connected_members[session['user']]["loc"] = lat, lng
+    if rand_loc:
+        lat, lng = random_location()
+        connected_members[session['user']]["loc"] = lat, lng
     broadcast_userdiff()
 
 
@@ -357,17 +362,20 @@ def get_online_memb():
             message=[x for x in connected_members])
 
 
-@socketio.on('user_added_locations_get', namespace='/comms')
-def get_user_added_loc():
-    print(db['ex'].get_user_added_locations())
+def send_user_added_locations(target):
     data = [
         # a[0] = NAME: STR
         # a[1] = LAT, LNG: STR
         (a[0], [float(x) for x in a[1].split(", ")])
         for a in db['ex'].get_user_added_locations()
     ]
-    emit_to(user=session['user'], event_name="user_added_locations",
+    emit_to(user=target, event_name="user_added_locations",
             message=data)
+
+
+@socketio.on('user_added_locations_get', namespace='/comms')
+def get_user_added_loc():
+    send_user_added_locations(session['user'])
 
 
 @socketio.on('interested', namespace="/comms")
@@ -394,13 +402,20 @@ def logged_on_users():
 
 
 @socketio.on('invite_user', namespace='/comms')
-def invite_user(reciever):
-    print("inviting", reciever)
+def invite_user(receiver):
+    print("inviting", receiver)
     db['ex'].send_message(title=f"Party invite from {session['user']}!",
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
-                          sender=session["user"], receiver=reciever, messagetype="question",
+                          sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
-    emit_to(reciever, 'notif','notification!')
+    emit_to(receiver, 'notif', 'notification!')
+
+
+@socketio.on('add_location', namespace='/comms')
+def invite_user(data):
+    name, lat, lng = data.split(", ")
+    db['ex'].add_location(name, lat, lng)
+    [send_user_added_locations(online_user) for online_user in connected_members]
 
 
 @socketio.on('joined', namespace='/comms')
@@ -412,8 +427,9 @@ def party(data):
         create_party(session["user"])
 
 
-def get_party_leader(sessionuser):
-    return db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')[0]
+def get_party_leader(session_user):
+    return db['ex'].get('users', 'current_party', condition=f'username="{session_user}"')[0]
+
 
 @socketio.on('directionsData', namespace='/comms')
 def directionsData(data):

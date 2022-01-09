@@ -1,24 +1,37 @@
-$(document).on('click', '#invite_user', function(){
-    $("#invite_user").prop("disabled", true);
-    $("#invite_user_popup").fadeIn()
-});
+$(document).ready(function(){
+    $(document).on('click', '#invite_user', function(){
+        $("#invite_user").prop("disabled", true);
+        $("#invite_user_popup").fadeIn()
+    });
 
-$(document).on('click', '#invite_user_close', function(){
-    $("#invite_user").prop("disabled", false);
-    $("#invite_user_popup").fadeOut()
-});
+    $("#user_invite_close").on("click", function(){
+        $("#invite_user_popup").fadeOut()
+        $("#invite_user").prop("disabled", false);
+    })
 
-var coll = document.getElementsByClassName("collapsible");
-var i;
+    $(document).on('click', '#add_loc_button', function(){
+        $("#add_loc_button").prop("disabled", true);
+        $("#add_loc_popup").fadeIn()
+    });
 
-for (i = 0; i < coll.length; i++) {
-  coll[i].addEventListener("click", function() {
-    this.classList.toggle("active");
-    var content = this.nextElementSibling;
-    if (content.style.display === "block") {
-      content.style.display = "none";
-    } else {
-      content.style.display = "block";
+    $(document).on('click', '#close_loc', function(){
+        $("#add_loc_button").prop("disabled", false);
+        $("#add_loc_popup").fadeOut()
+    });
+
+
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+      coll[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
     }
-  });
-}
+});

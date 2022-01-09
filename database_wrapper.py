@@ -188,8 +188,11 @@ class Database:
         s += f" WHERE {condition}" if condition else " WHERE 1=1"
         self.execute(s)
 
-    def add_user(self, name, password, friends="", interests="parks|0|restaurant|0|"):
-        self.add("users (username, password, friends, interests)", reformat(name, password, friends, interests))
+    def add_location(self, loc_name, lat, lng):
+        self.add('user_added_locations (name, latlng)', reformat(loc_name, f"{lat}, {lng}"))
+
+    def add_user(self, username, password, friends="", interests="parks|0|restaurant|0|"):
+        self.add("users (username, password, friends, interests)", reformat(username, password, friends, interests))
 
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
         with open('static/users.js', 'w') as f:

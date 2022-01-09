@@ -2,8 +2,6 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
-
 function showSteps(directionResult, markerArray, stepDisplay, map) {
   // For each step, place a marker, and add the text to the marker's infowindow.
   // Also attach the marker to an array so we can keep track of it and remove it
@@ -73,22 +71,21 @@ function initMap() {
         }
     });
 
-      socket.on('user_added_locations', function(data){
-        console.log(data);
-        console.log(data.length)
+    socket.on('user_added_locations', function(data){
         for(let i = 0; i < data.length; i++){
-
             var name = data[i][0];
             var latlng = data[i][1];
             var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
-            new google.maps.Marker({
+            var m = new google.maps.Marker({
                     position: myLatLng,
                     label: name,
                     map: map,
                     icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
-                });
+            });
+            markerArray.push(m);
         }
-      });
+
+    });
       // Create a renderer for directions and bind it to the map.
       const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
       // Instantiate an info window to hold step text.

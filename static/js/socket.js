@@ -159,4 +159,15 @@ $(document).ready(function(){
         $("#invite_user_popup").fadeOut()
         $("#invite_user").prop("disabled", false);
     });
+
+     $("#confirm_loc").on("click", function() {
+        var name = document.getElementById("add_loc_name").value;
+        var lat = document.getElementById("add_loc_lat").value;
+        var lng = document.getElementById("add_loc_lng").value;
+        socket.emit('add_location', `${name}, ${lat}, ${lng}`);
+        $("#add_loc_button").fadeOut();
+        $("#invite_user").prop("disabled", false);
+    });
+
+
 });

@@ -17,14 +17,30 @@ user = "{{session['user']}}";
     <div>
         <form method="POST" autocomplete="off" action="" id="add_user_form" style="margin: 0 auto;">
         <div class="autocomplete" style="position: relative;">
-            <input id="invite_user_input" type="text" name="user_to_add" placeholder="Username">
-
+            <input required id="invite_user_input" type="text" name="user_to_add" placeholder="Username">
         </div><br><br>
           <input class="form-button confirm-commit" id="confirm_invite" type="button" style="float: left;" value="Invite"/>
           <button type="button" class="form-button close-button" id="user_invite_close" style="float: right;" value="Close">Close</button>
         </form>
     </div>
- </div>
+</div>
+
+<div class="popup" id="add_loc_popup">
+    <h2>
+        Add Location
+    </h2>
+    <div>
+        <form method="POST" autocomplete="off" action="" id="add_loc_form" style="margin: 0 auto;">
+        <div class="autocomplete" style="position: relative;">
+            <input required id="add_loc_name" type="text" name="lat" placeholder="Place name"><br><br>
+            <input required id="add_loc_lat" type="text" name="lat" placeholder="LAT"><br><br>
+            <input required id="add_loc_lng" type="text" name="lng" placeholder="LNG"><br>
+        </div><br><br><br>
+          <input class="form-button confirm-commit" id="confirm_loc" type="button" style="float: left;" value="Add Location"/>
+          <button type="button" class="form-button close-button" id="close_loc" style="float: right;" value="Close">Close</button>
+        </form>
+    </div>
+</div>
 
 <div class="middle-panel" id="members_panel" style="position:absolute;left:2%;top:10%;margin: 0 auto;width: 15%;visibility:hidden;">
     <h2 class="white">Party Members</h2>
@@ -37,7 +53,9 @@ user = "{{session['user']}}";
 <div class="middle-panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
     <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>
 </div>
-
+<button style="" type="button" class="center" id="add_loc_button">
+        <span class="fa fa-map-marker" style="width:100px; height:100px;"></span>
+</button><br><br>
 <div id="floating-panel">
 <input name="secret_end" id="secret_end" hidden>
 <input name="secret_start" id="secret_start" hidden>
