@@ -219,7 +219,10 @@ class Database:
         if limit: s += f" LIMIT {limit}"
         return [x[0] if first else x for x in self.execute(s)]
 
-    def remove_user(self, name, password):
+    def get_user_added_locations(self):
+        return self.get('user_added_locations', 'name, latlng', first=False)
+
+    def remove_user(self, name):
         try:
             # if password == self.execute(f'SELECT password FROM users WHERE username="{name}"', 1)[0][0]:
             self.execute(f'DELETE FROM users WHERE username="{name}"')

@@ -23,7 +23,7 @@ function showSteps(directionResult, markerArray, stepDisplay, map) {
   }
 }
 
-
+var first = true;
 var onChangeHandler = null;
 var user_locations = {}
 var markerArray = [];
@@ -34,9 +34,11 @@ function initMap() {
 
       // Create a map and center it on my house.
       const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 13,
+        zoom: 12,
         center: { lat: 31.894756, lng: 34.809322 },
       });
+
+
       socket.on('party_member_coords', function(data){
         var request_directions = data[0];
         data = data[1];
@@ -66,11 +68,27 @@ function initMap() {
                 document.getElementById("secret_end").value = name;
             }
             if (request_directions){
-            onChangeHandler();
+                onChangeHandler();
             }
         }
     });
 
+      socket.on('user_added_locations', function(data){
+        console.log(data);
+        console.log(data.length)
+        for(let i = 0; i < data.length; i++){
+
+            var name = data[i][0];
+            var latlng = data[i][1];
+            var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
+            new google.maps.Marker({
+                    position: myLatLng,
+                    label: name,
+                    map: map,
+                    icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
+                });
+        }
+      });
       // Create a renderer for directions and bind it to the map.
       const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
       // Instantiate an info window to hold step text.
@@ -111,8 +129,6 @@ function calculateAndDisplayRoute(
   origin = user_locations[secret_start].location;
   destination = user_locations[secret_end].location;
 
-
-
   directionsService
     .route({
       origin: origin,
@@ -123,11 +139,15 @@ function calculateAndDisplayRoute(
       // Route the directions and pass the response to a function to create
       // markers for each step.
       var directionsData = result.routes[0] // Get data about the mapped route
-      socket.emit('directionsData', directionsData);
+      // there is only one leader
+      if(first && leader_of_party){
+        first = false;
+        socket.emit('directionsData', directionsData);
+      }
       document.getElementById("warnings-panel").innerHTML =
         "<b>" + directionsData.warnings + "</b>";
       directionsRenderer.setDirections(result);
-      showSteps(result, markerArray, stepDisplay, map);
+//      showSteps(result, markerArray, stepDisplay, map);
       document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
 
 //      myRoute = result.routes[0].legs[0];

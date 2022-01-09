@@ -19,6 +19,7 @@ import database_wrapper
 Payload.max_decode_packets = 1000
 __author__ = 'Rock'
 last_time_pings_checked = time()
+
 connected_members = {
 
 }
@@ -50,9 +51,9 @@ def random_location():
     return random.uniform(31.866, 31.929), random.uniform(34.755, 34.842)
 
 
-def get_party_members(user):
+def get_party_members(username):
     return db['ex'].get_party_members(
-            owner=db['ex'].get('users', 'current_party', f'username="{user}"')[0])
+            owner=get_party_leader(username))
 
 
 def create_party(user, members=None):
@@ -76,7 +77,7 @@ def join_party(owner, username):
 
 def disconnect_user_from_party(user):
     # first we update the local data
-    current_leader = db['ex'].get('users', 'current_party', condition=f'username="{user}"')
+    current_leader = get_party_leader(user)
     print('disconnecting', user, 'from', current_leader)
     db['ex'].remove_from_party(owner=current_leader, user_to_remove=user)
     members = get_party_members(current_leader)
@@ -304,6 +305,9 @@ def get_coords_of_party():
     members = get_party_members(session['user'])
     data = []
 
+    if not connected_members[session['user']]['can_request']:
+        return
+
     for member in members:
         try:
 
@@ -314,7 +318,7 @@ def get_coords_of_party():
         except Exception as e:
             print(connected_members)
             print('error', e)
-
+    data = [True, data]
     [emit_to(member, 'party_member_coords', '/comms',
             message=data) for member in get_party_members(session['user'])]
 
@@ -327,7 +331,8 @@ def logged_on_users():
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
-        "sid": request.sid
+        "sid": request.sid,
+        "can_request": True
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
@@ -344,8 +349,25 @@ def logged_on_users():
 def get_party_memb():
     emit_to(user=session['user'], event_name="party_members_list_get",
             message=get_party_members(session['user']))
+
+
+@socketio.on('online_members_get', namespace='/comms')
+def get_online_memb():
     emit_to(user=session['user'], event_name="online_members_get",
             message=[x for x in connected_members])
+
+
+@socketio.on('user_added_locations_get', namespace='/comms')
+def get_user_added_loc():
+    print(db['ex'].get_user_added_locations())
+    data = [
+        # a[0] = NAME: STR
+        # a[1] = LAT, LNG: STR
+        (a[0], [float(x) for x in a[1].split(", ")])
+        for a in db['ex'].get_user_added_locations()
+    ]
+    emit_to(user=session['user'], event_name="user_added_locations",
+            message=data)
 
 
 @socketio.on('interested', namespace="/comms")
@@ -390,19 +412,29 @@ def party(data):
         create_party(session["user"])
 
 
+def get_party_leader(sessionuser):
+    return db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')[0]
+
 @socketio.on('directionsData', namespace='/comms')
 def directionsData(data):
+    if connected_members[session['user']]['can_request']:
+        for x in get_party_members(session['user']):
+            connected_members[x]['can_request'] = False
+    else:
+        return
+
     path_coords = []
     myroute = data["legs"][0]
-    print(json.dumps(myroute, indent=4))
     for step in myroute["steps"]:
         for coords in step["path"]:
             path_coords.append((coords["lat"], coords["lng"]))
 
     sessionuser = session['user']
-    leader = db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')[0]
+    leader = get_party_leader(sessionuser)
 
     for coords in path_coords:
+
+
         connected_members[leader]["loc"] = coords
 
         data = [False, [(member, connected_members[member]["loc"]) for member in get_party_members(sessionuser)]]
@@ -410,6 +442,10 @@ def directionsData(data):
         [emit_to(member, 'party_member_coords', '/comms',
                  message=data) for member in get_party_members(session['user'])]
 
+        sleep(0.1)
+    else:
+        for x in get_party_members(session['user']):
+            connected_members[x]['can_request'] = True
     #  path_coords = []
     # //        for (let i = 0; i < myRoute.steps.length; i++) {
     # //            step = myRoute.steps[i]
@@ -436,9 +472,7 @@ def party(data):
     if 'current party' not in session:
         session['current party'] = 0
     if data == "__self__":
-        leader = db['ex'].get('users',
-                              'current_party',
-                              condition=f'username={session["user"]}')
+        leader = get_party_leader(session['user'])
         if leader == session['user']:
             for member in get_party_members(session['user']):
                 db['ex'].remove_from_party(session["user"], member)

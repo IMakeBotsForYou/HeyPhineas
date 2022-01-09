@@ -39,9 +39,11 @@ $(document).ready(function(){
        socket.emit('get_coords_of_party')
     }
 
-    if(window.location.href.split("/")[3] == ''){
-        console.log('emitted partymemberslistget');
-        socket.emit('party_members_list_get')
+    if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){
+        socket.emit('user_added_locations_get');
+        socket.emit('party_members_list_get');
+        socket.emit('online_members_get');
+
     }
 
     socket.on('party_members_list_get', function(data){
@@ -50,13 +52,8 @@ $(document).ready(function(){
 
     socket.on('online_members_get', function(data){
         online_users = data
-        autocomplete(document.getElementById("invite_user_input"), online_users);
+        autocomplete(document.getElementById("invite_user_input"), users);
     });
-
-
-
-
-    socket.emit('party_members_list_get')
 
 
     function ping_every_second(){
