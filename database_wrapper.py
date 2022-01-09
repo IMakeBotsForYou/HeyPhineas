@@ -81,6 +81,12 @@ class Database:
             a = self.get(na, "id")
             self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
+    def get_user_location(self, username):
+        return self.get("users", "loc", condition=f'username="{username}"')[0].split(", ")
+
+    def set_user_location(self, username, newvalue):
+        self.edit('users', 'loc', newvalue=newvalue, condition=f'username="{username}"')
+
     def create_party(self, user):
         if len(self.get('parties', 'creator', condition=f'creator="{user}"')) > 0:
             for member in self.get_party_members(user):
@@ -88,8 +94,14 @@ class Database:
                 self.remove_from_party(user, member)
             self.remove('parties', condition=f'creator="{user}"')
 
-        self.add('parties', reformat(user, ""))
+        self.add('parties', reformat(user, "", "no current request"))
         self.add_to_party(user, user)
+
+    def set_party_status(self, creator, newvalue):
+        self.edit('parties', 'status', newvalue=newvalue, condition=f'creator="{creator}"')
+
+    def get_party_status(self, creator):
+        return self.get('parties', 'status', condition=f'creator="{creator}"')[0]
 
     def add_to_party(self, owner, user_to_add):
         members = self.get('parties', 'members', condition=f'creator="{owner}"')

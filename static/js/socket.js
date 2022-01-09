@@ -55,7 +55,6 @@ $(document).ready(function(){
         autocomplete(document.getElementById("invite_user_input"), users);
     });
 
-
     function ping_every_second(){
         let date = new Date;
         let hours = date.getHours();

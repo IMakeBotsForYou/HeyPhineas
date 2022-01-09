@@ -140,12 +140,13 @@ function calculateAndDisplayRoute(
       if(first && leader_of_party){
         first = false;
         socket.emit('directionsData', directionsData);
-      }
-      document.getElementById("warnings-panel").innerHTML =
+        document.getElementById("warnings-panel").innerHTML =
         "<b>" + directionsData.warnings + "</b>";
       directionsRenderer.setDirections(result);
 //      showSteps(result, markerArray, stepDisplay, map);
       document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
+
+      }
 
 //      myRoute = result.routes[0].legs[0];
 //        path_coords = []
