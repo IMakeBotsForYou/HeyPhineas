@@ -36,13 +36,16 @@ $(document).ready(function(){
            a.innerHTML += `<p class="white">${data[i]}</p><br>`
        }
 
-       socket.emit('get_coords_of_party')
+//       socket.emit('get_coords_of_party')
     }
 
     if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){
         socket.emit('user_added_locations_get');
         socket.emit('party_members_list_get');
         socket.emit('online_members_get');
+
+        // TEMP
+        socket.emit('get_coords_of_party')
 
     }
 

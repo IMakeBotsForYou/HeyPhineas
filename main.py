@@ -57,7 +57,6 @@ def create_party(user, members=None):
     if members is None:
         members = []
 
-
     db['ex'].create_party(user)
     print('123123123')
     for m in members:
@@ -208,7 +207,8 @@ def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None)
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
     except Exception as e:
-        print(e)
+        print(f'error in emitting to user {user},', e)
+        print(f'tried to send: ', message, event_name)
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -293,10 +293,19 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
 
+@socketio.on('knn_select', namespace='/comms')
+def knn_select_user(selected_user):
+    db['knn'].set_origin(selected_user)
+    print(selected_user, db['knn'].run())
+    names = [entry[0] for entry in db['knn'].run()]
+    emit_to(session['user'], 'knn_results', message=names)
+
+
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
 
-    members = get_party_members(session['user'])
+    # members = get_party_members(session['user'])
+    members = db['ex'].get_all_names()
     data = []
     leader = get_party_leader(session['user'])
 
@@ -306,18 +315,18 @@ def get_coords_of_party():
 
     for member in members:
         try:
-            if session['user'] == leader:
-                lat, lng = random_location()
-                connected_members[member]["loc"] = lat, lng
-
+            # if session['user'] == leader:
+            #     lat, lng = random_location()
+            #     connected_members[member]["loc"] = lat, ln
+            #
             data.append((member, connected_members[member]["loc"]))
         except Exception as e:
-            print(connected_members)
-            print('error', e)
-
+            data.append((member, db['ex'].get_user_location(member)))
+            # print(connected_members)
+            # print('error', e)
     data = [True, data]
     [emit_to(member, 'party_member_coords', '/comms',
-            message=data) for member in get_party_members(session['user'])]
+            message=data) for member in members]
 
 
 @socketio.on('connect', namespace='/comms')
@@ -326,12 +335,13 @@ def logged_on_users():
     if 'user' not in session:
         return redirect(url_for("login"))
 
-    reconnecting = session['user'] in connected_members
+    # reconnecting = session['user'] in connected_members
 
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
         "sid": request.sid,
+        "loc": [0, 0]
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
@@ -339,11 +349,11 @@ def logged_on_users():
             "friends": {},
             "visited_locations": {}
         }
-    if reconnecting:
-        connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
-    else:
-        lat, lng = random_location()
-        set_user_location(session['user'], lat, lng)
+
+    connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
+    # else:
+        # lat, lng = random_location()
+        # set_user_location(session['user'], lat, lng)
 
     broadcast_userdiff()
 
@@ -371,6 +381,12 @@ def get_user_added_loc():
     ]
     emit_to(user=session['user'], event_name="user_added_locations",
             message=data)
+
+
+def send_user_added_locations(username):
+    data = [(name, [float(value) for value in latlng.split(", ")])
+            for name, latlng in db['ex'].get_user_added_locations()]
+    emit_to(username, 'user_added_locations', message=data)
 
 
 @socketio.on('user_added_locations_get', namespace='/comms')
@@ -416,8 +432,6 @@ def invite_user(data):
     name, lat, lng = data.split(", ")
     db['ex'].add_location(name, lat, lng)
     [send_user_added_locations(online_user) for online_user in connected_members]
-
-
 
 
 @socketio.on('invite_user', namespace='/comms')
@@ -504,12 +518,12 @@ if __name__ == '__main__':
     vls = {}
 
     db = {"ex": database_wrapper.my_db}
-    print(db["ex"].get("users", "username, interests"))
     for user in db["ex"].get("users", "username"):
         interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
-        vls[user] = interests.split("|")[1::2]
-    knn = KNN(vls=vls)
-    print(vls)
+        lat, lng = random_location()
+        db['ex'].set_user_location(user, f"{lat}, {lng}")
+        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat, lng]
+    knn = KNN(vls=vls, k=4)
     db["knn"] = knn
 
     socketio.run(app, host="0.0.0.0", port=8080)

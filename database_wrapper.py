@@ -101,7 +101,11 @@ class Database:
         self.edit('parties', 'status', newvalue=newvalue, condition=f'creator="{creator}"')
 
     def get_party_status(self, creator):
-        return self.get('parties', 'status', condition=f'creator="{creator}"')[0]
+        data = self.get('parties', 'status', condition=f'creator="{creator}"', first=False)
+        if len(data) == 0:
+            return "No Party"
+        else:
+            return data[0]
 
     def add_to_party(self, owner, user_to_add):
         members = self.get('parties', 'members', condition=f'creator="{owner}"')

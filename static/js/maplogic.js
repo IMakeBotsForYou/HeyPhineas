@@ -40,6 +40,7 @@ function initMap() {
       socket.on('party_member_coords', function(data){
         var request_directions = data[0];
         data = data[1];
+        names = [];
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
@@ -54,11 +55,12 @@ function initMap() {
             if ('marker' in user_locations[name]){
                 user_locations[name]["marker"].setPosition(myLatLng);
             } else {
-                user_locations[name]["marker"] = new google.maps.Marker({
+                var marker = new google.maps.Marker({
                     position: myLatLng,
                     label: name,
                     map: map
                 });
+                user_locations[name]["marker"] = marker;
             }
             if(name == "Dan"){
                 document.getElementById("secret_start").value = name;
@@ -69,9 +71,17 @@ function initMap() {
                 onChangeHandler();
             }
         }
+        for(let i = 0; i < data.length; i++){
+                        console.log( user_locations[data[i][0]]["marker"].label);
+
+            user_locations[data[i][0]]["marker"].addListener("click", () => {
+                console.log( user_locations[data[i][0]]["marker"].label);
+                socket.emit('knn_select', user_locations[data[i][0]]["marker"].label)
+            });
+       }
     });
 
-    socket.on('user_added_locations', function(data){
+      socket.on('user_added_locations', function(data){
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
@@ -84,8 +94,16 @@ function initMap() {
             });
             markerArray.push(m);
         }
-
-    });
+      });
+      socket.on('knn_results', function(data){
+        for(name in user_locations){
+            user_locations[name].marker.setIcon('https://maps.google.com/mapfiles/ms/icons/red-dot.png');
+        }
+        for(let i=0; i<data.length;i++){
+            var name = data[i];
+            user_locations[name].marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+        }
+      });
       // Create a renderer for directions and bind it to the map.
       const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
       // Instantiate an info window to hold step text.

@@ -41,6 +41,7 @@ class KNN:
         assert self.origin is not None
         labels = list(self.values.keys())
         vectors = list(self.values.values())
+
         distances = [self._euclidean_dist(np.array(vector)) for vector in vectors]
 
         labeled_distances = [(label, dist) for label, dist in zip(labels, distances)]
@@ -61,8 +62,8 @@ if __name__ == "__main__":
         "Bruh": [1, 5, 5]
     }
     import random
-    for a in range(10000):
-        values[str(a)] = [random.random()*5]*3
+    # for a in range(10000):
+    #     values[str(a)] = [random.random()*5]*3
     print("Done")
     knn = KNN(values, 3)
     knn.set_origin("Dan")
