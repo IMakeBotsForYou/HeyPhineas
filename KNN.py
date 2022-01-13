@@ -41,8 +41,11 @@ class KNN:
         assert self.origin is not None
         labels = list(self.values.keys())
         vectors = list(self.values.values())
-
-        distances = [self._euclidean_dist(np.array(vector)) for vector in vectors]
+        if weigh_values is None:
+            distances = [self._euclidean_dist(np.array(vector)) for vector in vectors]
+        else:
+            distances = [weigh_values(label, self._euclidean_dist(np.array(vector)))
+                         for label, vector in zip(labels, vectors)]
 
         labeled_distances = [(label, dist) for label, dist in zip(labels, distances)]
 

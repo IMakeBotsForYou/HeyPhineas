@@ -158,7 +158,12 @@ class Database:
         return ret
 
     def get_friends(self, user):
-        return self.get("users", "friends", condition=f'username="{user}"')[0]
+        f = self.get("users", "friends", condition=f'username="{user}"')
+        print(f)
+        if len(f) > 0:
+            return f[0].split(', ')
+        else:
+            return []
 
     def execute(self, line, fetch=None):
         """

@@ -261,7 +261,7 @@ def logout():
 def broadcast_userdiff():
     # update friends data
     print(session["user"])
-    fr = db["ex"].get_friends(session["user"]).split(", ")
+    fr = db["ex"].get_friends(session["user"])
     session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
                               'offline': [friend for friend in fr if friend not in connected_members]}
 
@@ -293,10 +293,24 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
 
+def weigh_values(name, value):
+    origin = db['knn'].origin
+    mult = 1
+    friends = db['ex'].get_friends(origin)
+    if name in friends:
+        mult += 0.3
+
+    friends_of_name = db['ex'].get_friends(name)
+    mutual_friends = [x for x in friends if x in friends_of_name]
+    mult += 0.05 * len(mutual_friends)
+
+    return value * mult
+
+
 @socketio.on('knn_select', namespace='/comms')
 def knn_select_user(selected_user):
     db['knn'].set_origin(selected_user)
-    print(selected_user, db['knn'].run())
+    print(selected_user, db['knn'].run(weigh_values=weigh_values))
     names = [entry[0] for entry in db['knn'].run()]
     emit_to(session['user'], 'knn_results', message=names)
 
