@@ -72,11 +72,11 @@ $(document).ready(function(){
     socket.on('user_diff', function(msg) {
 //        alert("User diff")
         if (typeof(msg.amount) != "undefined"){
-        current_users_online = msg.amount;
+            current_users_online = msg.amount;
         } else {
-        online_users = msg.names;
-        console.log(current_users_online);
+            console.log(current_users_online);
         }
+        online_users = msg.names;
 //        if (typeof(current_users_online) != "undefined"){
         $('#users_online').html(`${current_users_online} User(s) Online`);
 //        }
@@ -153,7 +153,6 @@ $(document).ready(function(){
            party_users=[];
         }
     });
-
     $("#confirm_invite").on("click", function() {
         var invite_user_input = document.getElementById("invite_user_input")
         socket.emit('invite_user', invite_user_input.value);

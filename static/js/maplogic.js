@@ -25,22 +25,41 @@ var first = true;
 var onChangeHandler = null;
 var user_locations = {}
 var markerArray = [];
-
+var current_directions;
+var step_index = 0;
+deshalit = {"lat": 31.89961596028198, "lng": 34.816320411774875}
 function initMap() {
       // Instantiate a directions service.
       const directionsService = new google.maps.DirectionsService();
 
       // Create a map and center it on my house.
       const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 12,
+        zoom: 16,
         center: { lat: 31.894756, lng: 34.809322 },
       });
 
+      $("#make_step").on("click", function() {
+        if (current_directions != null && current_directions.length < step_index - 1){
+            step_index += 1;
+            socket.emit('my_location', current_directions[step_index])
+        }
+      });
+
+      socket.on('update_location', function(data){
+        var name = data[0];
+        var lat = data[1];
+        var lng = data[2];
+        var myLatLng = new google.maps.LatLng(lat, lng)
+
+        user_locations[name].location = myLatLng
+        user_locations[name]["marker"].setPosition(myLatLng);
+      });
 
       socket.on('party_member_coords', function(data){
         var request_directions = data[0];
         data = data[1];
         names = [];
+
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
@@ -62,23 +81,21 @@ function initMap() {
                 });
                 user_locations[name]["marker"] = marker;
             }
-            if(name == "Dan"){
-                document.getElementById("secret_start").value = name;
-            }else{
-                document.getElementById("secret_end").value = name;
-            }
-            if (request_directions){
-                onChangeHandler();
-            }
+//            if(name == "Dan"){
+//                document.getElementById("secret_start").value = name;
+//            }else{
+//                document.getElementById("secret_end").value = name;
+//            }
         }
         for(let i = 0; i < data.length; i++){
-                        console.log( user_locations[data[i][0]]["marker"].label);
-
             user_locations[data[i][0]]["marker"].addListener("click", () => {
                 console.log( user_locations[data[i][0]]["marker"].label);
                 socket.emit('knn_select', user_locations[data[i][0]]["marker"].label)
             });
-       }
+        }
+        if (request_directions){
+            onChangeHandler();
+        }
     });
 
       socket.on('user_added_locations', function(data){
@@ -126,6 +143,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+
 function calculateAndDisplayRoute(
   directionsRenderer,
   directionsService,
@@ -134,59 +152,53 @@ function calculateAndDisplayRoute(
   map
 ) {
 
+
   // Retrieve the start and end locations and create a DirectionsRequest using
   // WALKING directions.
-  secret_start = document.getElementById("secret_start").value;
-  secret_end =   document.getElementById("secret_end").value;
+//  secret_start = document.getElementById("secret_start").value;
+//  secret_end =   document.getElementById("secret_end").value;
+
   if(secret_end == '' || secret_start == ''){
     return;
   }
-  origin = user_locations[secret_start].location;
-  destination = user_locations[secret_end].location;
+  origin = user_locations[user].location;
+//  destination = user_locations[secret_end].location;
+  destination = deshalit;
+  if (first){
+      directionsService
+        .route({
+          origin: origin,
+          destination: destination,
+          travelMode: google.maps.TravelMode.WALKING,
+        })
+        .then((result) => {
+          // Route the directions and pass the response to a function to create
+          // markers for each step.
+          var directionsData = result.routes[0] // Get data about the mapped route
+          var myRoute = directionsData.legs[0]
+          current_directions = [];
+          for(let i = 0; i < myRoute.steps.length; i++){
+             var step = myRoute.steps[i];
+             for(let i = 0; i < step.path.length; i++){
+                var coords = step.path[i];
+                current_directions.push([coords.lat(), coords.lng()]);
+             }
+          }
+          step_index = 0;
+          first = false;
 
-  directionsService
-    .route({
-      origin: origin,
-      destination: destination,
-      travelMode: google.maps.TravelMode.WALKING,
-    })
-    .then((result) => {
-      // Route the directions and pass the response to a function to create
-      // markers for each step.
-      var directionsData = result.routes[0] // Get data about the mapped route
-      // there is only one leader
-      if(first && leader_of_party){
-        first = false;
-        socket.emit('directionsData', directionsData);
-        document.getElementById("warnings-panel").innerHTML =
-        "<b>" + directionsData.warnings + "</b>";
-      directionsRenderer.setDirections(result);
-//      showSteps(result, markerArray, stepDisplay, map);
-      document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
+          socket.emit('in_progress');
 
-      }
+          document.getElementById("warnings-panel").innerHTML =
+          "<b>" + directionsData.warnings + "</b>";
 
-//      myRoute = result.routes[0].legs[0];
-//        path_coords = []
-//        for (let i = 0; i < myRoute.steps.length; i++) {
-//            step = myRoute.steps[i]
-//            for (let j = 0; j < step.path.length; j++){
-//                coords = step.path[j];
-//                path_coords.push({lat: coords.lat(), lng: coords.lng()});
-//            }
-//        }
-//          // First, remove any existing markers from the map.
-//        for (let i = 0; i < markerArray.length; i++) {
-//          markerArray[i].setMap(null);
-//        }
-//        name_start = secret_start;
-//        var index =0
-//        var mark = user_locations[name_start].marker
-//        var move_interval = setInterval(function () {
-//             mark.setPosition(path_coords[index]);
-//             index += 1;
-//        }, 50);
-    })
+          directionsRenderer.setDirections(result);
+
+
+        //showSteps(result, markerArray, stepDisplay, map);
+          document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
+        })
+    }
 }
 
 function attachInstructionText(stepDisplay, marker, text, map) {

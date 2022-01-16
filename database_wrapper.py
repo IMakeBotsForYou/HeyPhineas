@@ -82,7 +82,7 @@ class Database:
             self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
     def get_user_location(self, username):
-        return self.get("users", "loc", condition=f'username="{username}"')[0].split(", ")
+        return [float(value) for value in self.get("users", "loc", condition=f'username="{username}"')[0].split(", ")]
 
     def set_user_location(self, username, newvalue):
         self.edit('users', 'loc', newvalue=newvalue, condition=f'username="{username}"')
@@ -129,7 +129,9 @@ class Database:
         if len(a) == 0:
             return []
         else:
-            return a[0].split(", ")
+            a = a[0].split(", ")
+            a.remove(owner)
+            return [owner] + a
 
     def get_messages(self, user=None):
         mes = self.get('messages', '*', condition=f'receiver="{user}"' if user else None, first=False)

@@ -45,12 +45,12 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
 
 def random_location():
-    return random.uniform(31.866, 31.929), random.uniform(34.755, 34.842)
+    return random.uniform(31.8884302, 31.9043486), random.uniform(34.8025995, 34.8146395)
 
 
 def get_party_members(username):
     return db['ex'].get_party_members(
-            owner=get_party_leader(username))
+        owner=get_party_leader(username))
 
 
 def create_party(user, members=None):
@@ -293,7 +293,7 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
 
-def weigh_values(name, value):
+def weight_values(name, value):
     origin = db['knn'].origin
     mult = 1
     friends = db['ex'].get_friends(origin)
@@ -310,16 +310,36 @@ def weigh_values(name, value):
 @socketio.on('knn_select', namespace='/comms')
 def knn_select_user(selected_user):
     db['knn'].set_origin(selected_user)
-    print(selected_user, db['knn'].run(weigh_values=weigh_values))
-    names = [entry[0] for entry in db['knn'].run()]
+    db['knn'].run(weigh_values=weight_values)
+
+    names = [entry[0] for entry in db['knn'].run() if entry[0] in get_party_members(session['user'])]
     emit_to(session['user'], 'knn_results', message=names)
+
+
+def party_coords(username):
+    members = get_party_members(username)
+    # members = db['ex'].get_all_names()
+    data = []
+
+    for member in members:
+        try:
+            data.append((member, connected_members[member]["loc"]))
+        except KeyError:
+            loc = db['ex'].get_user_location(member)
+            data.append((member, loc))
+            connected_members[member]["loc"] = loc
+        except Exception as e:
+            print("get coords error", e)
+
+    data = [True, data]
+    [emit_to(member, 'party_member_coords', '/comms',
+             message=data) for member in members]
 
 
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
-
-    # members = get_party_members(session['user'])
-    members = db['ex'].get_all_names()
+    members = get_party_members(session['user'])
+    # members = db['ex'].get_all_names()
     data = []
     leader = get_party_leader(session['user'])
 
@@ -327,20 +347,7 @@ def get_coords_of_party():
         db['ex'].set_party_status(leader, "halt")
         print("caught halt")
 
-    for member in members:
-        try:
-            # if session['user'] == leader:
-            #     lat, lng = random_location()
-            #     connected_members[member]["loc"] = lat, ln
-            #
-            data.append((member, connected_members[member]["loc"]))
-        except Exception as e:
-            data.append((member, db['ex'].get_user_location(member)))
-            # print(connected_members)
-            # print('error', e)
-    data = [True, data]
-    [emit_to(member, 'party_member_coords', '/comms',
-            message=data) for member in members]
+    party_coords(leader)
 
 
 @socketio.on('connect', namespace='/comms')
@@ -366,8 +373,8 @@ def logged_on_users():
 
     connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
     # else:
-        # lat, lng = random_location()
-        # set_user_location(session['user'], lat, lng)
+    #   lat, lng = random_location()
+    #   set_user_location(session['user'], lat, lng)
 
     broadcast_userdiff()
 
@@ -414,6 +421,7 @@ def interest(data):
         # print(poi[0], points_of_interest[poi[1]]['interest'])
         location_interest = points_of_interest[poi[1]]['interest']
         return sum([location_interest[user] for user in location_interest])
+
     if data not in points_of_interest:
         return
     points_of_interest[data]["interest"][session["user"]] += 1
@@ -438,6 +446,7 @@ def invite_user(receiver):
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
+
     emit_to(receiver, 'notif', 'notification!')
 
 
@@ -463,7 +472,7 @@ def party(data):
     if 'current party' not in session:
         session['current party'] = 0
     if data == "__self__":
-        print("creating party for ",session['user'])
+        print("creating party for ", session['user'])
         create_party(session["user"])
 
 
@@ -476,13 +485,20 @@ def set_user_location(username, lat, lng):
     db['ex'].set_user_location(username, f"{lat}, {lng}")
 
 
-@socketio.on('directionsData', namespace='/comms')
-def directionsData(data):
-    path_coords = []
-    myroute = data["legs"][0]
-    for step in myroute["steps"]:
-        for coords in step["path"]:
-            path_coords.append((coords["lat"], coords["lng"]))
+@socketio.on('my_location', namespace='/comms')
+def my_location(data):
+    print("my_location", data)
+    set_user_location(session['user'], data[0], data[1])
+    [emit_to(member, 'update_location', message=[session['user'], data[0], data[1]]) for member in get_party_members(session['user'])]
+
+
+@socketio.on('in_progress', namespace='/comms')
+def in_progress():
+    # path_coords = []
+    # myroute = data["legs"][0]
+    # for step in myroute["steps"]:
+    #     for coords in step["path"]:
+    #         path_coords.append((coords["lat"], coords["lng"]))
 
     sessionuser = session['user']
     leader = get_party_leader(sessionuser)
@@ -490,26 +506,26 @@ def directionsData(data):
         db['ex'].set_party_status(leader, "in progress")
         print('starting new request')
 
-    # simulation
-    for coords in path_coords:
-        if db['ex'].get_party_status(leader) == "halt":
-            print('halting')
-            break
-
-        lat, lng = coords
-        # set_user_location(leader, lat, lng)
-        connected_members[leader]["loc"] = (lat, lng)
-
-        data = [False, [(member, connected_members[member]["loc"]) for member in get_party_members(sessionuser)]]
-
-        [emit_to(member, 'party_member_coords', '/comms',
-                 message=data) for member in get_party_members(session['user'])]
-
-        sleep(0.1)
-
-    lat, lng = connected_members[leader]["loc"]
-    set_user_location(leader, lat, lng)
-    db['ex'].set_party_status(leader, "no current request")
+    # # simulation
+    # for coords in path_coords:
+    #     if db['ex'].get_party_status(leader) == "halt":
+    #         print('halting')
+    #         break
+    #
+    #     lat, lng = coords
+    #     # set_user_location(leader, lat, lng)
+    #     connected_members[leader]["loc"] = (lat, lng)
+    #
+    #     data = [False, [(member, connected_members[member]["loc"]) for member in get_party_members(sessionuser)]]
+    #
+    #     [emit_to(member, 'party_member_coords', '/comms',
+    #              message=data) for member in get_party_members(session['user'])]
+    #
+    #     sleep(0.1)
+    #
+    # lat, lng = connected_members[leader]["loc"]
+    # set_user_location(leader, lat, lng)
+    # db['ex'].set_party_status(leader, "no current request")
 
 
 @socketio.on('left_party', namespace='/comms')
@@ -527,6 +543,7 @@ def party(data):
 
 if __name__ == '__main__':
     from KNN import KNN
+
     database_wrapper.main()
     # initialize database
     vls = {}
@@ -534,7 +551,7 @@ if __name__ == '__main__':
     db = {"ex": database_wrapper.my_db}
     for user in db["ex"].get("users", "username"):
         interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
-        lat, lng = random_location()
+        lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
         db['ex'].set_user_location(user, f"{lat}, {lng}")
         vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat, lng]
     knn = KNN(vls=vls, k=4)
