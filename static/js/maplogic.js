@@ -42,6 +42,7 @@ function initMap() {
         if (current_directions != null && current_directions.length < step_index - 1){
             step_index += 1;
             socket.emit('my_location', current_directions[step_index])
+            console.log( current_directions[step_index]);
         }
       });
 
@@ -187,7 +188,7 @@ function calculateAndDisplayRoute(
           step_index = 0;
           first = false;
 
-          socket.emit('in_progress');
+//          socket.emit('in_progress');
 
           document.getElementById("warnings-panel").innerHTML =
           "<b>" + directionsData.warnings + "</b>";
@@ -196,7 +197,7 @@ function calculateAndDisplayRoute(
 
 
         //showSteps(result, markerArray, stepDisplay, map);
-          document.getElementById('msg').innerHTML = " Driving distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
+          document.getElementById('msg').innerHTML = " Walking distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
         })
     }
 }

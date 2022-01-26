@@ -262,13 +262,16 @@ def broadcast_userdiff():
     # update friends data
     print(session["user"])
     fr = db["ex"].get_friends(session["user"])
-    session["friend_data"] = {'online': [friend for friend in fr if friend in connected_members],
-                              'offline': [friend for friend in fr if friend not in connected_members]}
+
+    visisble_uses = [x for x in connected_members if x != "Admin"]
+
+    session["friend_data"] = {'online': [friend for friend in fr if friend in visisble_uses],
+                              'offline': [friend for friend in fr if friend not in visisble_uses]}
 
     emit_to(session["user"], 'friend_data', message=session["friend_data"])
-    emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
+    emit('user_diff', {'amount': len(connected_members.keys()), 'names': [user for user in visisble_uses]})
     print("Data:")
-    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in connected_members]))
+    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visisble_uses]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
 
@@ -318,7 +321,6 @@ def knn_select_user(selected_user):
 
 def party_coords(username):
     members = get_party_members(username)
-    # members = db['ex'].get_all_names()
     data = []
 
     for member in members:
@@ -327,7 +329,7 @@ def party_coords(username):
         except KeyError:
             loc = db['ex'].get_user_location(member)
             data.append((member, loc))
-            connected_members[member]["loc"] = loc
+            # connected_members[member]["loc"] = loc
         except Exception as e:
             print("get coords error", e)
 
@@ -338,16 +340,32 @@ def party_coords(username):
 
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
-    members = get_party_members(session['user'])
-    # members = db['ex'].get_all_names()
-    data = []
-    leader = get_party_leader(session['user'])
 
-    if db['ex'].get_party_status(leader) == "in progress" and session['user'] == leader:
-        db['ex'].set_party_status(leader, "halt")
-        print("caught halt")
+    if session['user'] == "Admin":
+        members = db['ex'].get_all_names()
+        members.remove("Admin")
+        data = []
+        for member in members:
+            try:
+                data.append((member, connected_members[member]["loc"]))
+            except KeyError:
+                loc = db['ex'].get_user_location(member)
+                data.append((member, loc))
+            except Exception as e:
+                print("get coords error", e)
 
-    party_coords(leader)
+        data = [False, data]
+        emit_to("Admin", 'party_member_coords', '/comms', message=data)
+
+    else:
+        members = [p for p in get_party_members(session['user']) if p in connected_members]
+        leader = get_party_leader(session['user'])
+
+        if db['ex'].get_party_status(leader) == "in progress" and session['user'] == leader:
+            db['ex'].set_party_status(leader, "halt")
+            print("caught halt")
+
+        party_coords(leader)
 
 
 @socketio.on('connect', namespace='/comms')
@@ -370,8 +388,8 @@ def logged_on_users():
             "friends": {},
             "visited_locations": {}
         }
-
-    connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
+    if session['user'] != "Admin":
+        connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
     # else:
     #   lat, lng = random_location()
     #   set_user_location(session['user'], lat, lng)
@@ -550,6 +568,8 @@ if __name__ == '__main__':
 
     db = {"ex": database_wrapper.my_db}
     for user in db["ex"].get("users", "username"):
+        if user == "Admin":
+            continue
         interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
         lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
         db['ex'].set_user_location(user, f"{lat}, {lng}")

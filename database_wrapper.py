@@ -162,7 +162,7 @@ class Database:
     def get_friends(self, user):
         f = self.get("users", "friends", condition=f'username="{user}"')
         print(f)
-        if len(f) > 0:
+        if len(f) > 0 and f != [None]:
             return f[0].split(', ')
         else:
             return []
