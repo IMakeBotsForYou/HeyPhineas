@@ -335,12 +335,11 @@ def party_coords(username):
 
     data = [True, data]
     [emit_to(member, 'party_member_coords', '/comms',
-             message=data) for member in members]
+             message=data) for member in members if member in connected_members]
 
 
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
-
     if session['user'] == "Admin":
         members = db['ex'].get_all_names()
         members.remove("Admin")
@@ -358,7 +357,7 @@ def get_coords_of_party():
         emit_to("Admin", 'party_member_coords', '/comms', message=data)
 
     else:
-        members = [p for p in get_party_members(session['user']) if p in connected_members]
+        # members = [p for p in get_party_members(session['user']) if p in connected_members]
         leader = get_party_leader(session['user'])
 
         if db['ex'].get_party_status(leader) == "in progress" and session['user'] == leader:
@@ -433,6 +432,32 @@ def get_user_added_loc():
     send_user_added_locations(session['user'])
 
 
+@socketio.on('reset_locations', namespace='/comms')
+def reset_locs():
+    database_wrapper.reset_locations()
+
+    party_data = {}
+
+    for party_leader in db["ex"].get("parties", "creator"):
+        party_data[party_leader] = [
+            True,
+            [
+                [x, db['ex'].get_user_location(x)]
+                for x in get_party_members(party_leader)]
+        ]
+
+    party_data["Admin"] = [
+        False,
+        [
+            [x, db['ex'].get_user_location(x)]
+            for x in db['ex'].get_all_names() if x != "Admin"]
+    ]
+
+    for member in connected_members:
+        emit_to(member, 'party_member_coords',
+                message=party_data[get_party_leader(member)])
+
+
 @socketio.on('interested', namespace="/comms")
 def interest(data):
     def sort_em(poi):
@@ -495,10 +520,18 @@ def party(data):
 
 
 def get_party_leader(sessionuser):
-    return db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')[0]
+    if sessionuser == "Admin":
+        return "Admin"
+    a = db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')
+    if a and a not in ["" " "]:
+        return a[0]
+    else:
+        return None
 
 
 def set_user_location(username, lat, lng):
+    if username == "Admin":
+        return
     connected_members[username]["loc"] = (lat, lng)
     db['ex'].set_user_location(username, f"{lat}, {lng}")
 
@@ -507,7 +540,9 @@ def set_user_location(username, lat, lng):
 def my_location(data):
     print("my_location", data)
     set_user_location(session['user'], data[0], data[1])
-    [emit_to(member, 'update_location', message=[session['user'], data[0], data[1]]) for member in get_party_members(session['user'])]
+    [emit_to(member, 'update_location', message=[session['user'], data[0], data[1]]) for member in
+     get_party_members(session['user'])]
+    emit_to("Admin", 'update_location', message=[session['user'], data[0], data[1]])
 
 
 @socketio.on('in_progress', namespace='/comms')

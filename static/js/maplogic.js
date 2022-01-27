@@ -38,14 +38,6 @@ function initMap() {
         center: { lat: 31.894756, lng: 34.809322 },
       });
 
-      $("#make_step").on("click", function() {
-        if (current_directions != null && current_directions.length < step_index - 1){
-            step_index += 1;
-            socket.emit('my_location', current_directions[step_index])
-            console.log( current_directions[step_index]);
-        }
-      });
-
       socket.on('update_location', function(data){
         var name = data[0];
         var lat = data[1];
@@ -54,6 +46,14 @@ function initMap() {
 
         user_locations[name].location = myLatLng
         user_locations[name]["marker"].setPosition(myLatLng);
+      });
+
+      $("#make_step").on("click", function() {
+        if (current_directions != null && current_directions.length > step_index - 1){
+            step_index += 1;
+            socket.emit('my_location', current_directions[step_index])
+            console.log( current_directions[step_index]);
+        }
       });
 
       socket.on('party_member_coords', function(data){
@@ -95,6 +95,7 @@ function initMap() {
             });
         }
         if (request_directions){
+            first = true;
             onChangeHandler();
         }
     });

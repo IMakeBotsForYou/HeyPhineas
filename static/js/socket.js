@@ -21,22 +21,19 @@ socket = io.connect('http://' + document.domain + ':' + location.port + '/comms'
 $(document).ready(function(){
     function update_party_members(data){
        var a = document.getElementById("members_panel")
-       console.log(data)
        if (data.length == 0){
             return;
        }
 
        a.innerHTML = party_text;
        a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
-       a.style.visibility = 'visible';
        leader_of_party = data[0] == user;
 
 
        for(let i = 1; i < data.length; i++){
-           a.innerHTML += `<p class="white">${data[i]}</p><br>`
+           a.innerHTML += `<p class="white">${data[i]}</p>`
        }
-
-//       socket.emit('get_coords_of_party')
+      a.style.visibility = 'visible';
     }
 
     if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){

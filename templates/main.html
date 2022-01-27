@@ -56,7 +56,16 @@ user = "{{session['user']}}";
 <button style="" type="button" class="center" id="add_loc_button">
         <span class="fa fa-map-marker" style="width:100px; height:100px;"></span>
 </button><br><br>
-
+{% if session['user'] == "Admin" %}
+    <button type="button" class="form-button close-button" id="reset_locs" style="float: right;">RESET LOCATIONS</button>
+    <script>
+        $(document).ready(function(){
+        });
+        $("#reset_locs").on("click", function() {
+            socket.emit("reset_locations");
+        });
+    </script>
+{% endif %}
 <button type="button" class="form-button close-button" id="make_step" style="float: right;">Step</button>
 
 <div id="floating-panel">

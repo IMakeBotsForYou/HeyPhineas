@@ -2,6 +2,7 @@ import sqlite3
 import json
 import threading
 
+
 def st2int(array):
     return [int(x) for x in array]
 
@@ -39,7 +40,7 @@ def reformat(*args):
             st += f'{var}, '
             need_trim = True
         elif isinstance(var, list):
-            st += '"' + ", ".join(var) + '"'
+            st += '"' + ", ".join([str(x) for x in var]) + '"'
             need_trim = False
         else:
             st += f'"{var}", '
@@ -56,10 +57,85 @@ def reformat(*args):
 class Database:
     def __init__(self, path):
         self.lock = threading.Lock()
-        self.admin = "Dan Lvov"
+        # self.admin = "Admin"
         self.path = path.split(".")[0] + '.db'
         self.data = sqlite3.connect(self.path, check_same_thread=False)
         self.cursor = self.data.cursor()
+        # self.parties = []
+        # with open('static/users.js', 'w') as f:
+        #     f.write(f'var users = {json.dumps(self.get("users", "username"))}')
+
+    def get(self, table, column, condition=None, limit=None, first=True):
+        """
+        :param table: database table
+        :param column: What column?
+        :param condition: condition of search
+        :param limit: Limit the search to X results
+        :param first: Return first of every result
+        :return: The results
+        """
+
+        s = f"SELECT {column} FROM {table}"
+        if condition: s += f" WHERE {condition}"
+        if limit: s += f" LIMIT {limit}"
+        return [x[0] if first else x for x in self.execute(s)]
+
+    def execute(self, line, fetch=None):
+        """
+        :param line: SQL command
+        :param fetch: Number to of results to return
+        :return: The results
+        """
+        ret = None
+        try:
+            self.lock.acquire(True)
+
+            self.cursor.execute(line)
+            if not fetch or fetch == -1:
+                ret = self.cursor.fetchall()
+                self.data.commit()
+
+            else:
+                ret = self.cursor.fetchmany(fetch)
+                self.data.commit()
+            # do something
+        finally:
+            self.lock.release()
+            if ret is None:
+                print(f"Returning None, {line}")
+            return ret
+
+    def fix_seq(self):
+        # columns = ["users"]
+        # for na in columns:
+        #     a = self.get(na, "id")
+        #     self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
+        pass
+
+    def add(self, table, values):
+        # try:
+        self.fix_seq()
+        print(F"INSERT INTO {table} VALUES {values}")
+        self.execute(F"INSERT INTO {table} VALUES {values}")
+        self.fix_seq()
+        # except Exception as e:
+        #     print(1, e)
+        self.data.commit()
+
+    def remove(self, table, condition=None):
+        self.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
+        self.fix_seq()
+
+    def edit(self, table, column, newvalue, condition=None):
+        s = f'UPDATE {table} SET {column} = "{newvalue}"'
+        s += f" WHERE {condition}" if condition else " WHERE 1=1"
+        self.execute(s)
+
+
+class UserData(Database):
+    def __init__(self, path):
+        super().__init__(path)
+        self.admin = "Admin"
         self.parties = []
         with open('static/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
@@ -82,6 +158,8 @@ class Database:
             self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
     def get_user_location(self, username):
+        if username == "Admin":
+            return None
         return [float(value) for value in self.get("users", "loc", condition=f'username="{username}"')[0].split(", ")]
 
     def set_user_location(self, username, newvalue):
@@ -167,50 +245,6 @@ class Database:
         else:
             return []
 
-    def execute(self, line, fetch=None):
-        """
-        :param line: SQL command
-        :param fetch: Number to of results to return
-        :return: The results
-        """
-        ret = None
-        try:
-            self.lock.acquire(True)
-
-            self.cursor.execute(line)
-            if not fetch or fetch == -1:
-                ret = self.cursor.fetchall()
-                self.data.commit()
-
-            else:
-                ret = self.cursor.fetchmany(fetch)
-                self.data.commit()
-            # do something
-        finally:
-            self.lock.release()
-            if ret is None:
-                print(f"Returning None, {line}")
-            return ret
-
-    def add(self, table, values):
-        # try:
-        self.fix_seq()
-        print(F"INSERT INTO {table} VALUES {values}")
-        self.execute(F"INSERT INTO {table} VALUES {values}")
-        self.fix_seq()
-        # except Exception as e:
-        #     print(1, e)
-        self.data.commit()
-
-    def remove(self, table, condition=None):
-        self.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
-        self.fix_seq()
-
-    def edit(self, table, column, newvalue, condition=None):
-        s = f'UPDATE {table} SET {column} = "{newvalue}"'
-        s += f" WHERE {condition}" if condition else " WHERE 1=1"
-        self.execute(s)
-
     def add_location(self, loc_name, lat, lng):
         self.add('user_added_locations (name, latlng)', reformat(loc_name, f"{lat}, {lng}"))
 
@@ -229,21 +263,6 @@ class Database:
         current_friends2.append(user1)
         self.edit("users", "friends", ", ".join(current_friends1), condition=f'name={user1}')
         self.edit("users", "friends", ", ".join(current_friends2), condition=f'name={user2}')
-
-    def get(self, table, column, condition=None, limit=None, first=True):
-        """
-        :param table: database table
-        :param column: What column?
-        :param condition: condition of search
-        :param limit: Limit the search to X results
-        :param first: Return first of every result
-        :return: The results
-        """
-
-        s = f"SELECT {column} FROM {table}"
-        if condition: s += f" WHERE {condition}"
-        if limit: s += f" LIMIT {limit}"
-        return [x[0] if first else x for x in self.execute(s)]
 
     def get_user_added_locations(self):
         return self.get('user_added_locations', 'name, latlng', first=False)
@@ -265,23 +284,34 @@ class Database:
         self.data.close()
 
 
-my_db = None
-#
-#
+def_loc = None
+def_locations = Database('database/def_locations')
+
+
+def reset_locations():
+    for name in my_db.get_all_names():
+        if name == "Admin":
+            continue
+        my_db.edit("users", "loc",
+                   newvalue=def_locations.get("locations", "latlng", condition=f'username="{name}"')[0],
+                   condition=f'username="{name}"')
 
 
 def main():
     global my_db
+    my_db = UserData("database/data")
+    # for name in my_db.get_all_names():
+    #     def_locations.add("locations", reformat(name, my_db.get_user_location(name)))
 
-    my_db = Database("database/data")
-    # my_db.remove_user("Guy", "123")
-    # print(my_db.get_users())
 
+# my_db.remove_user("Guy", "123")
+# print(my_db.get_users())
 
 
 if __name__ == "__main__":
     main()
-    names = ["Mike", "Manor", "Liza", "Maya", "Yakov"]
-    import random
-    for name in names:
-        my_db.add_user(name, "123", random.choice(names))
+
+    # names = ["Mike", "Manor", "Liza", "Maya", "Yakov"]
+    # import random
+    # for name in names:
+    #     my_db.add_user(name, "123", random.choice(names))
