@@ -16,9 +16,10 @@ class KNN:
         '''
         self.values: dict = vls
         self.labels = list(self.values.keys())
-        self.distances: np.array[tuple[any, float]] = np.array([])
+        self.distances = np.array([])
         self.k: int = k
         self.origin = None
+        self.groups: dict
 
     def set_origin(self, origin):
         if origin in self.values:
@@ -54,7 +55,8 @@ class KNN:
             n = int(np.sqrt(len(self.values)))
         else:
             n = self.k
-        return labeled_distances[1:n]
+        final_values = labeled_distances[1:n]
+        return final_values
 
 
 if __name__ == "__main__":

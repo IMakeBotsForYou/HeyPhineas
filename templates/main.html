@@ -129,13 +129,8 @@ user = "{{session['user']}}";
 
                 // notify the server that we are interest in this location
                 socket.emit("interested", "{{place['id']}}");
-                console.log("Emited 'interested'");
-
             });
           </script>
-<!--          <form action="" method="POST"><br>-->
-<!--                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}" name="get_map" style="text-align: center;">Get Map</button>-->
-<!--          </form>-->
           </div>
     {% endwith %}
 

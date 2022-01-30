@@ -284,9 +284,6 @@ class UserData(Database):
         self.data.close()
 
 
-def_loc = None
-def_locations = Database('database/def_locations')
-
 
 def reset_locations():
     for name in my_db.get_all_names():
@@ -299,7 +296,9 @@ def reset_locations():
 
 def main():
     global my_db
+    global def_locations
     my_db = UserData("database/data")
+    def_locations = Database('database/def_locations')
     # for name in my_db.get_all_names():
     #     def_locations.add("locations", reformat(name, my_db.get_user_location(name)))
 

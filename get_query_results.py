@@ -1,7 +1,11 @@
-import googlemaps
-from keys import *
-from requests import get
 import json
+
+import googlemaps
+from requests import get
+
+from keys import *
+
+
 # import gmaps as map_maker
 
 
@@ -85,12 +89,7 @@ class query:
         self.type = place_type
 
     def get_all_pages(self, limit):
-        query_results, next_k = find_places((self.lat, self.lng), self.radius, place_type=self.type, limit=limit)
-        while next_k:
-            data = find_places((self.lat, self.lng), self.radius, page_token=next_k)
-            r, next_k = data
-            if r:
-                query_results += r
+        query_results = find_places((self.lat, self.lng), self.radius, place_type=self.type, limit=limit)
 
         print("\n\n\n", query_results, "\n\n\n")
         for place in query_results:
@@ -153,26 +152,34 @@ class query:
             except Exception as e:
                 print(e)
 
-def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", page_token=None, APIKEY=apikey, limit=-1):
+
+def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", limit=-1):
     lat, lng = loc
-    if page_token:
-        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?" \
-              f"pagetoken={page_token}" \
-              f"&key={APIKEY}" \
-              f"&language=en"
-    else:
-        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?" \
-              f"&location={lat},{lng}" \
-              f"&radius={radius}" \
-              f"&type={place_type}" \
-              f"&key={APIKEY}" \
-              f"&language=en"
+    # if page_token:
+    #     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?" \
+    #           f"pagetoken={page_token}" \
+    #           f"&key={APIKEY}" \
+    #           f"&language=en"
+    # else:
+    #     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?" \
+    #           f"&location={lat},{lng}" \
+    #           f"&radius={radius}" \
+    #           f"&type={place_type}" \
+    #           f"&key={APIKEY}" \
+    #           f"&language=en"
+    reverse_geocoded_data = json.loads(get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={apikey}").text)
+    reverse_geocoded_city = reverse_geocoded_data["formatted_address"].split(", ")[-2]
 
-    response = get(url)
-    res = json.loads(response.text)
-    resses = []
+    req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry"]
+    req_comp = [f"query={place_type}_in_{reverse_geocoded_city}", f"locationbias=circle:{radius}@{lat},{lng}", f"fields={'%2C'.join(req_fields)}", f"key={apikey}"]
+    req_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{'&'.join(req_comp)}"
 
-    api_responds = res["results"][:limit]
+    req_res = get(req_url)
+    json_res = json.loads(req_res.text)
+    final_results = []
+    print(req_url, json.dumps(json_res, indent=4))
+
+    api_responds = json_res["results"][:limit]
     geometry = ["location"]
     for result in api_responds:
         info = {}
@@ -184,7 +191,7 @@ def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", pag
                     info[dat] = result[dat]
             except KeyError:
                 continue
-        resses.append(info)
+        final_results.append(info)
     # icon,place_id,name,opening_hours,rating,formatted_phone_number,vicinity,website,url
 
     # for p_id in ids:
@@ -196,22 +203,15 @@ def find_places(loc=(31.894756, 34.809322), radius=2_000, place_type="park", pag
     #     except Exception as e:
     #         print(e)
 
-    next_page_token = res.get("next_page_token", None)
-    return resses, next_page_token
+    # next_page_token = json_res.get("next_page_token", None)
+    return final_results
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-
-from datetime import datetime
 
 gmaps = googlemaps.Client(key=apikey)
-
-
-def get_name(lat, lng):
-    gecoded = gmaps.reverse_geocode((lat, lng))
-    print(gecoded)
 
 
 def decode_polyline(polyline_str):
@@ -246,62 +246,3 @@ def decode_polyline(polyline_str):
         coordinates.append((lat / 100000.0, lng / 100000.0))
 
     return coordinates
-
-
-def draw_route(dest, waypoints, name, current_location=(31.894756, 34.809322)):
-    # Request directions via public transit
-    now = datetime.now()
-
-    # locations = ["סטימצקי, Herzl Street, רחובות"]
-
-    markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
-               + r for i, r in enumerate(waypoints)]
-    # "כיכר המרכבה, Rehovot"
-    # dest "קניון רחובות، Bilu Street, Rehovot"
-
-    gmaps_results = gmaps.directions(origin=current_location,
-                                     destination=dest,
-                                     waypoints=waypoints,
-                                     departure_time=now)
-
-    marker_points = []
-    waypoints = []
-    # extract the location points from the previous directions function
-    distance = 0
-    for leg in gmaps_results[0]["legs"]:
-        leg_start_loc = leg["start_location"]
-        marker_points.append(f'{leg_start_loc["lat"]},{leg_start_loc["lng"]}')
-        for step in leg["steps"]:
-            distance += step["distance"]["value"]
-            end_loc = step["end_location"]
-            waypoints.append(f'{end_loc["lat"]},{end_loc["lng"]}')
-    last_stop = gmaps_results[0]["legs"][-1]["end_location"]
-    # marker_points.append(f'{last_stop["lat"]},{last_stop["lng"]}')
-    marker_points.append((last_stop["lat"], last_stop["lng"]))
-
-    # markers = ["color:blue|size:mid|label:" + chr(65 + i) + "|"
-    #            + r for i, r in enumerate(marker_points)]
-
-    # distance /= 1000
-
-    # fig = map_maker.figure()
-    # markers = map_maker.marker_layer(marker_points)
-    # fig.add_layer(markers)
-    # print(fig)
-
-    # marks = mark
-
-    #
-    # result_map = gmaps.static_map(
-    #     center=waypoints[0],
-    #     scale=10,
-    #     zoom=15,
-    #     size=[640, 640],
-    #     format="jpg",
-    #     maptype="roadmap",
-    #     markers=markers,
-    #     path="color:0x0000ff|weight:2|" + "|".join(waypoints))
-    #
-    # with open(f"static/{name}_route_map.jpg", "wb") as img:
-    #     for chunk in result_map:
-    #         img.write(chunk)

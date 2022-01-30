@@ -128,6 +128,7 @@ def inbox():
         emit_to(session['user'], "reset_notifs", "/comms")
     except KeyError:
         pass
+
     if request.method == "POST":
         # it has to be one, and ONLY one of these.
         message_id = request.form['accept'] + request.form['mark_as_read']
@@ -206,6 +207,7 @@ def register():
 def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None):
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
+        print(f"Sent {event_name} {message} {namespace} {user}")
     except Exception as e:
         print(f'error in emitting to user {user},', e)
         print(f'tried to send: ', message, event_name)
@@ -274,6 +276,9 @@ def broadcast_userdiff():
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visisble_uses]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
+    # Run KNN on new online userbase
+
+
 
 @socketio.on('ping', namespace='/comms')
 def check_ping(*args):
@@ -307,15 +312,17 @@ def weight_values(name, value):
     mutual_friends = [x for x in friends if x in friends_of_name]
     mult += 0.05 * len(mutual_friends)
 
-    return value * mult
+    return value / mult
+
+import math
 
 
 @socketio.on('knn_select', namespace='/comms')
 def knn_select_user(selected_user):
     db['knn'].set_origin(selected_user)
     db['knn'].run(weigh_values=weight_values)
-
-    names = [entry[0] for entry in db['knn'].run() if entry[0] in get_party_members(session['user'])]
+    members = [name for name in connected_members]
+    names = [entry[0] for entry in db['knn'].run(n=int(math.sqrt(len(members)))) if entry[0] in members]
     emit_to(session['user'], 'knn_results', message=names)
 
 
@@ -479,7 +486,8 @@ def interest(data):
 
 @socketio.on('disconnect', namespace='/comms')
 def logged_on_users():
-    broadcast_userdiff()
+    # broadcast_userdiff()
+    pass
 
 
 @socketio.on('invite_user', namespace='/comms')
@@ -490,7 +498,7 @@ def invite_user(receiver):
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
 
-    emit_to(receiver, 'notif', 'notification!')
+    emit_to(receiver, 'notif', namespace='/comms', message='notification!')
 
 
 @socketio.on('add_location', namespace='/comms')
@@ -501,13 +509,13 @@ def invite_user(data):
 
 
 @socketio.on('invite_user', namespace='/comms')
-def invite_user(reciever):
-    print("inviting", reciever)
+def invite_user(receiver):
+    print("inviting", receiver)
     db['ex'].send_message(title=f"Party invite from {session['user']}!",
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
-                          sender=session["user"], receiver=reciever, messagetype="question",
+                          sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
-    emit_to(reciever, 'notif', 'notification!')
+    emit_to(receiver, 'notif', namespace='/comms', message='notification!')
 
 
 @socketio.on('joined', namespace='/comms')
@@ -609,7 +617,7 @@ if __name__ == '__main__':
         lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
         db['ex'].set_user_location(user, f"{lat}, {lng}")
         vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat, lng]
-    knn = KNN(vls=vls, k=4)
+    knn = KNN(vls=vls, k=2)
     db["knn"] = knn
 
     socketio.run(app, host="0.0.0.0", port=8080)
