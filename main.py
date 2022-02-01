@@ -313,19 +313,31 @@ def weight_values(name, value):
 
     return value / mult
 
+
 import math
 import numpy as np
+
 
 @socketio.on('location_recommendation_request', namespace='/comms')
 def location_recommendation_request():
     members = get_party_members(session['user'])
     my_loc = connected_members[session['user']]['loc']
-    locations = [connected_members[m]['loc'] for m in members]
-    middle_lat, middle_lng = sum([loc[0] for loc in locations])/len(locations), sum([loc[1] for loc in locations]) / len(locations)
-    query_res = query((middle_lat, middle_lng), np.linalg.norm(np.array([middle_lat, middle_lng]) - np.array(my_loc)), 0, "restaurant")
-    query_res.get_all_pages(3)
+    locations = [connected_members[m]['loc'] for m in members if m in connected_members]
+    middle_lat, middle_lng = sum([loc[0] for loc in locations]) / len(locations), sum(
+        [loc[1] for loc in locations]) / len(locations)
+
+
+
+    query_res = query((middle_lat, middle_lng), np.linalg.norm(np.array([middle_lat, middle_lng]) - np.array(my_loc)),
+                      0, "park")
+
+    query_res.get_all_pages()
+
     session["results"] = query_res.results.get()
-    print("QUERY", session["results"])
+    print(1234, json.dumps(session['results'], indent=2))
+    place_locations = [session["results"][x]["location"] for x in session["results"]]
+    place_locations += [(middle_lat, middle_lng)]
+    [emit_to(member, 'suggestions', message=place_locations) for member in get_party_members(session["user"])]
 
 
 @socketio.on('knn_select', namespace='/comms')

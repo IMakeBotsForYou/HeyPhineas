@@ -88,7 +88,7 @@ class query:
         self.results = results([])
         self.type = place_type
 
-    def get_all_pages(self, limit):
+    def get_all_pages(self, limit=-1):
         query_results = find_places((self.lat, self.lng), self.radius, place_type=self.type, limit=limit)
 
         print("\n\n\n", query_results, "\n\n\n")
@@ -175,9 +175,9 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", lim
     req_res = get(req_url)
     json_res = json.loads(req_res.text)
     final_results = []
-    print(req_url, json.dumps(json_res, indent=4))
-
-    api_responds = json_res["results"][:limit]
+    # print(req_url, json.dumps(json_res, indent=4))
+    if limit != -1:
+        api_responds = json_res["results"][:limit]
     geometry = ["location"]
     for result in api_responds:
         info = {}

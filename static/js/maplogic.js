@@ -55,6 +55,23 @@ function initMap() {
             console.log( current_directions[step_index]);
         }
       });
+      var place_markers = [];
+       socket.on('suggestions', function(data){
+            for (let i = 0; i < place_markers.length; i++) {
+                markers[i].setMap(null);
+            }
+            for(let i = 0; i < data.length; i++){
+
+                var location = data[i];
+                var myLatLng = new google.maps.LatLng(location[0], location[1]);
+                var marker = new google.maps.Marker({
+                    position: myLatLng,
+                    label: name,
+                    map: map
+                });
+                place_markers.push(marker);
+            }
+       });
 
       socket.on('party_member_coords', function(data){
         var request_directions = data[0];
