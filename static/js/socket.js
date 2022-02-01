@@ -28,7 +28,9 @@ $(document).ready(function(){
        a.innerHTML = party_text;
        a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
        leader_of_party = data[0] == user;
-
+       if(leader_of_party){
+        $("#start_origin").visibility = 'visible';
+       }
 
        for(let i = 1; i < data.length; i++){
            a.innerHTML += `<p class="white">${data[i]}</p>`
@@ -133,7 +135,9 @@ $(document).ready(function(){
         $('#recommended').html(msg);
     });
 
-
+    $("#start_origin").on("click", function() {
+       socket.emit('location_recommendation_request')
+     });
 
     $("#create_party").on("click", function() {
         var a = document.getElementById("members_panel")

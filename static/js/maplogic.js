@@ -165,7 +165,7 @@ function calculateAndDisplayRoute(
   }
   origin = user_locations[user].location;
 //  destination = user_locations[secret_end].location;
-//  destination = deshalit;
+  destination = deshalit;
   if (first){
       directionsService
         .route({

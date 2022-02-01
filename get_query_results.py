@@ -130,10 +130,8 @@ class query:
                 url = None
 
             try:
-                open_now = place["opening_hours"]["open_now"]
                 periods = place["opening_hours"]["weekday_text"]
             except:
-                open_now = "opening_hours" not in place
                 periods = None
 
             try:
@@ -168,7 +166,7 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", lim
     #           f"&key={APIKEY}" \
     #           f"&language=en"
     reverse_geocoded_data = json.loads(get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={apikey}").text)
-    reverse_geocoded_city = reverse_geocoded_data["formatted_address"].split(", ")[-2]
+    reverse_geocoded_city = reverse_geocoded_data["results"][0]["address_components"][2]["long_name"]
 
     req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry"]
     req_comp = [f"query={place_type}_in_{reverse_geocoded_city}", f"locationbias=circle:{radius}@{lat},{lng}", f"fields={'%2C'.join(req_fields)}", f"key={apikey}"]
@@ -207,8 +205,8 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", lim
     return final_results
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 gmaps = googlemaps.Client(key=apikey)
@@ -244,5 +242,5 @@ def decode_polyline(polyline_str):
         lng += changes['longitude']
 
         coordinates.append((lat / 100000.0, lng / 100000.0))
-
     return coordinates
+

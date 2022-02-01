@@ -7,7 +7,7 @@ from engineio.payload import Payload
 import os
 import random
 from time import time, sleep
-
+from get_query_results import query
 from engineio.payload import Payload
 from flask import *
 from flask_socketio import SocketIO, emit
@@ -279,7 +279,6 @@ def broadcast_userdiff():
     # Run KNN on new online userbase
 
 
-
 @socketio.on('ping', namespace='/comms')
 def check_ping(*args):
     global last_time_pings_checked
@@ -315,6 +314,18 @@ def weight_values(name, value):
     return value / mult
 
 import math
+import numpy as np
+
+@socketio.on('location_recommendation_request', namespace='/comms')
+def location_recommendation_request():
+    members = get_party_members(session['user'])
+    my_loc = connected_members[session['user']]['loc']
+    locations = [connected_members[m]['loc'] for m in members]
+    middle_lat, middle_lng = sum([loc[0] for loc in locations])/len(locations), sum([loc[1] for loc in locations]) / len(locations)
+    query_res = query((middle_lat, middle_lng), np.linalg.norm(np.array([middle_lat, middle_lng]) - np.array(my_loc)), 0, "restaurant")
+    query_res.get_all_pages(3)
+    session["results"] = query_res.results.get()
+    print("QUERY", session["results"])
 
 
 @socketio.on('knn_select', namespace='/comms')
@@ -340,7 +351,7 @@ def party_coords(username):
         except Exception as e:
             print("get coords error", e)
 
-    data = [True, data]
+    data = [False, data]
     [emit_to(member, 'party_member_coords', '/comms',
              message=data) for member in members if member in connected_members]
 
