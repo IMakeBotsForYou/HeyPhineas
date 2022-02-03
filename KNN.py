@@ -33,13 +33,19 @@ class KNN:
     def _euclidean_dist(self, target_point: np.array) -> float:
         return np.linalg.norm(self.origin - np.array(target_point))
 
-    def run(self, n=None, weigh_values=None):
+    def run(self, n=None, weigh_values=None, sonly_these_values=None):
         """
+        :param only_these_values: only run on certain values
         :param weigh_values: user-controlled function to weigh the
         :param n: Number of nearest neighbours to return
         :return: K-NN labels
         """
         assert self.origin is not None
+        saved_values = None
+        if only_these_values is not None:
+            saved_values = self.values
+            self.valeus = only_these_values
+
         labels = list(self.values.keys())
         vectors = list(self.values.values())
         if weigh_values is None:
@@ -56,6 +62,10 @@ class KNN:
         else:
             n = self.k
         final_values = labeled_distances[1:n]
+
+        if only_these_values is not None:
+            self.values = saved_values
+
         return final_values
 
 

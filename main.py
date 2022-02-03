@@ -325,11 +325,10 @@ def location_recommendation_request():
     locations = [connected_members[m]['loc'] for m in members if m in connected_members]
     middle_lat, middle_lng = sum([loc[0] for loc in locations]) / len(locations), sum(
         [loc[1] for loc in locations]) / len(locations)
-
-
-
-    query_res = query((middle_lat, middle_lng), np.linalg.norm(np.array([middle_lat, middle_lng]) - np.array(my_loc)),
-                      0, "park")
+    farthest = max([connected_members[x]['loc'][0] for x in members]), \
+               max([connected_members[x]['loc'][1] for x in members])
+    max_distance = 3963.0 * np.arccos[(np.sin(middle_lat) * np.sin(farthest[0])) + np.sin(middle_lat) * np.sin(farthest[0]) * np.sin(farthest[1] - middle_lng)]
+    query_res = query((middle_lat, middle_lng), max_distance, 0, "park")
 
     query_res.get_all_pages()
 
@@ -636,11 +635,22 @@ if __name__ == '__main__':
     for user in db["ex"].get("users", "username"):
         if user == "Admin":
             continue
-        interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
+        # interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
         lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
         db['ex'].set_user_location(user, f"{lat}, {lng}")
-        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat, lng]
-    knn = KNN(vls=vls, k=2)
+        interests_list = ["sport", "theater", "computer", "park", "restaurant"]
+        interests_dict = {}
+        for i in interests_list:
+            interests_dict[i] = np.random.random_sample() * 5
+
+        interests = "|".join([f"{i}|{interests_dict[i]}" for i in interests_list])
+        db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
+        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat/30, lng/30]
+
+    vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5])
+    vls["__ideal_park"] = np.array([4, 2, 1, 5, 2])
+
+    knn = KNN(vls=vls, k=3)
     db["knn"] = knn
 
     socketio.run(app, host="0.0.0.0", port=8080)

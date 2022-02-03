@@ -80,7 +80,7 @@ class Place:
 
 # 31.894756, 34.809322
 class query:
-    def __init__(self, loc, radius, min_rating, place_type):
+    def __init__(self, loc, radius, min_rating=0, place_type="park"):
         self.lat, self.lng = loc
         # self.lat_lng = {'lat': self.lat, 'lng': self.lng}
         self.radius = radius
@@ -169,7 +169,7 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", lim
     reverse_geocoded_city = reverse_geocoded_data["results"][0]["address_components"][2]["long_name"]
 
     req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry"]
-    req_comp = [f"query={place_type}_in_{reverse_geocoded_city}", f"locationbias=circle:{radius}@{lat},{lng}", f"fields={'%2C'.join(req_fields)}", f"key={apikey}"]
+    req_comp = [f"query={place_type}_around_{reverse_geocoded_city}", f"locationbias=circle:{radius}@{lat},{lng}", f"fields={'%2C'.join(req_fields)}", f"key={apikey}"]
     req_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{'&'.join(req_comp)}"
 
     req_res = get(req_url)
