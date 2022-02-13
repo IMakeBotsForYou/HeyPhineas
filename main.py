@@ -1,10 +1,7 @@
 from flask_socketio import SocketIO, emit
 from flask import *
-import database_wrapper
-from time import time
 import os
-from engineio.payload import Payload
-import os
+import asyncio
 import random
 from time import time, sleep
 from get_query_results import query
@@ -41,7 +38,7 @@ app.config['SECRET_KEY'] = 'secret!'
 # app.config['DEBUG'] = True
 
 # turn the flask app into a socketio app
-socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
+socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
 
 def random_location():
@@ -320,35 +317,98 @@ import numpy as np
 
 @socketio.on('location_recommendation_request', namespace='/comms')
 def location_recommendation_request():
+    pass
+    # members = get_party_members(session['user'])
+    # my_loc = connected_members[session['user']]['loc']
+    # locations = [connected_members[m]['loc'] for m in members if m in connected_members]
+    # middle_lat, middle_lng = sum([loc[0] for loc in locations]) / len(locations), sum(
+    #     [loc[1] for loc in locations]) / len(locations)
+    # farthest = max([connected_members[x]['loc'][0] for x in members]), \
+    #            max([connected_members[x]['loc'][1] for x in members])
+    # max_distance = 3963.0 * np.arccos[(np.sin(middle_lat) * np.sin(farthest[0]))
+    #                   + np.sin(middle_lat) * np.sin(farthest[0]) * np.sin(farthest[1] - middle_lng)]
+    # interest_values = {}
+    #
+    # for entry in db['knn'].values:
+    #     if entry not in members and entry not in ["__ideal_restaurant", "__ideal_park"]:
+    #         interest_values[entry] = db['knn'].values[:5]
+    #
+    # # db['knn'].sort_users("__ideal_restaurant", "__ideal_park")
+    # # db['knn'].run(only_these_values=interest_values)
+    #
+    # query_res = query((middle_lat, middle_lng), max_distance, 0, place_type)
+    # query_res.get_all_pages()
+    #
+    # session["results"] = query_res.results.get()
+    # # print(1234, json.dumps(session['results'], indent=2))
+    # place_locations = [session["results"][x]["location"] for x in session["results"]]
+    # place_locations += [(middle_lat, middle_lng)]
+    # [emit_to(member, 'suggestions', message=place_locations) for member in get_party_members(session["user"])]
+
+
+@socketio.on('send_current_path', namespace='/comms')
+def return_path(data):
+    connected_members[session['user']]['current_path'] = [data, 0]
+    print(f"Received path from {session['user']}")
+    # print(json.dumps(connected_members[session['user']]))
+
+
+@socketio.on('start_simulation', namespace='/comms')
+def start_simulation():
     members = get_party_members(session['user'])
-    my_loc = connected_members[session['user']]['loc']
-    locations = [connected_members[m]['loc'] for m in members if m in connected_members]
-    middle_lat, middle_lng = sum([loc[0] for loc in locations]) / len(locations), sum(
-        [loc[1] for loc in locations]) / len(locations)
-    farthest = max([connected_members[x]['loc'][0] for x in members]), \
-               max([connected_members[x]['loc'][1] for x in members])
-    max_distance = 3963.0 * np.arccos[(np.sin(middle_lat) * np.sin(farthest[0])) + np.sin(middle_lat) * np.sin(farthest[0]) * np.sin(farthest[1] - middle_lng)]
-    query_res = query((middle_lat, middle_lng), max_distance, 0, "park")
+    # for member in members:
+    #     print(member, json.dumps(connected_members[member], indent=4))
+    lengths = []
+    for member in members:
+        try:
+            lengths.append(len(connected_members[member]['current_path'][0]))
+        except TypeError:
+            continue
 
-    query_res.get_all_pages()
+    maxlen = max(lengths)
 
-    session["results"] = query_res.results.get()
-    print(1234, json.dumps(session['results'], indent=2))
-    place_locations = [session["results"][x]["location"] for x in session["results"]]
-    place_locations += [(middle_lat, middle_lng)]
-    [emit_to(member, 'suggestions', message=place_locations) for member in get_party_members(session["user"])]
+    for step_index in range(maxlen):
+         for m in members:
+            try:
+                lat, lng = connected_members[m]['current_path'][0][step_index]
+                connected_members[m]['current_path'][1] = step_index
+                connected_members[m]['loc'] = lat, lng
+            except IndexError:
+                print("IndexError")
+            except KeyError:
+                print("KeyError")
+
+         party_coords(session['user'])
+         sleep(0.3)
+
+
+
+
+def try_reset_first(user):
+    route, lng = connected_members[user]['current_path']
+
+    if lng >= len(route):
+        emit_to(user, 'reset_first')
+
+
+@socketio.on('step', namespace='/comms')
+def step():
+    connected_members[session['user']]['current_path'][1] += 1
+    try_reset_first(session['user'])
 
 
 @socketio.on('knn_select', namespace='/comms')
 def knn_select_user(selected_user):
-    db['knn'].set_origin(selected_user)
-    db['knn'].run(weigh_values=weight_values)
-    members = [name for name in connected_members]
-    names = [entry[0] for entry in db['knn'].run(n=int(math.sqrt(len(members)))) if entry[0] in members]
-    emit_to(session['user'], 'knn_results', message=names)
+
+    # db['knn'].set_origin(selected_user)
+    # db['knn'].run(weigh_values=weight_values)
+    # members = [name for name in connected_members]
+    # names = [entry[0] for entry in db['knn'].run(n=int(math.sqrt(len(members)))) if entry[0] in members]
+    # emit_to(session['user'], 'knn_results', message=names)
+    pass
 
 
-def party_coords(username):
+def party_coords(username, request_directions=False):
     members = get_party_members(username)
     data = []
 
@@ -362,7 +422,7 @@ def party_coords(username):
         except Exception as e:
             print("get coords error", e)
 
-    data = [False, data]
+    data = [request_directions, data]
     [emit_to(member, 'party_member_coords', '/comms',
              message=data) for member in members if member in connected_members]
 
@@ -393,7 +453,7 @@ def get_coords_of_party():
             db['ex'].set_party_status(leader, "halt")
             print("caught halt")
 
-        party_coords(leader)
+        party_coords(leader, True)
 
 
 @socketio.on('connect', namespace='/comms')
@@ -408,7 +468,8 @@ def logged_on_users():
         "last ping": int(time()),
         "remote addr": request.remote_addr,
         "sid": request.sid,
-        "loc": [0, 0]
+        "loc": [0, 0],
+        "current_path": None
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
@@ -647,8 +708,8 @@ if __name__ == '__main__':
         db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
         vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat/30, lng/30]
 
-    vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5])
-    vls["__ideal_park"] = np.array([4, 2, 1, 5, 2])
+    vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
+    vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])
 
     knn = KNN(vls=vls, k=3)
     db["knn"] = knn

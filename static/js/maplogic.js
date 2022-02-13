@@ -34,7 +34,7 @@ function initMap() {
 
       // Create a map and center it on my house.
       const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 16,
+        zoom: 14,
         center: { lat: 31.894756, lng: 34.809322 },
       });
 
@@ -52,11 +52,13 @@ function initMap() {
         if (current_directions != null && current_directions.length > step_index - 1){
             step_index += 1;
             socket.emit('my_location', current_directions[step_index])
-            console.log( current_directions[step_index]);
+            socket.emit('step')
+            console.log(current_directions[step_index]);
         }
       });
+
       var place_markers = [];
-       socket.on('suggestions', function(data){
+      socket.on('suggestions', function(data){
             for (let i = 0; i < place_markers.length; i++) {
                 markers[i].setMap(null);
             }
@@ -82,7 +84,7 @@ function initMap() {
             var name = data[i][0];
             var latlng = data[i][1];
             var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
-
+            console.log(`${name}, ${latlng}`);
             if (name in user_locations){
                 user_locations[name].location = myLatLng;
             } else {
@@ -206,7 +208,7 @@ function calculateAndDisplayRoute(
           step_index = 0;
           first = false;
 
-//          socket.emit('in_progress');
+          socket.emit('send_current_path', current_directions);
 
           document.getElementById("warnings-panel").innerHTML =
           "<b>" + directionsData.warnings + "</b>";

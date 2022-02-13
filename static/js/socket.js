@@ -134,9 +134,12 @@ $(document).ready(function(){
     socket.on('best_3_locations', function(msg) {
         $('#recommended').html(msg);
     });
+    socket.on('reset_first', function(msg) {
+        first=false;
+    });
 
     $("#start_origin").on("click", function() {
-       socket.emit('location_recommendation_request')
+       socket.emit('start_simulation')
      });
 
     $("#create_party").on("click", function() {
