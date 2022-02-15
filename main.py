@@ -273,7 +273,20 @@ def broadcast_userdiff():
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visisble_uses]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
-    # Run KNN on new online userbase
+    in_party = get_party_leader(session['user'])
+    if in_party:
+        party_members = get_party_members(session['user']) + ["Admin"]
+        for member in party_members:
+            if member != session['user']:
+                try:
+                    path, index = connected_members[member]['current_path']
+                    data = path[index:]
+                    print(f"Sending path from {member} to {session['user']} ({party_members})")
+                    emit_to(session['user'], 'user_path', message=data)
+                except:
+                    print(f"Error in drawing path from {member} on {session['user']}'s screen")
+        # send_path_to_party(user_to_track=session['user'])
+
 
 
 @socketio.on('ping', namespace='/comms')
@@ -346,16 +359,30 @@ def location_recommendation_request():
     # [emit_to(member, 'suggestions', message=place_locations) for member in get_party_members(session["user"])]
 
 
+def send_path_to_party(user_to_track):
+    data = connected_members[session['user']]['current_path'][0]
+    party_members = get_party_members(user_to_track) + ["Admin"]
+    for member in party_members:
+        if member != session['user']:
+            print(f"Sending path from {session['user']} to {member} ({party_members})")
+            emit_to(member, 'user_path', message=data)
+
+
 @socketio.on('send_current_path', namespace='/comms')
 def return_path(data):
+    # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
     connected_members[session['user']]['current_path'] = [data, 0]
     print(f"Received path from {session['user']}")
+    send_path_to_party(user_to_track=session['user'])
+
     # print(json.dumps(connected_members[session['user']]))
 
 
 @socketio.on('start_simulation', namespace='/comms')
 def start_simulation():
-    members = get_party_members(session['user'])
+    if session['user'] == "Admin":
+        return
+    members = get_party_members(session['user']) + ["Admin"]
     # for member in members:
     #     print(member, json.dumps(connected_members[member], indent=4))
     lengths = []
@@ -368,7 +395,7 @@ def start_simulation():
     maxlen = max(lengths)
 
     for step_index in range(maxlen):
-         for m in members:
+        for m in members:
             try:
                 lat, lng = connected_members[m]['current_path'][0][step_index]
                 connected_members[m]['current_path'][1] = step_index
@@ -377,11 +404,11 @@ def start_simulation():
                 print("IndexError")
             except KeyError:
                 print("KeyError")
+            except TypeError:
+                print("TypeError in simulation 389")
 
-         party_coords(session['user'])
-         sleep(0.3)
-
-
+        party_coords(session['user'])
+        sleep(0.3)
 
 
 def try_reset_first(user):
@@ -399,7 +426,6 @@ def step():
 
 @socketio.on('knn_select', namespace='/comms')
 def knn_select_user(selected_user):
-
     # db['knn'].set_origin(selected_user)
     # db['knn'].run(weigh_values=weight_values)
     # members = [name for name in connected_members]
@@ -455,6 +481,8 @@ def get_coords_of_party():
 
         party_coords(leader, True)
 
+from threading import Thread
+
 
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
@@ -479,9 +507,7 @@ def logged_on_users():
         }
     if session['user'] != "Admin":
         connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
-    # else:
-    #   lat, lng = random_location()
-    #   set_user_location(session['user'], lat, lng)
+
 
     broadcast_userdiff()
 
@@ -542,10 +568,14 @@ def reset_locs():
             [x, db['ex'].get_user_location(x)]
             for x in db['ex'].get_all_names() if x != "Admin"]
     ]
-
-    for member in connected_members:
-        emit_to(member, 'party_member_coords',
-                message=party_data[get_party_leader(member)])
+    print(json.dumps(party_data, indent=2))
+    try:
+        for member in connected_members:
+            if member != "Admin":
+                emit_to(member, 'party_member_coords',
+                        message=party_data[get_party_leader(member)])
+    except KeyError:
+        print("Error KEYERROR 549 reset locations")
 
 
 @socketio.on('interested', namespace="/comms")
@@ -610,10 +640,10 @@ def party(data):
         create_party(session["user"])
 
 
-def get_party_leader(sessionuser):
-    if sessionuser == "Admin":
+def get_party_leader(username):
+    if username == "Admin":
         return "Admin"
-    a = db['ex'].get('users', 'current_party', condition=f'username="{sessionuser}"')
+    a = db['ex'].get('users', 'current_party', condition=f'username="{username}"')
     if a and a not in ["" " "]:
         return a[0]
     else:
@@ -706,7 +736,7 @@ if __name__ == '__main__':
 
         interests = "|".join([f"{i}|{interests_dict[i]}" for i in interests_list])
         db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
-        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat/30, lng/30]
+        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 30, lng / 30]
 
     vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
     vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])

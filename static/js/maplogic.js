@@ -27,7 +27,19 @@ var user_locations = {}
 var markerArray = [];
 var current_directions;
 var step_index = 0;
-deshalit = {"lat": 31.89961596028198, "lng": 34.816320411774875}
+deshalit = {"lat": 31.89961596028198, "lng": 34.816320411774875};
+colours = ["#9a465c",
+"#469a83",
+"#29a0b1",
+"#167d7f",
+"#98d7c2",
+"#ddffe7",
+"#9a4686",
+"#9a5946",
+"#9a8346",
+"#5c9a46"];
+colours_index = 0;
+paths = []
 function initMap() {
       // Instantiate a directions service.
       const directionsService = new google.maps.DirectionsService();
@@ -74,6 +86,28 @@ function initMap() {
                 place_markers.push(marker);
             }
        });
+
+
+      socket.on('user_path', function(data){
+        path = [];
+//        for(let i = 0; i < paths.length; i++){
+//            paths[i].setMap(null);
+//        }
+        for(let i = 0; i < data.length; i++){
+            path.push({lat: data[i][0], lng: data[i][1]})
+        };
+        var user_path = new google.maps.Polyline({
+            path: path,
+            geodesic: true,
+            strokeColor: colours[colours_index],
+            strokeOpacity: 1.0,
+            strokeWeight: 5,
+        });
+        user_path.setMap(map);
+        colours_index += 1;
+        colours_index %= colours.length;
+        paths.push(user_path);
+      });
 
       socket.on('party_member_coords', function(data){
         var request_directions = data[0];
