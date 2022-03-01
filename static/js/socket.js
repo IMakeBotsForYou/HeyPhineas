@@ -48,6 +48,18 @@ $(document).ready(function(){
 
     }
 
+
+    $(document).on('click', '#submit_place', function(){
+
+        var type = document.getElementById("type").value;
+        var radius = document.getElementById("radius").value;
+        var min_rating = document.getElementById("min_rating").value;
+        var limit = document.getElementById("limit").value;
+        console.log();
+        socket.emit('place_form_data', `${type}|${radius}|${min_rating}|${limit}`)
+    });
+
+
     socket.on('party_members_list_get', function(data){
         update_party_members(data)
     });
@@ -90,6 +102,7 @@ $(document).ready(function(){
                 delay: 100,
             });
         });
+
     });
 
     socket.on('update_party_members', function(data){

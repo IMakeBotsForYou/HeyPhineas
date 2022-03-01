@@ -123,9 +123,8 @@ user = "{{session['user']}}";
             $("#get_map_btn_{{place['id']}}").click(function(e) {
                 //document.getElementById("secret_end").value = "{{place['id']}}";
                 //console.log(document.getElementById("secret_end").value);
-                document.getElementById("secret_end").value = "{{place["location"][0]}}, {{place["location"][1]}}";
-                //a = $("#secret_end").value;
-                //onChangeHandler();
+                destination = new google.maps.LatLng(place["location"][0], place["location"][0]);
+                onChangeHandler();
 
                 // notify the server that we are interest in this location
                 socket.emit("interested", "{{place['id']}}");
@@ -206,12 +205,12 @@ user = "{{session['user']}}";
 <!--{% endfor %}-->
 </div>
 <div class="middle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
-    <form action="" method="POST"><br>
-        <input type="text" name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
+<!--    <form action="" method="POST"><br>-->
+        <input type="text"  name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
         <input type="text" name="radius" id="radius" placeholder="Radius" autocomplete="off"><br><br>
         <input type="text" name="min_rating" id="min_rating" placeholder="Rating" autocomplete="off"><br><br>
         <input type="text" name="limit" id="limit" placeholder="Limit" autocomplete="off"><br><br>
-        <button type="submit" name="search_place" class="action_button" style="width: 30%;">Search</button>
-    </form>
+        <button type="button" id="submit_place" name="submit_place" class="action_button" style="width: 30%;">Search</button>
+<!--    </form>-->
 </div>
 {% endblock %}

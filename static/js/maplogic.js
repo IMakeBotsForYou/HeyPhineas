@@ -26,6 +26,7 @@ var onChangeHandler = null;
 var user_locations = {}
 var markerArray = [];
 var current_directions;
+var destination = null;
 var step_index = 0;
 deshalit = {"lat": 31.89961596028198, "lng": 34.816320411774875};
 colours = ["#9a465c",
@@ -40,6 +41,9 @@ colours = ["#9a465c",
 "#5c9a46"];
 colours_index = 0;
 paths = []
+
+
+
 function initMap() {
       // Instantiate a directions service.
       const directionsService = new google.maps.DirectionsService();
@@ -52,12 +56,25 @@ function initMap() {
 
       socket.on('update_location', function(data){
         var name = data[0];
-        var lat = data[1];
-        var lng = data[2];
-        var myLatLng = new google.maps.LatLng(lat, lng)
+        var latlng = data[1];
+        var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
+        console.log(`${name}, ${latlng}`);
+        if (name in user_locations){
+            user_locations[name].location = myLatLng;
+        } else {
+            user_locations[name] = {"location": myLatLng}
+        }
 
-        user_locations[name].location = myLatLng
-        user_locations[name]["marker"].setPosition(myLatLng);
+        if ('marker' in user_locations[name]){
+            user_locations[name]["marker"].setPosition(myLatLng);
+        } else {
+            var marker = new google.maps.Marker({
+                position: myLatLng,
+                label: name,
+                map: map
+            });
+            user_locations[name]["marker"] = marker;
+        }
       });
 
       $("#make_step").on("click", function() {
@@ -70,49 +87,70 @@ function initMap() {
       });
 
       var place_markers = [];
-      socket.on('suggestions', function(data){
+      socket.on('recommended_places', function(data){
             for (let i = 0; i < place_markers.length; i++) {
-                markers[i].setMap(null);
+                place_markers[i].setMap(null);
             }
-            for(let i = 0; i < data.length; i++){
 
-                var location = data[i];
+            for(let i = 0; i < data.length; i++){
+                var location = data[i].location;
+
                 var myLatLng = new google.maps.LatLng(location[0], location[1]);
                 var marker = new google.maps.Marker({
                     position: myLatLng,
-                    label: name,
+                    label: data[i].name,
                     map: map
                 });
+
                 place_markers.push(marker);
+                place_markers[place_markers.length-1].addListener("click", () => {
+                    //socket.emit('knn_select', user_locations[data[i][0]]["marker"].label)
+                    console.log(place_markers[place_markers.length-1].label);
+                });
+
+
             }
+
        });
 
 
-      socket.on('user_path', function(data){
-        path = [];
-//        for(let i = 0; i < paths.length; i++){
-//            paths[i].setMap(null);
-//        }
+
+
+      socket.on('user_paths', function(data){
+        for(let i = 0; i < paths.length; i++){
+            paths[i].setMap(null);
+        }
+
         for(let i = 0; i < data.length; i++){
-            path.push({lat: data[i][0], lng: data[i][1]})
+            let name = data[i][0];
+            let coords = data[i][1];
+            let path = []
+            for(let i = 0; i < coords.length; i++){
+                path.push({lat: coords[i][0], lng: coords[i][1]})
+            }
+
+            if (!(name in paths)){
+                paths[name] = {"path": user_path, "colour": colours[colours_index]};
+                colours_index += 1;
+                colours_index %= colours.length;
+            } else
+                paths[name].path = user_path
+
+            var user_path = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: paths[name].colour,
+                strokeOpacity: 1.0,
+                strokeWeight: 5,
+                map: map
+            });
+            paths.push(user_path)
         };
-        var user_path = new google.maps.Polyline({
-            path: path,
-            geodesic: true,
-            strokeColor: colours[colours_index],
-            strokeOpacity: 1.0,
-            strokeWeight: 5,
-        });
-        user_path.setMap(map);
-        colours_index += 1;
-        colours_index %= colours.length;
-        paths.push(user_path);
       });
 
       socket.on('party_member_coords', function(data){
         var request_directions = data[0];
         data = data[1];
-        names = [];
 
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
@@ -135,11 +173,6 @@ function initMap() {
                 });
                 user_locations[name]["marker"] = marker;
             }
-//            if(name == "Dan"){
-//                document.getElementById("secret_start").value = name;
-//            }else{
-//                document.getElementById("secret_end").value = name;
-//            }
         }
         for(let i = 0; i < data.length; i++){
             user_locations[data[i][0]]["marker"].addListener("click", () => {
@@ -206,7 +239,9 @@ function calculateAndDisplayRoute(
   stepDisplay,
   map
 ) {
-
+    if(user == "Admin"){
+    return;
+    }
 
   // Retrieve the start and end locations and create a DirectionsRequest using
   // WALKING directions.
@@ -216,9 +251,11 @@ function calculateAndDisplayRoute(
   if(secret_end == '' || secret_start == ''){
     return;
   }
-  origin = user_locations[user].location;
-//  destination = user_locations[secret_end].location;
-  destination = deshalit;
+  var origin = user_locations[user].location;
+  if(destination == null){
+    destination = deshalit;
+  }
+
   if (first){
       directionsService
         .route({

@@ -20,6 +20,8 @@ $(document).ready(function(){
     });
 
 
+
+
     var coll = document.getElementsByClassName("collapsible");
     var i;
 

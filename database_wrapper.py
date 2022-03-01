@@ -140,7 +140,10 @@ class UserData(Database):
         with open('static/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
-    def get_all_names(self):
+    def get_all_names(self, removeAdmin=False):
+        if removeAdmin:
+            return [name for name in self.get("users", "username") if name != "Admin"]
+
         return self.get("users", "username")
 
     def send_message(self, title, desc, sender, receiver, messagetype, action):

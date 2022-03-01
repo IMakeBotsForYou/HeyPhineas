@@ -169,12 +169,15 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", lim
     reverse_geocoded_city = reverse_geocoded_data["results"][0]["address_components"][2]["long_name"]
 
     req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry"]
-    req_comp = [f"query={place_type}_around_{reverse_geocoded_city}", f"locationbias=circle:{radius}@{lat},{lng}", f"fields={'%2C'.join(req_fields)}", f"key={apikey}"]
+    req_comp = [f"query={place_type}_in_{reverse_geocoded_city}", f"fields={','.join(req_fields)}", f"key={apikey}", f"locationbias=circle:{radius}@{lat},{lng}"]
     req_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{'&'.join(req_comp)}"
-
+    print(req_url)
     req_res = get(req_url)
     json_res = json.loads(req_res.text)
     final_results = []
+
+    print(reverse_geocoded_city)
+
     # print(req_url, json.dumps(json_res, indent=4))
     if limit != -1:
         api_responds = json_res["results"][:limit]
