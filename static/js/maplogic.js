@@ -118,7 +118,6 @@ function initMap() {
         const meters = 10;
         const ten_metres = meters * 0.0000089;
         function move_towards_next_point() {
-
             var current_pos = user_locations[user].marker.getPosition().toJSON();
             var my_lat = current_pos.lat;
             var my_long = current_pos.lng;
