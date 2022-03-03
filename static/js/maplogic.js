@@ -29,7 +29,8 @@ var current_directions;
 var destination = null;
 var step_index = 0;
 deshalit = {"lat": 31.89961596028198, "lng": 34.816320411774875};
-colours = ["#9a465c",
+colours =
+["#9a465c",
 "#469a83",
 "#29a0b1",
 "#167d7f",
@@ -39,8 +40,9 @@ colours = ["#9a465c",
 "#9a5946",
 "#9a8346",
 "#5c9a46"];
+
 colours_index = 0;
-paths = []
+paths = {}
 
 
 
@@ -107,27 +109,51 @@ function initMap() {
                     //socket.emit('knn_select', user_locations[data[i][0]]["marker"].label)
                     console.log(place_markers[place_markers.length-1].label);
                 });
-
-
             }
-
        });
+
+
+      $("#start_origin").on("click", function() {
+        const myInterval = setInterval(move_towards_next_point, 1000);
+        const meters = 10;
+        const ten_metres = meters * 0.0000089;
+        function move_towards_next_point() {
+
+            var current_pos = user_locations[user].marker.getPosition().toJSON();
+            var my_lat = current_pos.lat;
+            var my_long = current_pos.lng;
+            var next_point = current_directions[step_index];
+
+
+            var theta = Math.atan((next_point.lng-my_lng)/(next_point.lat-my_lat));
+
+            var new_lat = my_lat + ten_metres*Math.sin(theta);
+            var new_long = my_long + ten_metres*Math.cos(theta)/Math.cos(my_lat * 0.018);
+
+            user_locations[user].marker.setPosition(new google.maps.LatLng(new_lat, new_long));
+            user_locations[user].position = new google.maps.LatLng(new_lat, new_long);
+
+
+        }
+      });
 
 
 
 
       socket.on('user_paths', function(data){
-        for(let i = 0; i < paths.length; i++){
-            paths[i].setMap(null);
-        }
+
 
         for(let i = 0; i < data.length; i++){
             let name = data[i][0];
             let coords = data[i][1];
-            let path = []
+            let path = [];
+
+
             for(let i = 0; i < coords.length; i++){
                 path.push({lat: coords[i][0], lng: coords[i][1]})
             }
+
+             var user_path;
 
             if (!(name in paths)){
                 paths[name] = {"path": user_path, "colour": colours[colours_index]};
@@ -136,15 +162,14 @@ function initMap() {
             } else
                 paths[name].path = user_path
 
-            var user_path = new google.maps.Polyline({
+            user_path = new google.maps.Polyline({
                 path: path,
                 geodesic: true,
-                strokeColor: paths[name].colour,
                 strokeOpacity: 1.0,
+                strokeColor: paths[name].colour,
                 strokeWeight: 5,
                 map: map
             });
-            paths.push(user_path)
         };
       });
 
@@ -157,6 +182,7 @@ function initMap() {
             var latlng = data[i][1];
             var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
             console.log(`${name}, ${latlng}`);
+
             if (name in user_locations){
                 user_locations[name].location = myLatLng;
             } else {

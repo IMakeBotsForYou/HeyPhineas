@@ -31,7 +31,7 @@ class KNN:
 
         return np.linalg.norm(np.array(self.values[self.origin]) - np.array(target_point))
 
-    def get_closest(self, n=None, weigh_values=None, only_these_values=None):
+    def get_closest(self, n=None, weigh_values=None, only_these_values=None, names_only=False):
         """
         :param only_these_values: only run on certain values
         :param weigh_values: user-controlled function to weigh the
@@ -64,6 +64,9 @@ class KNN:
         if only_these_values is not None:
             self.values = saved_values
 
+        if names_only:
+            return [x[0] for x in final_values]
+
         return final_values
 
 
@@ -72,7 +75,11 @@ if __name__ == "__main__":
         "Dan": [5, 5],
         "Rudich": [4, 4],
         "Guy": [4.5, 4],
-        "Fefer": [1, 5]
+        "Shoshani": [4, 5],
+
+        "Fefer": [1, 2],
+        "Maya": [2, 3],
+        "Yasha": [1, 1],
     }
     import random
 
@@ -83,10 +90,27 @@ if __name__ == "__main__":
     knn.set_origin("Dan")
     flag = True
     closest = {}
+    middles = {}
     for name in values:
-        # print("Scanning", knn.origin)
         knn.set_origin(name)
-        closest[knn.origin] = knn.get_closest()
-        print(closest)
+        closest[knn.origin] = {"closest": knn.get_closest(names_only=True), "in group": False}
+
+    for name in values:
+        middle_x, middle_y = sum(coord[0] for coord in closest[name]["closest"]) / 3, \
+                             sum(coord[1] for coord in closest[name]["closest"]) / 3
+        middle = middle_x, middle_y
+        knn.set_origin(middle)
+        knn.get_closest()
+
+
+
+
+
+
+
+
+
+
+
 
 

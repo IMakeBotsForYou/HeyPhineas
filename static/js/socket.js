@@ -151,9 +151,7 @@ $(document).ready(function(){
         first=false;
     });
 
-    $("#start_origin").on("click", function() {
-       socket.emit('start_simulation')
-     });
+
 
     $("#create_party").on("click", function() {
         var a = document.getElementById("members_panel")

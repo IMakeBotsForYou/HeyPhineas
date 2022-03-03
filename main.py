@@ -369,24 +369,18 @@ def location_recommendation_request():
 
 
 def send_path_to_party(user_to_track):
-    if user_to_track == "Admin":
-        need_to_send = True
-    else:
-        need_to_send = get_party_leader(user_to_track)
-
-    if need_to_send:
-        party_members = get_party_members(session['user']) + ["Admin"]
-        paths = []
-
-        for member in party_members:
-            if member != session['user']:
-                try:
-                    path, index = connected_members[member]['current_path']
-                    paths.append((member, path[index:]))
-                    print(f"Adding path from {member}, sending to {session['user']} ({party_members})")
-                except Exception as e:
-                    print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
-        emit_to(session['user'], 'user_paths', message=paths)
+    party_members = get_party_members(user_to_track)
+    paths = []
+    for member in party_members:
+        if member not in user_to_track:
+            try:
+                path, index = connected_members[member]['current_path']
+                paths.append((member, path[index:]))
+                print(f"Adding path from {member}, sending to {user_to_track} ({party_members})")
+            except Exception as e:
+                print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
+    emit_to(session["user"], 'user_paths', message=paths)
+    emit_to("Admin", 'user_paths', message=paths)
 
 
 @socketio.on('send_current_path', namespace='/comms')
@@ -394,44 +388,43 @@ def return_path(data):
     # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
     connected_members[session['user']]['current_path'] = [data, 0]
     print(f"Received path from {session['user']}")
-    send_path_to_party(user_to_track=session['user'])
-
+    # send_path_to_party(user_to_track=session['user'])
     # print(json.dumps(connected_members[session['user']]))
 
 
-@socketio.on('start_simulation', namespace='/comms')
-def start_simulation():
-    if session['user'] == "Admin":
-        return
-    members = get_party_members(session['user'])
-    # for member in members:
-    #     print(member, json.dumps(connected_members[member], indent=4))
-    lengths = []
-    for member in members:
-        try:
-            lengths.append(len(connected_members[member]['current_path'][0]))
-        except TypeError:
-            continue
-        except KeyError:
-            continue
-
-    maxlen = max(lengths)
-
-    for step_index in range(maxlen):
-        for m in members:
-            try:
-                lat, lng = connected_members[m]['current_path'][0][step_index]
-                connected_members[m]['current_path'][1] = step_index
-                connected_members[m]['loc'] = lat, lng
-            except IndexError:
-                print("IndexError")
-            except KeyError:
-                print("KeyError")
-            except TypeError:
-                print("TypeError in simulation 389")
-
-        party_coords(session['user'])
-        sleep(0.3)
+# @socketio.on('start_simulation', namespace='/comms')
+# def start_simulation():
+#     if session['user'] == "Admin":
+#         return
+#     members = get_party_members(session['user'])
+#     # for member in members:
+#     #     print(member, json.dumps(connected_members[member], indent=4))
+#     lengths = []
+#     for member in members:
+#         try:
+#             lengths.append(len(connected_members[member]['current_path'][0]))
+#         except TypeError:
+#             continue
+#         except KeyError:
+#             continue
+#
+#     maxlen = max(lengths)
+#
+#     for step_index in range(maxlen):
+#         for m in members:
+#             try:
+#                 lat, lng = connected_members[m]['current_path'][0][step_index]
+#                 connected_members[m]['current_path'][1] = step_index
+#                 connected_members[m]['loc'] = lat, lng
+#             except IndexError:
+#                 print("IndexError")
+#             except KeyError:
+#                 print("KeyError")
+#             except TypeError:
+#                 print("TypeError in simulation 389")
+#
+#         party_coords(session['user'])
+#         sleep(0.3)
 
 
 def try_reset_first(user):
@@ -588,7 +581,7 @@ def reset_locs():
             [x, db['ex'].get_user_location(x)]
             for x in db['ex'].get_all_names(removeAdmin=True)]
     ]
-    print(json.dumps(party_data, indent=2))
+
     try:
         for member in connected_members:
             if member != "Admin":
@@ -679,11 +672,11 @@ def set_user_location(username, lat, lng):
 
 @socketio.on('my_location', namespace='/comms')
 def my_location(data):
-    print("my_location", data)
     set_user_location(session['user'], data[0], data[1])
+    recipients = get_party_members(session['user']) + ["Admin"]
     [emit_to(member, 'update_location', message=[session['user'], data[0], data[1]]) for member in
-     get_party_members(session['user'])]
-    emit_to("Admin", 'update_location', message=[session['user'], data[0], data[1]])
+     recipients]
+    # emit_to("Admin", 'update_location', message=[session['user'], data[0], data[1]])
 
 
 @socketio.on('in_progress', namespace='/comms')
