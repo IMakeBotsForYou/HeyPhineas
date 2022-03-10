@@ -201,10 +201,10 @@ def register():
 def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None):
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
-        print(f"Sent {event_name} {message} {namespace} {user}")
+        print(f"Sent to {user}: {event_name} {message} {namespace} ")
     except Exception as e:
-        print(f'error in emitting to user {user},', e)
-        print(f'tried to send: ', message, event_name)
+        print(f'Error in emitting to user {user},', e)
+        print(f'Tried to send: ', message, event_name)
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -286,9 +286,22 @@ def place_form(data):
     query_res.get_all_pages(limit)
 
     results_json = query_res.results.get()
-    [emit_to(user=party_m, event_name='recommended_places',
-             message=[results_json[x] for x in results_json])
-     for party_m in get_party_members(session['user'])]
+
+    middle_lat, middle_lng = sum([connected_members[member]["loc"][0] for member in get_party_members(session['user']) if member in connected_members]) / len(get_party_members(session['user'])), \
+                             sum([connected_members[member]["loc"][1] for member in get_party_members(session['user']) if member in connected_members]) / len(get_party_members(session['user']))
+    middle = middle_lat, middle_lng
+    places = list(results_json.keys())
+
+    def get_distance(place):
+        loc = results_json[place]["location"]
+        return np.linalg.norm(np.array(middle) - np.array([loc]))
+
+    places.sort(key=lambda x: get_distance(x))
+
+    coords = results_json[places[0]]["location"]
+    [emit_to(user=party_m, event_name='update_destination',
+             message=[coords])
+     for party_m in get_party_members(session['user']) if party_m in connected_members]
 
 
 @socketio.on('ping', namespace='/comms')
@@ -317,7 +330,7 @@ def check_ping(*args):
         members = db['ex'].get_all_names(removeAdmin=True)
         for member in members:
             lat, lng = db['ex'].get_user_location(member)
-            emit_to("Admin", 'update_location', message=[member, [lat, lng]])
+            emit_to("Admin", 'my_location', message=[member, [lat, lng]])
 
 
 def weight_values(name, value):
@@ -372,11 +385,11 @@ def send_path_to_party(user_to_track):
     party_members = get_party_members(user_to_track)
     paths = []
     for member in party_members:
-        if member not in user_to_track:
+        if member not in user_to_track and user in connected_members:
             try:
                 path, index = connected_members[member]['current_path']
-                paths.append((member, path[index:]))
-                print(f"Adding path from {member}, sending to {user_to_track} ({party_members})")
+                paths.append((member, [connected_members[member]['loc']] + path[index:]))
+                print(f"Adding path from {member}:{index}, sending to {user_to_track} ({party_members})")
             except Exception as e:
                 print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
     emit_to(session["user"], 'user_paths', message=paths)
@@ -392,41 +405,6 @@ def return_path(data):
     # print(json.dumps(connected_members[session['user']]))
 
 
-# @socketio.on('start_simulation', namespace='/comms')
-# def start_simulation():
-#     if session['user'] == "Admin":
-#         return
-#     members = get_party_members(session['user'])
-#     # for member in members:
-#     #     print(member, json.dumps(connected_members[member], indent=4))
-#     lengths = []
-#     for member in members:
-#         try:
-#             lengths.append(len(connected_members[member]['current_path'][0]))
-#         except TypeError:
-#             continue
-#         except KeyError:
-#             continue
-#
-#     maxlen = max(lengths)
-#
-#     for step_index in range(maxlen):
-#         for m in members:
-#             try:
-#                 lat, lng = connected_members[m]['current_path'][0][step_index]
-#                 connected_members[m]['current_path'][1] = step_index
-#                 connected_members[m]['loc'] = lat, lng
-#             except IndexError:
-#                 print("IndexError")
-#             except KeyError:
-#                 print("KeyError")
-#             except TypeError:
-#                 print("TypeError in simulation 389")
-#
-#         party_coords(session['user'])
-#         sleep(0.3)
-
-
 def try_reset_first(user):
     route, lng = connected_members[user]['current_path']
 
@@ -437,7 +415,7 @@ def try_reset_first(user):
 @socketio.on('step', namespace='/comms')
 def step():
     connected_members[session['user']]['current_path'][1] += 1
-    try_reset_first(session['user'])
+    # try_reset_first(session['user'])
 
 
 @socketio.on('knn_select', namespace='/comms')
@@ -510,7 +488,7 @@ def logged_on_users():
         "remote addr": request.remote_addr,
         "sid": request.sid,
         "loc": [0, 0],
-        "current_path": None
+        "current_path": [None, None]
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
@@ -520,6 +498,8 @@ def logged_on_users():
         }
     if session['user'] != "Admin":
         connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
+
+    emit_to(session['user'], 'my_location', message=[session['user'], connected_members[session['user']]["loc"]])
 
     broadcast_userdiff()
 
@@ -574,6 +554,7 @@ def reset_locs():
                 for x in get_party_members(party_leader)
             ]
         ]
+        [try_reset_first(user) for user in get_party_members(party_leader)]
 
     party_data["Admin"] = [
         False,
@@ -587,6 +568,7 @@ def reset_locs():
             if member != "Admin":
                 emit_to(member, 'party_member_coords',
                         message=party_data[get_party_leader(member)])
+
     except KeyError:
         print("Error KEYERROR 549 reset locations")
 
@@ -673,10 +655,16 @@ def set_user_location(username, lat, lng):
 @socketio.on('my_location', namespace='/comms')
 def my_location(data):
     set_user_location(session['user'], data[0], data[1])
+    if connected_members[session['user']]['current_path'][1]:
+        connected_members[session['user']]['current_path'][1] = data[2]
+
     recipients = get_party_members(session['user']) + ["Admin"]
-    [emit_to(member, 'update_location', message=[session['user'], data[0], data[1]]) for member in
+    [emit_to(member, 'my_location', message=[session['user'], [data[0], data[1]]]) for member in
      recipients]
-    # emit_to("Admin", 'update_location', message=[session['user'], data[0], data[1]])
+
+    send_path_to_party(session['user'])
+
+    # emit_to("Admin", 'my_location', message=[session['user'], data[0], data[1]])
 
 
 @socketio.on('in_progress', namespace='/comms')

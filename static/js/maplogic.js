@@ -28,6 +28,9 @@ var markerArray = [];
 var current_directions;
 var destination = null;
 var step_index = 0;
+var running_speed = 2;
+var running_delay = 150;
+
 deshalit = {"lat": 31.89961596028198, "lng": 34.816320411774875};
 colours =
 ["#9a465c",
@@ -56,11 +59,11 @@ function initMap() {
         center: { lat: 31.894756, lng: 34.809322 },
       });
 
-      socket.on('update_location', function(data){
+      socket.on('my_location', function(data){
         var name = data[0];
         var latlng = data[1];
         var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
-        console.log(`${name}, ${latlng}`);
+//        console.log(`${name}, ${latlng}`);
         if (name in user_locations){
             user_locations[name].location = myLatLng;
         } else {
@@ -79,6 +82,20 @@ function initMap() {
         }
       });
 
+      socket.on('update_destination', function(data){
+        destination = data;
+        console.log(data);
+        first = false;
+        step_index = 0;
+        onChangeHandler();
+      });
+
+
+//      var slider = document.getElementById("running_speed_slider");
+//      slider.oninput = function() {
+//          running_speed =  this.value;
+////          console.log(500000, running_delay);
+//      }
       $("#make_step").on("click", function() {
         if (current_directions != null && current_directions.length > step_index - 1){
             step_index += 1;
@@ -114,25 +131,75 @@ function initMap() {
 
 
       $("#start_origin").on("click", function() {
-        const myInterval = setInterval(move_towards_next_point, 1000);
-        const meters = 10;
-        const ten_metres = meters * 0.0000089;
+        var myInterval = setInterval(move_towards_next_point, running_delay);
+        var meter = running_speed;
+        var unit = meter * 0.0000089;
+        function distance(lat1, lng1, lat2, lng2){
+            return Math.sqrt((lat1-lat2)*(lat1-lat2)+(lng2-lng1)*(lng2-lng1));
+        }
+        function toDegrees (angle) {
+          return angle * (180 / Math.PI);
+        }
+        function toRadians (angle) {
+          return angle * (Math.PI / 180);
+        }
+
         function move_towards_next_point() {
             var current_pos = user_locations[user].marker.getPosition().toJSON();
             var my_lat = current_pos.lat;
             var my_long = current_pos.lng;
             var next_point = current_directions[step_index];
 
+            if(next_point == undefined || next_point == null){
+                clearInterval(myInterval);
+                return;
+             }
 
-            var theta = Math.atan((next_point.lng-my_lng)/(next_point.lat-my_lat));
+            var new_lat = 0;
+            var new_long = 0;
 
-            var new_lat = my_lat + ten_metres*Math.sin(theta);
-            var new_long = my_long + ten_metres*Math.cos(theta)/Math.cos(my_lat * 0.018);
+            var d = distance(next_point[0], next_point[1], my_lat, my_long);
+            if (d < unit){
+                new_lat = next_point[0];
+                new_long = next_point[1];
+            } else
+            {
 
-            user_locations[user].marker.setPosition(new google.maps.LatLng(new_lat, new_long));
-            user_locations[user].position = new google.maps.LatLng(new_lat, new_long);
+            var percent = unit / d;
+
+            new_lat = my_lat+(next_point[0]-my_lat) * percent;
+            new_long = my_long+(next_point[1]-my_long) * percent;
 
 
+
+
+            }
+
+//
+//            var theta = Math.atan2((next_point[1]-my_long),(next_point[0]-my_lat));
+//
+//            console.log(theta);
+//
+//            var new_lat = my_lat + unit * Math.sin(toRadians(theta));
+//
+//            var new_long = my_long + unit * Math.cos(toRadians(theta)) / Math.cos(my_lat * 0.018);
+//
+//            new_lat = distance(new_lat, new_long, next_point[0], next_point[1]) >
+//                      unit ? new_lat : next_point[0]
+//
+//            new_long = distance(new_lat, new_long, next_point[0], next_point[1]) >
+//                      unit ? new_long : next_point[1]
+
+            if (new_lat == next_point[0]){
+                step_index += 1;
+                if(current_directions.length == step_index)
+                    clearInterval(myInterval);
+                socket.emit('step');
+            }
+
+//            user_locations[user].marker.setPosition(new google.maps.LatLng(new_lat, new_long));
+//            user_locations[user].position = new google.maps.LatLng(new_lat, new_long);
+            socket.emit('my_location', [new_lat, new_long, step_index])
         }
       });
 
@@ -152,23 +219,38 @@ function initMap() {
                 path.push({lat: coords[i][0], lng: coords[i][1]})
             }
 
-             var user_path;
+            var user_path;
 
-            if (!(name in paths)){
-                paths[name] = {"path": user_path, "colour": colours[colours_index]};
+            if (name in paths){
+
+                paths[name].path.setMap(null);
+                paths[name].path = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeOpacity: 1.0,
+                    strokeColor: paths[name].colour,
+                    strokeWeight: 5,
+                    map: map
+                });
+
+            } else{
+
+                paths[name] = {"path": null, "colour": colours[colours_index]};
                 colours_index += 1;
                 colours_index %= colours.length;
-            } else
-                paths[name].path = user_path
 
-            user_path = new google.maps.Polyline({
-                path: path,
-                geodesic: true,
-                strokeOpacity: 1.0,
-                strokeColor: paths[name].colour,
-                strokeWeight: 5,
-                map: map
-            });
+                user_path = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeOpacity: 1.0,
+                    strokeColor: paths[name].colour,
+                    strokeWeight: 5,
+                    map: map
+                });
+
+                paths[name].path = user_path;
+
+            }
         };
       });
 
@@ -180,7 +262,7 @@ function initMap() {
             var name = data[i][0];
             var latlng = data[i][1];
             var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
-            console.log(`${name}, ${latlng}`);
+//            console.log(`${name}, ${latlng}`);
 
             if (name in user_locations){
                 user_locations[name].location = myLatLng;
@@ -280,7 +362,6 @@ function calculateAndDisplayRoute(
   if(destination == null){
     destination = deshalit;
   }
-
   if (first){
       directionsService
         .route({
@@ -299,11 +380,11 @@ function calculateAndDisplayRoute(
              for(let i = 0; i < step.path.length; i++){
                 var coords = step.path[i];
                 current_directions.push([coords.lat(), coords.lng()]);
+                console.log(i, coords.lat(), coords.lng())
              }
           }
           step_index = 0;
           first = false;
-
           socket.emit('send_current_path', current_directions);
 
           document.getElementById("warnings-panel").innerHTML =
