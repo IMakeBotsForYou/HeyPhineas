@@ -260,7 +260,6 @@ def logout():
 
 def broadcast_userdiff():
     # update friends data
-    print(session["user"])
     fr = db["ex"].get_friends(session["user"])
 
     visisble_uses = [x for x in connected_members if x != "Admin"]
@@ -277,7 +276,6 @@ def broadcast_userdiff():
 
 @socketio.on('place_form_data', namespace='/comms')
 def place_form(data):
-
     tp, radius, rating_min, limit = data.split("|")
     radius = float(radius) * 1000
     lat, lng = db['ex'].get_user_location(session['user'])
@@ -298,9 +296,9 @@ def place_form(data):
 
     places.sort(key=lambda x: get_distance(x))
 
-    coords = results_json[places[0]]["location"]
+    coords = list(results_json[places[0]]["location"])
     [emit_to(user=party_m, event_name='update_destination',
-             message=[coords])
+             message=coords)
      for party_m in get_party_members(session['user']) if party_m in connected_members]
 
 
@@ -384,12 +382,13 @@ def location_recommendation_request():
 def send_path_to_party(user_to_track):
     party_members = get_party_members(user_to_track)
     paths = []
+
     for member in party_members:
-        if member not in user_to_track and user in connected_members:
+        if member not in user_to_track and member in connected_members:
             try:
                 path, index = connected_members[member]['current_path']
                 paths.append((member, [connected_members[member]['loc']] + path[index:]))
-                print(f"Adding path from {member}:{index}, sending to {user_to_track} ({party_members})")
+                print(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
             except Exception as e:
                 print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
     emit_to(session["user"], 'user_paths', message=paths)

@@ -83,11 +83,13 @@ function initMap() {
       });
 
       socket.on('update_destination', function(data){
-        destination = data;
-        console.log(data);
-        first = false;
+        lat = data[0];
+        lng = data[1];
+        destination = new google.maps.LatLng(lat, lng);
+        first = true;
         step_index = 0;
         onChangeHandler();
+        console.log(data);
       });
 
 
