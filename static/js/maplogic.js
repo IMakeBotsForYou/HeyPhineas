@@ -92,12 +92,12 @@ function initMap() {
         console.log(data);
       });
 
-
 //      var slider = document.getElementById("running_speed_slider");
 //      slider.oninput = function() {
 //          running_speed =  this.value;
 ////          console.log(500000, running_delay);
 //      }
+
       $("#make_step").on("click", function() {
         if (current_directions != null && current_directions.length > step_index - 1){
             step_index += 1;
