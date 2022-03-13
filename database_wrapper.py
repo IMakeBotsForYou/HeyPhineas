@@ -248,8 +248,8 @@ class UserData(Database):
         else:
             return []
 
-    def add_location(self, loc_name, lat, lng):
-        self.add('user_added_locations (name, latlng)', reformat(loc_name, f"{lat}, {lng}"))
+    def add_location(self, loc_name, lat, lng, loc_type):
+        self.add('user_added_locations (name, latlng, type)', reformat(loc_name, f"{lat}, {lng}", loc_type))
 
     def add_user(self, username, password, friends="", interests="parks|0|restaurant|0|"):
         self.add("users (username, password, friends, interests)", reformat(username, password, friends, interests))
@@ -268,7 +268,7 @@ class UserData(Database):
         self.edit("users", "friends", ", ".join(current_friends2), condition=f'name={user2}')
 
     def get_user_added_locations(self):
-        return self.get('user_added_locations', 'name, latlng', first=False)
+        return self.get('user_added_locations', 'name, latlng, type', first=False)
 
     def remove_user(self, name):
         try:

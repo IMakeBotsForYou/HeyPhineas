@@ -180,7 +180,8 @@ $(document).ready(function(){
         var name = document.getElementById("add_loc_name").value;
         var lat = document.getElementById("add_loc_lat").value;
         var lng = document.getElementById("add_loc_lng").value;
-        socket.emit('add_location', `${name}, ${lat}, ${lng}`);
+        var type = document.getElementById("add_loc_type").value;
+        socket.emit('add_location', `${name}, ${lat}, ${lng}, ${type}`);
         $("#add_loc_button").fadeOut();
         $("#invite_user").prop("disabled", false);
     });

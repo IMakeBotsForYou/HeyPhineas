@@ -20,7 +20,6 @@ function showSteps(directionResult, markerArray, stepDisplay, map) {
     );
   }
 }
-
 var first = true;
 var onChangeHandler = null;
 var user_locations = {}
@@ -89,7 +88,7 @@ function initMap() {
         first = true;
         step_index = 0;
         onChangeHandler();
-        console.log(data);
+//        console.log(data);
       });
 
 //      var slider = document.getElementById("running_speed_slider");
@@ -103,7 +102,7 @@ function initMap() {
             step_index += 1;
             socket.emit('my_location', current_directions[step_index])
             socket.emit('step')
-            console.log(current_directions[step_index]);
+//            console.log(current_directions[step_index]);
         }
       });
 
@@ -296,6 +295,7 @@ function initMap() {
     });
 
       socket.on('user_added_locations', function(data){
+      console.log(data);
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
@@ -307,6 +307,10 @@ function initMap() {
                     icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
             });
             markerArray.push(m);
+            m.addListener("click", () => {
+                socket.emit('request_destination_update', latlng)
+                map.setCenter(m.getPosition());
+            });
         }
       });
       socket.on('knn_results', function(data){

@@ -274,6 +274,13 @@ def broadcast_userdiff():
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
 
+@socketio.on('request_destination_update', namespace='/comms')
+def destination_update_request(data):
+    [emit_to(user=party_m, event_name='update_destination',
+             message=data)
+     for party_m in get_party_members(session['user']) if party_m in connected_members]
+
+
 @socketio.on('place_form_data', namespace='/comms')
 def place_form(data):
     tp, radius, rating_min, limit = data.split("|")
@@ -288,6 +295,20 @@ def place_form(data):
     middle_lat, middle_lng = sum([connected_members[member]["loc"][0] for member in get_party_members(session['user']) if member in connected_members]) / len(get_party_members(session['user'])), \
                              sum([connected_members[member]["loc"][1] for member in get_party_members(session['user']) if member in connected_members]) / len(get_party_members(session['user']))
     middle = middle_lat, middle_lng
+    places = list(results_json.keys())
+
+    data = [
+        # a[0] = NAME: STR
+        # a[1] = LAT, LNG: STR
+        # a[2] = TYPE: STRs
+        (a[0], [float(x) for x in a[1].split(", ")], a[2])
+        for a in db['ex'].get_user_added_locations() if a[2] == tp
+    ]
+
+    for i in range(len(data)):
+        dat = data[i]
+        results_json[ord('a')+i] = {"name": dat[0], "location": dat[1]}
+
     places = list(results_json.keys())
 
     def get_distance(place):
@@ -517,11 +538,12 @@ def get_online_memb():
 
 @socketio.on('user_added_locations_get', namespace='/comms')
 def get_user_added_loc():
-    print(db['ex'].get_user_added_locations())
+
     data = [
         # a[0] = NAME: STR
         # a[1] = LAT, LNG: STR
-        (a[0], [float(x) for x in a[1].split(", ")])
+        # a[2] = TYPE: STR
+        (a[0], [float(x) for x in a[1].split(", ")], a[2])
         for a in db['ex'].get_user_added_locations()
     ]
     emit_to(user=session['user'], event_name="user_added_locations",
@@ -530,7 +552,7 @@ def get_user_added_loc():
 
 def send_user_added_locations(username):
     data = [(name, [float(value) for value in latlng.split(", ")])
-            for name, latlng in db['ex'].get_user_added_locations()]
+            for name, latlng, type in db['ex'].get_user_added_locations()]
     emit_to(username, 'user_added_locations', message=data)
 
 
@@ -610,8 +632,8 @@ def invite_user(receiver):
 
 @socketio.on('add_location', namespace='/comms')
 def invite_user(data):
-    name, lat, lng = data.split(", ")
-    db['ex'].add_location(name, lat, lng)
+    name, lat, lngm, loc_type = data.split(", ")
+    db['ex'].add_location(name, lat, lng, loc_type)
     [send_user_added_locations(online_user) for online_user in connected_members]
 
 

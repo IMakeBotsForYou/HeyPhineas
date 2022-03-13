@@ -4,6 +4,7 @@
 <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
 <script src="/static/js/socket.js"></script>
 <script src="/static/js/buttons.js"></script>
+<script src="/static/js/icons.js"></script>
 <link rel="stylesheet" href="/static/drawing_things.css">
 <br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>
 <h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br><br>
@@ -33,6 +34,7 @@ user = "{{session['user']}}";
         <form method="POST" autocomplete="off" action="" id="add_loc_form" style="margin: 0 auto;">
         <div class="autocomplete" style="position: relative;">
             <input required id="add_loc_name" type="text" name="lat" placeholder="Place name"><br><br>
+            <input required id="add_loc_type" type="text" name="lat" placeholder="Place Type (e.g park)"><br><br>
             <input required id="add_loc_lat" type="text" name="lat" placeholder="LAT"><br><br>
             <input required id="add_loc_lng" type="text" name="lng" placeholder="LNG"><br>
         </div><br><br><br>
@@ -66,8 +68,10 @@ user = "{{session['user']}}";
         });
     </script>
 {% endif %}
+{% if session['user'] != "Admin" %}
 <button type="button" class="form-button close-button" id="make_step" style="float: right;">Step</button>
 <button type="button" class="form-button close-button" id="start_origin" style="float: right">Start</button>
+{% endif %}
 <!--<div class="slidecontainer">-->
 <!--  <input type="range" min="1" max="15" value="1" class="slider" id="running_speed_slider">-->
 <!--</div>-->
