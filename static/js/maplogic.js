@@ -292,7 +292,7 @@ function initMap() {
     });
       var user_added_locations = {};
       socket.on('user_added_locations', function(data){
-
+        var user_location_markers = [];
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
@@ -307,10 +307,14 @@ function initMap() {
                         icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
                 });
                 markerArray.push(m);
-                user_added_locations[`${latlng[0]}, ${latlng[1]}`] = m;
-                m.addListener("click", () => {
-                    socket.emit('request_destination_update', [user_added_locations[`${latlng[0]}, ${latlng[1]}`].position.lat(), user_added_locations[`${latlng[0]}, ${latlng[1]}`].position.lng()])
-                    map.setCenter(m.getPosition());
+                user_location_markers.push(m);
+                user_added_locations[`${latlng[0]}, ${latlng[1]}`] = 1;
+                user_location_markers[i].addListener("click", () => {
+
+
+                console.log([user_location_markers[i].getPosition().lat(), user_location_markers[i].getPosition().lng()])
+                    socket.emit('request_destination_update', [user_location_markers[i].getPosition().lat(), user_location_markers[i].getPosition().lng()])
+                    map.setCenter(user_location_markers[i].getPosition());
                 });
             }
         }
@@ -365,6 +369,14 @@ function calculateAndDisplayRoute(
 
   if(secret_end == '' || secret_start == ''){
     return;
+  }
+  if (!(user in user_locations)){
+   socket.emit('user_added_locations_get');
+        socket.emit('party_members_list_get');
+        socket.emit('online_members_get');
+        socket.emit('get_destination')
+        // TEMP
+        socket.emit('get_coords_of_party')
   }
   var origin = user_locations[user].location;
   if(destination == null){

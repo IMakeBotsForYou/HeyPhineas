@@ -281,6 +281,9 @@ def destination_update_request(data):
      for party_m in get_party_members(session['user']) if party_m in connected_members]
 
 
+party_locations = {}
+
+
 @socketio.on('place_form_data', namespace='/comms')
 def place_form(data):
     tp, radius, rating_min, limit = data.split("|")
@@ -318,6 +321,9 @@ def place_form(data):
     places.sort(key=lambda x: get_distance(x))
 
     coords = list(results_json[places[0]]["location"])
+
+    party_locations[get_party_leader(session['user'])] = coords
+
     [emit_to(user=party_m, event_name='update_destination',
              message=coords)
      for party_m in get_party_members(session['user']) if party_m in connected_members]
@@ -344,7 +350,8 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
     send_path_to_party(session['user'])
-
+    if get_party_leader(session['user']) == session['user']:
+        party_locations[session['user']] = db['ex'].get_user_location(session['user'])
     if session['user'] == "Admin":
         members = db['ex'].get_all_names(removeAdmin=True)
         for member in members:
@@ -591,7 +598,7 @@ def reset_locs():
                         message=party_data[get_party_leader(member)])
 
     except KeyError:
-        print("Error KEYERROR 549 reset locations")
+        print("Error KEYERROR 594 reset locations")
 
 
 @socketio.on('interested', namespace="/comms")
@@ -645,6 +652,11 @@ def invite_user(receiver):
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
     emit_to(receiver, 'notif', namespace='/comms', message='notification!')
+
+
+@socketio.on('get_destination', namespace='/comms')
+def get_destination():
+    emit_to(session['user'], event_name='update_destination', message=party_locations[get_party_leader(session['user'])])
 
 
 @socketio.on('joined', namespace='/comms')
