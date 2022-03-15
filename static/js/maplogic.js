@@ -171,9 +171,6 @@ function initMap() {
             new_lat = my_lat+(next_point[0]-my_lat) * percent;
             new_long = my_long+(next_point[1]-my_long) * percent;
 
-
-
-
             }
 
 //
@@ -293,24 +290,29 @@ function initMap() {
             onChangeHandler();
         }
     });
-
+      var user_added_locations = {};
       socket.on('user_added_locations', function(data){
-      console.log(data);
+
         for(let i = 0; i < data.length; i++){
             var name = data[i][0];
             var latlng = data[i][1];
-            var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
-            var m = new google.maps.Marker({
-                    position: myLatLng,
-                    label: name,
-                    map: map,
-                    icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
-            });
-            markerArray.push(m);
-            m.addListener("click", () => {
-                socket.emit('request_destination_update', latlng)
-                map.setCenter(m.getPosition());
-            });
+            if(`${latlng[0]}, ${latlng[1]}` in user_added_locations){
+
+            } else {
+                var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
+                var m = new google.maps.Marker({
+                        position: myLatLng,
+                        label: name,
+                        map: map,
+                        icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
+                });
+                markerArray.push(m);
+                user_added_locations[`${latlng[0]}, ${latlng[1]}`] = m;
+                m.addListener("click", () => {
+                    socket.emit('request_destination_update', [user_added_locations[`${latlng[0]}, ${latlng[1]}`].position.lat(), user_added_locations[`${latlng[0]}, ${latlng[1]}`].position.lng()])
+                    map.setCenter(m.getPosition());
+                });
+            }
         }
       });
       socket.on('knn_results', function(data){
