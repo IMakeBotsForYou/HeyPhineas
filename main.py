@@ -1,7 +1,7 @@
 import os
 import random
-from time import time, sleep
-
+from time import time
+import numpy as np
 from engineio.payload import Payload
 from flask import *
 from flask_socketio import SocketIO, emit
@@ -21,6 +21,9 @@ points_of_interest = {
 
 }
 user_data = {
+
+}
+party_locations = {
 
 }
 
@@ -138,31 +141,7 @@ def inbox():
     session['inbox_messages'] = get_messages(session['user'])
     return render_template("inbox.html")
 
-
-@app.route("/login", methods=["POST", "GET"])
-def login():
-    if request.method == "POST":
-        user = request.form['name']
-        password = request.form['pass']
-        # password = request.form['pass']
-        # Is the password correct? Is the user valid?
-        # If the user isn't valid, it throws an error.
-        try:
-            if str(db['ex'].get("users", "password", f'username="{user}"')[0]) != password:
-                flash("Either the name, or the password are wrong.")
-                return render_template("login.html")
-            else:
-                session['user'] = user
-                # create the instance folder
-                session['is_admin'] = user == db['ex'].admin
-
-                return redirect("/")
-        except Exception as e:
-            flash(e)
-            flash("Either the name, or the password are wrong.")
-            return render_template("login.html")
-    else:
-        return render_template("login.html")
+ 
 
 
 def get_messages(user):
@@ -211,38 +190,7 @@ def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None)
 def main_page():
     session["time"] = int(time())
     if "user" not in session:
-        return redirect(url_for(f"login"))
-
-    # if "search_place" in request.form:
-    #     radius = float(request.form["radius"]) * 1000
-    #     lat, lng = 31.9034937, 34.8131821
-    #     rating_min = request.form["min_rating"]
-    #     tp = request.form["type"]
-    #     limit = int(request.form["limit"])
-    #
-    #     query_res = query((lat, lng), radius, rating_min, tp)
-    #     query_res.get_all_pages(limit)
-    #
-    #     session["results"] = query_res.results.get()
-    #
-    #     for result in session["results"]:
-    #         if result not in points_of_interest:
-    #             data = session["results"][result]
-    #             data["interest"] = {session["user"]: 0}
-    #             points_of_interest[result] = data
-    #
-        # [emit_to(user=party_m, event_name='recommended_places', message=[(place.location, place.id) for place in session['results']])
-        #  for party_m in get_party_members(session['user'])]
-    #
-    #     session["results_rating"] = query_res.results.sort_by_rating()
-    #     session["results_name"] = query_res.results.sort_by_name()
-    #
-    #     # return render_template("main.html", async_mode=socketio.async_mode)
-    # else:
-    #     session["results"] = []
-    #     session["results_rating"] = []
-    #     session["results_name"] = []
-
+        return redirect(url_for("login"))
     return render_template("main.html")
 
 
@@ -268,7 +216,9 @@ def broadcast_userdiff():
                               'offline': [friend for friend in fr if friend not in visisble_uses]}
 
     emit_to(session["user"], 'friend_data', message=session["friend_data"])
-    [emit_to(us, 'user_diff', message={'amount': len(connected_members.keys()), 'names': [user for user in visisble_uses]}) for us in connected_members]
+    [emit_to(us, 'user_diff',
+             message={'amount': len(connected_members.keys()), 'names': [user for user in visisble_uses]}) for us in
+     connected_members]
     print("Data:")
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visisble_uses]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
@@ -279,9 +229,6 @@ def destination_update_request(data):
     [emit_to(user=party_m, event_name='update_destination',
              message=data)
      for party_m in get_party_members(session['user']) if party_m in connected_members]
-
-
-party_locations = {}
 
 
 @socketio.on('place_form_data', namespace='/comms')
@@ -295,10 +242,12 @@ def place_form(data):
 
     results_json = query_res.results.get()
 
-    middle_lat, middle_lng = sum([connected_members[member]["loc"][0] for member in get_party_members(session['user']) if member in connected_members]) / len(get_party_members(session['user'])), \
-                             sum([connected_members[member]["loc"][1] for member in get_party_members(session['user']) if member in connected_members]) / len(get_party_members(session['user']))
+    middle_lat, middle_lng = sum(
+        [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
+         member in connected_members]) / len(get_party_members(session['user'])), \
+                             sum([connected_members[member]["loc"][1] for member in get_party_members(session['user'])
+                                  if member in connected_members]) / len(get_party_members(session['user']))
     middle = middle_lat, middle_lng
-    places = list(results_json.keys())
 
     data = [
         # a[0] = NAME: STR
@@ -310,7 +259,7 @@ def place_form(data):
 
     for i in range(len(data)):
         dat = data[i]
-        results_json[ord('a')+i] = {"name": dat[0], "location": dat[1]}
+        results_json[ord('a') + i] = {"name": dat[0], "location": dat[1]}
 
     places = list(results_json.keys())
 
@@ -350,8 +299,8 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
     send_path_to_party(session['user'])
-    if get_party_leader(session['user']) == session['user']:
-        party_locations[session['user']] = db['ex'].get_user_location(session['user'])
+    # if get_party_leader(session['user']) == session['user']:
+    #     party_locations[session['user']] = db['ex'].get_user_location(session['user'])
     if session['user'] == "Admin":
         members = db['ex'].get_all_names(removeAdmin=True)
         for member in members:
@@ -371,9 +320,6 @@ def weight_values(name, value):
     mult += 0.05 * len(mutual_friends)
 
     return value / mult
-
-
-import numpy as np
 
 
 @socketio.on('location_recommendation_request', namespace='/comms')
@@ -545,7 +491,6 @@ def get_online_memb():
 
 @socketio.on('user_added_locations_get', namespace='/comms')
 def get_user_added_loc():
-
     data = [
         # a[0] = NAME: STR
         # a[1] = LAT, LNG: STR
@@ -656,7 +601,11 @@ def invite_user(receiver):
 
 @socketio.on('get_destination', namespace='/comms')
 def get_destination():
-    emit_to(session['user'], event_name='update_destination', message=party_locations[get_party_leader(session['user'])])
+    print(123, json.dumps(party_locations, indent=4))
+    if session['user'] == "Admin":
+        return
+    emit_to(session['user'], event_name='update_destination',
+            message=party_locations[get_party_leader(session['user'])])
 
 
 @socketio.on('joined', namespace='/comms')

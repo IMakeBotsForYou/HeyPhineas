@@ -28,10 +28,13 @@ class KNN:
         self.values = vls
 
     def _euclidean_dist(self, target_point: np.array) -> float:
+        if self.origin in self.values:
+            return np.linalg.norm(np.array(self.values[self.origin]) - np.array(target_point))
+        else:
+            return np.linalg.norm(np.array(self.origin) - np.array(target_point))
 
-        return np.linalg.norm(np.array(self.values[self.origin]) - np.array(target_point))
-
-    def get_closest(self, n=None, weigh_values=None, only_these_values=None, names_only=False):
+    def get_closest(self, n=None, weigh_values=None, only_these_values=None,
+                    names_only=False, verbose=False, remove_first=True):
         """
         :param only_these_values: only run on certain values
         :param weigh_values: user-controlled function to weigh the
@@ -55,11 +58,19 @@ class KNN:
         labeled_distances = [(label, dist) for label, dist in zip(labels, distances)]
 
         labeled_distances.sort(key=lambda info: info[1])
+        if verbose:
+            print(self.origin, [x[0] for x in labeled_distances])
+        save_k = self.k
         if n is None and self.k == 0:
             n = int(np.sqrt(len(self.values)))
-        else:
+        elif n is None:
             n = self.k
-        final_values = labeled_distances[1:n]
+            # self.k = n
+        else:
+            self.k = n
+            # n = self.k
+
+        final_values = labeled_distances[1:n] if remove_first else labeled_distances[:n]
 
         if only_these_values is not None:
             self.values = saved_values
@@ -67,7 +78,12 @@ class KNN:
         if names_only:
             return [x[0] for x in final_values]
 
+        self.k = save_k
         return final_values
+
+
+def get_intersection(a, b):
+    return list(set(a) & set(b))
 
 
 if __name__ == "__main__":
@@ -78,39 +94,43 @@ if __name__ == "__main__":
         "Shoshani": [4, 5],
 
         "Fefer": [1, 2],
-        "Maya": [2, 3],
+        "Maya": [2, 2],
         "Yasha": [1, 1],
+
+        "Eran": [3, 3]
     }
     import random
 
     # for a in range(100):
     #     values[str(a)] = [random.random() * 5] * 2
 
-    knn = KNN(values, 3)
+    knn = KNN(values, k=4)
     knn.set_origin("Dan")
     flag = True
     closest = {}
-    middles = {}
+    included = []
+    i = 0
     for name in values:
         knn.set_origin(name)
-        closest[knn.origin] = {"closest": knn.get_closest(names_only=True), "in group": False}
+        closest[knn.origin] = {"closest": knn.get_closest(names_only=True, verbose=False), "in group": False}
 
     for name in values:
-        middle_x, middle_y = sum(coord[0] for coord in closest[name]["closest"]) / 3, \
-                             sum(coord[1] for coord in closest[name]["closest"]) / 3
+        if name in included:
+            continue
+        # print(name + f"\t{closest[name]['closest']}")
+        new_list = {value: knn.values[value] for value in knn.values if not closest[value]["in group"]}
+        middle_x, middle_y = sum([knn.values[user][0] for user in closest[name]["closest"] if user in new_list]) \
+                             / len(closest[name]['closest']), \
+                             sum([knn.values[user][1] for user in closest[name]["closest"] if user in new_list]) \
+                             / len(closest[name]['closest'])
         middle = middle_x, middle_y
         knn.set_origin(middle)
-        knn.get_closest()
-
-
-
-
-
-
-
-
-
-
-
-
-
+        a = knn.get_closest(only_these_values=new_list,
+                            names_only=True, n=4, verbose=False, remove_first=False)
+        for user in a:
+            closest[user]["in group"] = True
+        print(f"GROUP {i}: {a}")
+        included += a
+        included = list(set(included))
+        # print(included)
+        i += 1
