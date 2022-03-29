@@ -1,6 +1,4 @@
-body {
-  background-color: #2C2F33
-}
+
 
 
 @media screen and (max-width: 481px){
@@ -11,7 +9,6 @@ body {
 
 }
 @media screen and (min-width: 482px){
-
     .flashed_messages_div{
         position: absolute;
         z-index: 20;
@@ -158,8 +155,7 @@ body {
     }
 
     body {
-      background: #2c3338;
-      color: #606468;
+background: #2c3338;      color: #606468;
       font: 87.5%/1.5em 'Varela Round', normal;
       margin: 0;
     }

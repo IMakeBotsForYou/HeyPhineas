@@ -87,6 +87,33 @@ def home():
     return render_template("main.html")
 
 
+@app.route("/login", methods=["POST", "GET"])
+def login():
+    if request.method == "POST":
+        user = request.form['name']
+        password = request.form['pass']
+        # password = request.form['pass']
+        # Is the password correct? Is the user valid?
+        # If the user isn't valid, it throws an error.
+        try:
+            if str(db['ex'].get("users", "password", f'username="{user}"')[0]) != password:
+                flash("Either the name, or the password are wrong.")
+                return render_template("login.html")
+            else:
+                session['user'] = user
+                # create the instance folder
+                session['is_admin'] = user == db['ex'].admin
+
+                return redirect("/")
+        except Exception as e:
+            flash(e)
+            flash("Either the name, or the password are wrong.")
+            return render_template("login.html")
+    else:
+        return render_template("login.html")
+
+
+
 @app.route("/static/favicon.ico")  # 2 add get for favicon
 def fav():
     print(os.path.join(app.root_path, 'static'))
@@ -140,8 +167,6 @@ def inbox():
         db['ex'].remove("messages", f'id={message_id}')
     session['inbox_messages'] = get_messages(session['user'])
     return render_template("inbox.html")
-
- 
 
 
 def get_messages(user):
