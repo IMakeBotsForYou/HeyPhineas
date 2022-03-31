@@ -21,6 +21,18 @@ class KNN:
         self.origin = None
         self.groups: dict
 
+    def group_clusters(self, centroids):
+        centroids = dict.fromkeys(centroids, [])
+        for vec in self.values.values():
+            min_dist, best_centroid = 10**99, None
+            for center in centroids:
+                dist = np.linalg.norm(np.array(center) - np.array(vec))
+                if dist < min_dist:
+                    min_dist = dist
+                    best_centroid = center
+            centroids[best_centroid] = best_centroid
+        return centroids
+
     def set_origin(self, name):
         self.origin = name
 
@@ -99,6 +111,7 @@ if __name__ == "__main__":
 
         "Eran": [3, 3]
     }
+
     import random
 
     # for a in range(100):
@@ -107,30 +120,41 @@ if __name__ == "__main__":
     knn = KNN(values, k=4)
     knn.set_origin("Dan")
     flag = True
-    closest = {}
-    included = []
-    i = 0
-    for name in values:
-        knn.set_origin(name)
-        closest[knn.origin] = {"closest": knn.get_closest(names_only=True, verbose=False), "in group": False}
 
-    for name in values:
-        if name in included:
-            continue
-        # print(name + f"\t{closest[name]['closest']}")
-        new_list = {value: knn.values[value] for value in knn.values if not closest[value]["in group"]}
-        middle_x, middle_y = sum([knn.values[user][0] for user in closest[name]["closest"] if user in new_list]) \
-                             / len(closest[name]['closest']), \
-                             sum([knn.values[user][1] for user in closest[name]["closest"] if user in new_list]) \
-                             / len(closest[name]['closest'])
-        middle = middle_x, middle_y
-        knn.set_origin(middle)
-        a = knn.get_closest(only_these_values=new_list,
-                            names_only=True, n=4, verbose=False, remove_first=False)
-        for user in a:
-            closest[user]["in group"] = True
-        print(f"GROUP {i}: {a}")
-        included += a
-        included = list(set(included))
-        # print(included)
-        i += 1
+
+
+    i = 0
+
+    centroids_amount = 2
+    centroids = {[random.uniform(1, 5)] * centroids_amount}
+
+    centroids = knn.group_clusters(centroids)
+
+
+
+
+
+
+
+
+
+    # for name in values:
+    #     if name in included:
+    #         continue
+    #     # print(name + f"\t{closest[name]['closest']}")
+    #     new_list = {value: knn.values[value] for value in knn.values if not closest[value]["in group"]}
+    #     middle_x, middle_y = sum([knn.values[user][0] for user in closest[name]["closest"] if user in new_list]) \
+    #                          / len(closest[name]['closest']), \
+    #                          sum([knn.values[user][1] for user in closest[name]["closest"] if user in new_list]) \
+    #                          / len(closest[name]['closest'])
+    #     middle = middle_x, middle_y
+    #     knn.set_origin(middle)
+    #     a = knn.get_closest(only_these_values=new_list,
+    #                         names_only=True, n=4, verbose=False, remove_first=False)
+    #     for user in a:
+    #         closest[user]["in group"] = True
+    #     print(f"GROUP {i}: {a}")
+    #     included += a
+    #     included = list(set(included))
+    #     # print(included)
+    #     i += 1
