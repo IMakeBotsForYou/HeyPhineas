@@ -1,4 +1,76 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import json
+
+
+def distance(a, b):
+    return np.linalg.norm(np.array(a) - np.array(b))
+
+
+def calculate_error(clusters):
+    error = 0
+    for cluster in clusters:
+        clus_coord = [float(a) for a in cluster.split(' ')]
+        error += sum([distance(np.array(clus_coord), x[1]) for x in clusters[cluster]])
+    return error
+
+
+def recenter_centroids(centroids):
+    new_centroids = []
+
+    for centroid in centroids:
+        labels, vectors = [x[0] for x in centroids[centroid]], [x[1] for x in centroids[centroid]]
+        cluster_points = np.rot90(vectors, k=3)
+        center_of_mass = np.sum(cluster_points, axis=1) / len(vectors)
+        new_centroids.append(center_of_mass.tolist())
+    return new_centroids
+
+
+def display_points(values, centroids):
+    for l, v in values.items():
+        # print(l, v)
+        x, y = v
+        # get_color((x, y), centroids_dict)
+        plt.plot(x, y, 'o', c=get_color([x, y], centroids))
+        plt.text(x + 0.01, y + 0.01, l, fontsize=12)
+    for centroid in centroids:
+        x, y = centroid.split(" ")
+        plt.plot(float(x), float(y), 'o', c='black')
+        plt.text(float(x) + 0.01, float(y) + 0.01, "O", fontsize=12)
+    plt.title(f"{len(values.values())} items, {len(centroids)} centroids")
+    plt.show()
+
+
+def find_elbow(points):
+    """
+    Must have more than 2 points.
+    Calculates the elbow based on the change in slope.
+    :param points: List of 2-D coordinates
+    :return: Returns the X value of the elbow
+    """
+    delta_m = [0]
+    print(points)
+    for i, point in enumerate(points[1:-1]):
+        p_x, p_y = points[i]
+        x, y = point
+        n_x, n_y = points[x]
+        m_before = y-p_y
+        m_after = n_y-y
+        delta_m.append(round(np.abs(m_before)-np.abs(m_after), 4))
+        print(f"{i+1} {delta_m[-1]}")
+
+    # delta_m = [x if x < 0 else -100 for x in delta_m]
+    # print(delta_m)
+
+    return delta_m.index(max(delta_m))+1
+
+#
+# def valid_distance(center, points, vec):
+#     if len(points) < 3:
+#         return True
+#     avg_dist = sum([distance(a[1], center) for a in points])
+#     print(f"{avg_dist = }, allowed = {avg_dist * 1.5} {points}")
+#     return avg_dist * 2 <= distance(vec, center)
 
 
 class KNN:
@@ -21,17 +93,73 @@ class KNN:
         self.origin = None
         self.groups: dict
 
-    def group_clusters(self, centroids):
-        centroids = dict.fromkeys(centroids, [])
-        for vec in self.values.values():
-            min_dist, best_centroid = 10**99, None
-            for center in centroids:
-                dist = np.linalg.norm(np.array(center) - np.array(vec))
+    def group_clusters(self, centroid_coords):
+        centroids = {}
+        """
+        Calculate the distance between a point and every centroid
+        Find the closest one and label that point as belonging to that centroid
+        """
+        for label, vec in zip(self.labels, self.values.values()):
+            # We want to remember the label (name) of each point
+            min_dist, best_centroid = 10 ** 99, None
+
+            # Loop over every centroid
+            for center in centroid_coords:
+                dist = distance(np.array(center), np.array(vec))
                 if dist < min_dist:
+                    # New closest centroid
                     min_dist = dist
                     best_centroid = center
-            centroids[best_centroid] = best_centroid
+
+            # Centroids are a tuple of floats, if we want it
+            # to be hashable we convert it to a string
+            temp = " ".join([str(x) for x in best_centroid])
+            if temp not in centroids:
+                centroids[temp] = []
+
+            # if valid_distance(best_centroid, centroids[temp], vec):
+            # if len(centroids[temp]) < 2:
+            centroids[temp].append((label, vec))
+
+        # centroids = {k: v for (k, v) in centroids.items() if len(v) > 1}
+
         return centroids
+
+    def find_optimal_clusters(self, *, draw_graphs=False):
+        error_values = []
+        centroids_options = [None]
+        length = len(list(self.values.keys()))
+        for i in range(1, length):
+            old_centroids_array = []
+            centroids_array = [[3 + 1.5 * np.cos(2*np.pi * j / i),
+                                3 + 1.5 * np.sin(2*np.pi * j / i)] for j in range(i)]
+
+            centroids_dict = {}
+            # print(f"Adjusting centroids...")
+            while not np.all(centroids_array == old_centroids_array):
+                # print(len(centroids_array), len(old_centroids_array), i)
+                centroids_dict = knn.group_clusters(centroids_array)
+
+                # display_points(self.values, centroids_dict)
+
+                old_centroids_array = centroids_array
+                centroids_array = recenter_centroids(centroids_dict)
+
+            print(f"{i = } | ", calculate_error(centroids_dict))
+
+            error_values.append(calculate_error(centroids_dict))
+            centroids_options.append(centroids_dict)
+
+        x = [i + 1 for i in range(len(error_values))]
+        elbow = find_elbow(list(zip(x, error_values)))
+        if draw_graphs:
+
+            plt.scatter(x=x, y=error_values, c=['yellow' if a == elbow else 'black' for a in x])
+            plt.show()
+            print(f"{elbow}/{len(centroids_options)}:({len(centroids_options[elbow])} clusters, "
+                  f"{elbow-len(centroids_options[elbow])} ignored)")
+            display_points(values, centroids_options[elbow])
+        return [[user[1] for user in centroids_options[elbow][group]] for group in centroids_options[elbow]]
 
     def set_origin(self, name):
         self.origin = name
@@ -41,9 +169,9 @@ class KNN:
 
     def _euclidean_dist(self, target_point: np.array) -> float:
         if self.origin in self.values:
-            return np.linalg.norm(np.array(self.values[self.origin]) - np.array(target_point))
+            return distance(np.array(self.values[self.origin]), np.array(target_point))
         else:
-            return np.linalg.norm(np.array(self.origin) - np.array(target_point))
+            return distance(np.array(self.origin), np.array(target_point))
 
     def get_closest(self, n=None, weigh_values=None, only_these_values=None,
                     names_only=False, verbose=False, remove_first=True):
@@ -98,6 +226,16 @@ def get_intersection(a, b):
     return list(set(a) & set(b))
 
 
+def get_color(x, clusters):
+    colors = ['green', 'orange', 'red', 'darkorange', 'olive', 'teal', 'violet',
+             'skyblue', 'gray', 'magenta', 'cyan', 'royal_blue']
+    for i, cluster in enumerate(clusters):
+        # print(x, cluster,[b[1] for b in clusters[cluster]])
+        if x in [b[1] for b in clusters[cluster]]:
+            return colors[i]
+    return 'pink'
+
+
 if __name__ == "__main__":
     values = {
         "Dan": [5, 5],
@@ -109,52 +247,21 @@ if __name__ == "__main__":
         "Maya": [2, 2],
         "Yasha": [1, 1],
 
-        "Eran": [3, 3]
+        "Eran": [3, 3],
+        "Yael": [5, 0.9],
+        "Dana": [4.5, 0.2],
+
+        "Danilin": [1, 5],
+        "Omer": [1.5, 4.6],
+        "Manor": [0.5, 4]
     }
-
-    import random
-
-    # for a in range(100):
-    #     values[str(a)] = [random.random() * 5] * 2
 
     knn = KNN(values, k=4)
     knn.set_origin("Dan")
-    flag = True
 
-
-
-    i = 0
-
-    centroids_amount = 2
-    centroids = {[random.uniform(1, 5)] * centroids_amount}
-
-    centroids = knn.group_clusters(centroids)
-
-
-
-
-
-
-
-
-
-    # for name in values:
-    #     if name in included:
-    #         continue
-    #     # print(name + f"\t{closest[name]['closest']}")
-    #     new_list = {value: knn.values[value] for value in knn.values if not closest[value]["in group"]}
-    #     middle_x, middle_y = sum([knn.values[user][0] for user in closest[name]["closest"] if user in new_list]) \
-    #                          / len(closest[name]['closest']), \
-    #                          sum([knn.values[user][1] for user in closest[name]["closest"] if user in new_list]) \
-    #                          / len(closest[name]['closest'])
-    #     middle = middle_x, middle_y
-    #     knn.set_origin(middle)
-    #     a = knn.get_closest(only_these_values=new_list,
-    #                         names_only=True, n=4, verbose=False, remove_first=False)
-    #     for user in a:
-    #         closest[user]["in group"] = True
-    #     print(f"GROUP {i}: {a}")
-    #     included += a
-    #     included = list(set(included))
-    #     # print(included)
-    #     i += 1
+    _ = knn.find_optimal_clusters(draw_graphs=True)
+    # i = 3
+    # x = [3 + 1.5 * np.cos(2 * np.pi * j / i+0.25) for j in range(i)]
+    # y = [3 + 1.5 * np.sin(2 * np.pi * j / i+0.25) for j in range(i)]
+    # plt.scatter(x, y)
+    # plt.show()

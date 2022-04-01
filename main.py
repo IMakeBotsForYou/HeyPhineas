@@ -113,11 +113,10 @@ def login():
         return render_template("login.html")
 
 
-
 @app.route("/static/favicon.ico")  # 2 add get for favicon
 def fav():
     print(os.path.join(app.root_path, 'static'))
-    return send_from_directory(app.static_folder, 'favicon.ico')  # for sure return the file
+    return send_from_directory(app.static_folder, 'static/favicon.ico')  # for sure return the file
 
 
 def parse_action(command):
