@@ -327,6 +327,7 @@ function initMap() {
             var name = data[i];
             user_locations[name].marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
         }
+        // user_colors
       });
       // Create a renderer for directions and bind it to the map.
       const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
@@ -406,7 +407,9 @@ function calculateAndDisplayRoute(
           step_index = 0;
           first = false;
           socket.emit('send_current_path', current_directions);
-
+          if (leader_of_party){
+            socket.emit('send_dest', destination);
+          }
           document.getElementById("warnings-panel").innerHTML =
           "<b>" + directionsData.warnings + "</b>";
 

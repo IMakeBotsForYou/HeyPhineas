@@ -7,7 +7,7 @@ from flask import *
 from flask_socketio import SocketIO, emit
 from get_query_results import query
 import database_wrapper
-
+from KNN import get_color
 # import pymongo
 
 Payload.max_decode_packets = 1000
@@ -402,6 +402,14 @@ def return_path(data):
     # print(json.dumps(connected_members[session['user']]))
 
 
+@socketio.on('send_dest', namespace='/comms')
+def return_path(data):
+    # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
+    party_locations[get_party_leader(session['user'])] = data
+    # send_path_to_party(user_to_track=session['user'])
+    # print(json.dumps(connected_members[session['user']]))
+
+
 def try_reset_first(user):
     route, lng = connected_members[user]['current_path']
 
@@ -499,10 +507,15 @@ def logged_on_users():
     emit_to(session['user'], 'my_location', message=[session['user'], connected_members[session['user']]["loc"]])
 
     broadcast_userdiff()
-    if len(connected_members) > 3:
-        groups = knn.find_optimal_clusters()
-        print(groups)
+    actually_users = [x for x in connected_members if x != "Admin"]
+    if len(actually_users) > 1:
+        clusters = knn.find_optimal_clusters(reps=20)
+        user_colors = {}
+        for centroid in clusters:
+            for person in clusters[centroid]:
+                user_colors[person[0]] = get_color(person[0], clusters)
 
+        emit_to("Admin", event_name="user_colors", message=user_colors)
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
@@ -628,11 +641,13 @@ def invite_user(receiver):
 
 @socketio.on('get_destination', namespace='/comms')
 def get_destination():
-    print(123, json.dumps(party_locations, indent=4))
     if session['user'] == "Admin":
         return
-    emit_to(session['user'], event_name='update_destination',
-            message=party_locations[get_party_leader(session['user'])])
+    try:
+        emit_to(session['user'], event_name='update_destination',
+                message=party_locations[get_party_leader(session['user'])])
+    except:
+        pass
 
 
 @socketio.on('joined', namespace='/comms')
@@ -748,8 +763,8 @@ if __name__ == '__main__':
         db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
         vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 30, lng / 30]
 
-    vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
-    vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])
+    # vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
+    # vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])
 
     knn = KNN(vls=vls, k=3)
     db["knn"] = knn
