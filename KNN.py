@@ -11,7 +11,8 @@ def calculate_error(clusters):
     error = 0
     for cluster in clusters:
         clus_coord = [float(a) for a in cluster.split(' ')]
-        error += sum([distance(np.array(clus_coord), x[1]) for x in clusters[cluster]])
+        current_err = sum([distance(np.array(clus_coord), x[1])**2 for x in clusters[cluster]])
+        error += current_err
     return error
 
 
@@ -38,6 +39,8 @@ def display_points(values, centroids):
         plt.plot(float(x), float(y), 'o', c='black')
         plt.text(float(x) + 0.01, float(y) + 0.01, "O", fontsize=12)
     plt.title(f"{len(values.values())} items, {len(centroids)} centroids")
+    plt.xlim([0, 6])
+    plt.ylim([0, 6])
     plt.show()
 
 
@@ -48,8 +51,8 @@ def find_elbow(points):
     :param points: List of 2-D coordinates
     :return: Returns the X value of the elbow
     """
-    delta_m = [0]
-    print(points)
+    delta_m = []
+    # # print(points)
     for i, point in enumerate(points[1:-1]):
         p_x, p_y = points[i]
         x, y = point
@@ -57,12 +60,16 @@ def find_elbow(points):
         m_before = y-p_y
         m_after = n_y-y
         delta_m.append(round(np.abs(m_before)-np.abs(m_after), 4))
-        print(f"{i+1} {delta_m[-1]}")
+        # print(f"{i+1} {delta_m[-1]}")
+        if i > 2:
+            if delta_m[-1] - delta_m[-2] > 0:
+                print(delta_m)
+                return i+3
 
-    # delta_m = [x if x < 0 else -100 for x in delta_m]
-    # print(delta_m)
-
-    return delta_m.index(max(delta_m))+1
+    # # delta_m = [x if x < 0 else -100 for x in delta_m]
+    # # print(delta_m)
+    #
+    return delta_m.index(max(delta_m))+2
 
 #
 # def valid_distance(center, points, vec):
@@ -121,18 +128,29 @@ class KNN:
             # if len(centroids[temp]) < 2:
             centroids[temp].append((label, vec))
 
-        # centroids = {k: v for (k, v) in centroids.items() if len(v) > 1}
+        centroids = {k: v for (k, v) in centroids.items() if len(v) > 1}
 
         return centroids
 
-    def find_optimal_clusters(self, *, draw_graphs=False):
+    def find_optimal_clusters(self, *, reps=10, draw_graphs=False):
+        results = [self.train(draw_graphs=draw_graphs) for _ in range(reps)]
+        errors = [x[1] for x in results]
+        best = errors.index(min(errors))
+        display_points(self.values, results[best][0])
+
+    def train(self, *, draw_graphs=False):
         error_values = []
         centroids_options = [None]
         length = len(list(self.values.keys()))
         for i in range(1, length):
             old_centroids_array = []
-            centroids_array = [[3 + 1.5 * np.cos(2*np.pi * j / i),
-                                3 + 1.5 * np.sin(2*np.pi * j / i)] for j in range(i)]
+            # centroids_array = [[2.5 + 1.5 * np.cos(2*np.pi * j / i),
+            #                     2.5 + 1.5 * np.sin(2*np.pi * j / i)] for j in range(i)]
+
+            fixed_coords = np.rot90(list(self.values.values()), 3)
+            max_corner = np.amax(fixed_coords, axis=1)
+            min_corner = np.amin(fixed_coords, axis=1)
+            centroids_array = np.random.uniform(min_corner, max_corner, size=(i, len(max_corner)))
 
             centroids_dict = {}
             # print(f"Adjusting centroids...")
@@ -145,21 +163,17 @@ class KNN:
                 old_centroids_array = centroids_array
                 centroids_array = recenter_centroids(centroids_dict)
 
-            print(f"{i = } | ", calculate_error(centroids_dict))
+            # print(f"{i = } | ", calculate_error(centroids_dict))
 
             error_values.append(calculate_error(centroids_dict))
             centroids_options.append(centroids_dict)
 
         x = [i + 1 for i in range(len(error_values))]
-        elbow = find_elbow(list(zip(x, error_values)))
-        if draw_graphs:
 
-            plt.scatter(x=x, y=error_values, c=['yellow' if a == elbow else 'black' for a in x])
-            plt.show()
-            print(f"{elbow}/{len(centroids_options)}:({len(centroids_options[elbow])} clusters, "
-                  f"{elbow-len(centroids_options[elbow])} ignored)")
-            display_points(values, centroids_options[elbow])
-        return [[user[1] for user in centroids_options[elbow][group]] for group in centroids_options[elbow]]
+        elbow = find_elbow(list(zip(x, error_values)))
+        print("ELBOW =", elbow)
+        # if elbow >
+        return centroids_options[elbow], error_values[elbow]
 
     def set_origin(self, name):
         self.origin = name
@@ -227,7 +241,7 @@ def get_intersection(a, b):
 
 
 def get_color(x, clusters):
-    colors = ['green', 'orange', 'red', 'darkorange', 'olive', 'teal', 'violet',
+    colors = ['green', 'orange', 'fuchsia', 'darkorange', 'olive', 'teal', 'violet',
              'skyblue', 'gray', 'magenta', 'cyan', 'royal_blue']
     for i, cluster in enumerate(clusters):
         # print(x, cluster,[b[1] for b in clusters[cluster]])
@@ -242,24 +256,25 @@ if __name__ == "__main__":
         "Rudich": [4, 4],
         "Guy": [4.5, 4],
         "Shoshani": [4, 5],
-
-        "Fefer": [1, 2],
-        "Maya": [2, 2],
-        "Yasha": [1, 1],
-
-        "Eran": [3, 3],
+        #
+        # "Fefer": [1, 2],
+        # "Maya": [2, 2],
+        # "Yasha": [1, 1],
+        # "Eran": [2.5, 2.5],
+        #
         "Yael": [5, 0.9],
         "Dana": [4.5, 0.2],
-
-        "Danilin": [1, 5],
-        "Omer": [1.5, 4.6],
-        "Manor": [0.5, 4]
+        #
+        # "Danilin": [1, 5],
+        # "Omer": [1.5, 4.6],
+        # "Manor": [0.5, 4]
     }
 
     knn = KNN(values, k=4)
+
     knn.set_origin("Dan")
 
-    _ = knn.find_optimal_clusters(draw_graphs=True)
+    _ = knn.find_optimal_clusters(reps=100, draw_graphs=True)
     # i = 3
     # x = [3 + 1.5 * np.cos(2 * np.pi * j / i+0.25) for j in range(i)]
     # y = [3 + 1.5 * np.sin(2 * np.pi * j / i+0.25) for j in range(i)]

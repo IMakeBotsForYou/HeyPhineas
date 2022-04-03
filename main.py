@@ -499,6 +499,9 @@ def logged_on_users():
     emit_to(session['user'], 'my_location', message=[session['user'], connected_members[session['user']]["loc"]])
 
     broadcast_userdiff()
+    if len(connected_members) > 3:
+        groups = knn.find_optimal_clusters()
+        print(groups)
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
