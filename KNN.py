@@ -62,14 +62,14 @@ def find_elbow(points):
         delta_m.append(round(np.abs(m_before)-np.abs(m_after), 4))
         # print(f"{i+1} {delta_m[-1]}")
         if i > 2:
-            if delta_m[-1] - delta_m[-2] > 0:
-                print(delta_m)
-                return i+3
+            if delta_m[-2] - delta_m[-1] > 0:
+                # print(delta_m)
+                break
 
     # # delta_m = [x if x < 0 else -100 for x in delta_m]
     # # print(delta_m)
     #
-    return delta_m.index(max(delta_m))+2
+    return delta_m.index(min(delta_m))+2
 
 #
 # def valid_distance(center, points, vec):
@@ -257,10 +257,10 @@ if __name__ == "__main__":
         "Guy": [4.5, 4],
         "Shoshani": [4, 5],
         #
-        # "Fefer": [1, 2],
-        # "Maya": [2, 2],
-        # "Yasha": [1, 1],
-        # "Eran": [2.5, 2.5],
+        "Fefer": [1, 2],
+        "Maya": [2, 2],
+        "Yasha": [1, 1],
+        "Eran": [2.5, 2.5],
         #
         "Yael": [5, 0.9],
         "Dana": [4.5, 0.2],
