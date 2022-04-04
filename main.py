@@ -41,6 +41,20 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
 
+def filter_dict(d, f):
+    """ Filters dictionary d by function f. """
+    new_dict = dict()
+
+    # Iterate over all (k,v) pairs in names
+    for key, value in d.items():
+
+        # Is condition satisfied?
+        if f(key):
+            new_dict[key] = value
+
+    return new_dict
+
+
 def random_location():
     return random.uniform(31.8884302, 31.9043486), random.uniform(34.8025995, 34.8146395)
 
@@ -201,10 +215,11 @@ def register():
         return render_template("register.html")
 
 
-def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None):
+def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None, verbose=False):
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
-        print(f"Sent to {user}: {event_name} {message} {namespace} ")
+        if verbose:
+            print(f"Sent to {user}: {event_name} {message} {namespace} ")
     except Exception as e:
         print(f'Error in emitting to user {user},', e)
         print(f'Tried to send: ', message, event_name)
@@ -326,7 +341,7 @@ def check_ping(*args):
     # if get_party_leader(session['user']) == session['user']:
     #     party_locations[session['user']] = db['ex'].get_user_location(session['user'])
     if session['user'] == "Admin":
-        members = db['ex'].get_all_names(removeAdmin=True)
+        members = db['ex'].get_all_names(remove_admin=True)
         for member in members:
             lat, lng = db['ex'].get_user_location(member)
             emit_to("Admin", 'my_location', message=[member, [lat, lng]])
@@ -382,7 +397,7 @@ def send_path_to_party(user_to_track):
     paths = []
 
     for member in party_members:
-        if member not in user_to_track and member in connected_members:
+        if member != user_to_track and member in connected_members:
             try:
                 path, index = connected_members[member]['current_path']
                 paths.append((member, [connected_members[member]['loc']] + path[index:]))
@@ -412,7 +427,9 @@ def return_path(data):
 
 def try_reset_first(user):
     route, lng = connected_members[user]['current_path']
-
+    if route is None:
+        emit_to(user, 'reset_first')
+        return
     if lng >= len(route):
         emit_to(user, 'reset_first')
 
@@ -455,7 +472,7 @@ def party_coords(username, request_directions=False):
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
     if session['user'] == "Admin":
-        members = db['ex'].get_all_names(removeAdmin=True)
+        members = db['ex'].get_all_names(remove_admin=True)
         data = []
         for member in members:
             try:
@@ -509,13 +526,15 @@ def logged_on_users():
     broadcast_userdiff()
     actually_users = [x for x in connected_members if x != "Admin"]
     if len(actually_users) > 1:
-        clusters = knn.find_optimal_clusters(reps=20)
+        clusters = knn.find_optimal_clusters(reps=20, only_these_values=filter_dict(vls, lambda x: x in connected_members))
         user_colors = {}
         for centroid in clusters:
             for person in clusters[centroid]:
+                print(9000, person, clusters)
                 user_colors[person[0]] = get_color(person[0], clusters)
-
+        # print("USER COLOURS = ", user_colors)
         emit_to("Admin", event_name="user_colors", message=user_colors)
+
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
@@ -573,7 +592,7 @@ def reset_locs():
         False,
         [
             [x, db['ex'].get_user_location(x)]
-            for x in db['ex'].get_all_names(removeAdmin=True)]
+            for x in db['ex'].get_all_names(remove_admin=True)]
     ]
 
     try:
@@ -754,14 +773,14 @@ if __name__ == '__main__':
         # interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
         lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
         db['ex'].set_user_location(user, f"{lat}, {lng}")
-        interests_list = ["sport", "theater", "computer", "park", "restaurant"]
-        interests_dict = {}
-        for i in interests_list:
-            interests_dict[i] = np.random.random_sample() * 5
-
-        interests = "|".join([f"{i}|{interests_dict[i]}" for i in interests_list])
-        db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
-        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 30, lng / 30]
+        # interests_list = ["sport", "theater", "computer", "park", "restaurant"]
+        # interests_dict = {}
+        # for i in interests_list:
+        #     interests_dict[i] = np.random.random_sample() * 5
+        #
+        interests = db['ex'].get("users", "interests", condition=f'username="{user}"')[0]
+        # db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
+        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 25, lng / 25]
 
     # vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
     # vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])
@@ -769,4 +788,4 @@ if __name__ == '__main__':
     knn = KNN(vls=vls, k=3)
     db["knn"] = knn
 
-    socketio.run(app, host="0.0.0.0", port=8080)
+    socketio.run(app, host="0.0.0.0", port=8080, debug=False)

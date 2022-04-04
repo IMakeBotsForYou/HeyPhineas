@@ -62,6 +62,7 @@ function initMap() {
         var name = data[0];
         var latlng = data[1];
         var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
+//        console.log(name, latlng);
 //        console.log(`${name}, ${latlng}`);
         if (name in user_locations){
             user_locations[name].location = myLatLng;
@@ -319,16 +320,28 @@ function initMap() {
             }
         }
       });
-      socket.on('knn_results', function(data){
-        for(name in user_locations){
-            user_locations[name].marker.setIcon('https://maps.google.com/mapfiles/ms/icons/red-dot.png');
-        }
-        for(let i=0; i<data.length;i++){
-            var name = data[i];
-            user_locations[name].marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
-        }
-        // user_colors
+
+      function color_dot_link(colour){
+        return "https://maps.google.com/mapfiles/ms/icons/"+ colour + "-dot.png"
+      }
+      socket.on('user_colors', function(data){
+         console.log(data);
+         for (const [username, colour] of Object.entries(data)) {
+            if (username in user_locations)
+            user_locations[username].marker.setIcon(color_dot_link(colour));
+         }
       });
+
+//      socket.on('knn_results', function(data){
+//        for(name in user_locations){
+//            user_locations[name].marker.setIcon('https://maps.google.com/mapfiles/ms/icons/red-dot.png');
+//        }
+//        for(let i=0; i<data.length;i++){
+//            var name = data[i];
+//            user_locations[name].marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+//        }
+//        // user_colors
+//      });
       // Create a renderer for directions and bind it to the map.
       const directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
       // Instantiate an info window to hold step text.
