@@ -188,6 +188,16 @@ class UserData(Database):
         else:
             return data[0]
 
+    def reset_notifs(self, user):
+        return self.edit("users", "notifications", newvalue=0, condition=f'username="{user}"')
+
+    def add_notif(self, user):
+        num = self.get_notifs(user)
+        return self.edit("users", "notifications", newvalue=num+1, condition=f'username="{user}"')
+
+    def get_notifs(self, user):
+        return int(self.get("users", "notifications", condition=f'username="{user}"')[0])
+
     def add_to_party(self, owner, user_to_add):
         members = self.get('parties', 'members', condition=f'creator="{owner}"')
         if len(members) == 0:

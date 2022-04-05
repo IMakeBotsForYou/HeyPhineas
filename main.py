@@ -152,7 +152,9 @@ def parse_action(command):
                               desc=f"{session['user']} has accepted your friend request.",
                               message_sender=session["user"], receiver=request, messagetype="ignore",
                               action="ignore")
-        emit_to(requester, 'notif', '/comms', 'notification!')
+        db['ex'].add_notif(requester)
+
+        # emit_to(requester, 'notif', '/comms', 'notification!')
 
     if command_name == "join_party":
         party_owner = args[1]
@@ -182,14 +184,12 @@ def inbox():
     if "user" not in session:
         return redirect(url_for("register"))
 
-    # emit('reset_notifs', namespace="/comms", room=connected_members[session['user']]['sid'])
     try:
-        emit_to(session['user'], "reset_notifs", "/comms")
+        db['ex'].reset_notifs(session['user'])
     except KeyError:
         pass
 
     if request.method == "POST":
-        print(request.form)
         message_id = request.form['message_id']
         reaction = request.form['action']
         # first grab the message to see what we need to do with it
@@ -237,7 +237,7 @@ def register():
         return render_template("register.html")
 
 
-def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None, verbose=False):
+def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None, verbose=True):
     try:
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
         if verbose:
@@ -278,7 +278,7 @@ def broadcast_userdiff():
 
     emit_to(session["user"], 'friend_data', message=session["friend_data"])
     [emit_to(us, 'user_diff',
-             message={'amount': len(connected_members.keys()), 'names': [user for user in visisble_uses]}) for us in
+             message={'amount': len(visisble_uses), 'names': [user for user in visisble_uses]}) for us in
      connected_members]
     print("Data:")
     print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visisble_uses]))
@@ -367,6 +367,11 @@ def check_ping(*args):
         for member in members:
             lat, lng = db['ex'].get_user_location(member)
             emit_to("Admin", 'my_location', message=[member, [lat, lng]])
+
+        # user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
+
+        emit_to("Admin", event_name="user_colors", message=user_colors)
+    emit_to(session['user'], event_name="notifications", message=db['ex'].get_notifs(session['user']))
 
 
 def weight_values(name, value):
@@ -559,20 +564,25 @@ def logged_on_users():
     not_in_group_or_suggestion = list(filter(group_suggestion_filter, actually_users))
 
     if len(not_in_group_or_suggestion) > 1:
-        clusters = knn.find_optimal_clusters(reps=20, only_these_values=filter_dict(vls, lambda x: x in connected_members))
-        print(f"CLUSTERS:{clusters}")
+        clusters = knn.find_optimal_clusters(reps=20, only_these_values=filter_dict(vls, lambda x: x in connected_members), get_error=False)
+        # print(f"CLUSTERS:{clusters}")
         for centroid in clusters:
             suggest_party([x[0] for x in clusters[centroid]])
             for person in clusters[centroid]:
                 user_colors[person[0]] = get_color(person[0], clusters)
         print("USER COLOURS = ", user_colors, "\n", filter_dict(vls, lambda x: x in connected_members))
-    emit_to("Admin", event_name="user_colors", message=user_colors)
+    #
+    # [emit_to("Admin", 'my_location', message=[member, [data[0], data[1]]]) for member in
+    #  recipients]
+    # emit_to("Admin", event_name="user_colors", message=user_colors)
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
+    # emit_to(user=session['user'], event_name="party_members_list_get",
+    #         message=[get_party_members(session['user']), voting_status[get_party_leader(session['user'])]])
     emit_to(user=session['user'], event_name="party_members_list_get",
-            message=[get_party_members(session['user']), voting_status[get_party_leader(session['user'])]])
+            message=get_party_members(session['user']))
 
 
 @socketio.on('online_members_get', namespace='/comms')
@@ -670,8 +680,8 @@ def invite_user(receiver):
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
-
-    emit_to(receiver, 'notif', namespace='/comms', message='notification!')
+    db['ex'].add_notif(receiver)
+    # emit_to(receiver, 'notif', namespace='/comms', message='notification!')
 
 
 def suggest_party(users):
@@ -686,8 +696,9 @@ def suggest_party(users):
                               desc=desc,
                               sender="Admin", receiver=u, messagetype="group_suggestion",
                               action=f"accept_suggestion/{users[0]}")
+        db['ex'].add_notif(u)
 
-        emit_to(u, 'notif', namespace='/comms', message='notification!')
+        # emit_to(u, 'notif', namespace='/comms', message='notification!')
 
 
 @socketio.on('add_location', namespace='/comms')
@@ -704,7 +715,9 @@ def invite_user(receiver):
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
-    emit_to(receiver, 'notif', namespace='/comms', message='notification!')
+    db['ex'].add_notif(receiver)
+
+    # emit_to(receiver, 'notif', namespace='/comms', message='notification!')
 
 
 @socketio.on('get_destination', namespace='/comms')

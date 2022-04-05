@@ -124,16 +124,16 @@ class KNN:
 
             # Centroids are a tuple of floats, if we want it
             # to be hashable we convert it to a string
+
             temp = " ".join([str(x) for x in best_centroid])
             if temp not in centroids:
                 centroids[temp] = []
-
             # if valid_distance(best_centroid, centroids[temp], vec):
             # if len(centroids[temp]) < 2:
             centroids[temp].append((label, vec))
 
         centroids = {k: v for (k, v) in centroids.items() if len(v) > 1}
-
+        # print(centroids)
         return centroids
 
     def find_optimal_clusters(self, *, reps=10, draw_graphs=False, get_error=False, only_these_values=None):
@@ -147,7 +147,9 @@ class KNN:
         if draw_graphs:
             display_points(self.values, results[best][0])
         ret = results[best] if get_error else results[best][0]
+        print("Running on values:22 ", json.dumps(self.values, indent=2))
 
+        print("ret = \n\r", "\n".join([",".join([user[0] for user in ret[c]]) for c in ret]), "\n")
         self.values = save
         return ret
 
@@ -164,7 +166,7 @@ class KNN:
                 max_corner = np.amax(fixed_coords, axis=1)
                 min_corner = np.amin(fixed_coords, axis=1)
             except TypeError:
-                print(self.values.values(), 1001)
+                print(self.values.values())
 
             centroids_array = np.random.uniform(min_corner, max_corner, size=(i, len(max_corner)))
 
@@ -262,14 +264,13 @@ def get_color(x, clusters):
     colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
              'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
     for i, cluster in enumerate(clusters):
-        # print(x, cluster,[b[1] for b in clusters[cluster]])
-        print("$$$", x, clusters[cluster], )
         if x in [b[0] for b in clusters[cluster]]:
             return colors[i]
     return 'pink'
 
 
 if __name__ == "__main__":
+    pass
     # values = {
     #     "Dan": [5, 5],
     #     "Rudich": [4, 4],
@@ -289,32 +290,32 @@ if __name__ == "__main__":
     #     # "Manor": [0.5, 4]
     # }
 
-    values = {
-        "Dan": [
-            1.4139529501783277,
-            0.19044196186873308,
-            4.6700282728892715,
-            2.618641549773333,
-            4.364774171117821,
-            1.276163339572814,
-            1.3926109624901486
-        ],
-        "Guy": [
-            0.31841902357506446,
-            1.368656652558296,
-            2.4409434881924663,
-            4.1108784884750325,
-            1.8107549521046284,
-            1.2759919830598405,
-            1.392992765834319
-        ]
-    }
-    knn = KNN(values)
+    # values = {
+    #     "Dan": [
+    #         1.4139529501783277,
+    #         0.19044196186873308,
+    #         4.6700282728892715,
+    #         2.618641549773333,
+    #         4.364774171117821,
+    #         1.276163339572814,
+    #         1.3926109624901486
+    #     ],
+    #     "Guy": [
+    #         0.31841902357506446,
+    #         1.368656652558296,
+    #         2.4409434881924663,
+    #         4.1108784884750325,
+    #         1.8107549521046284,
+    #         1.2759919830598405,
+    #         1.392992765834319
+    #     ]
+    # }
+    # knn = KNN(values)
 
-    knn.set_origin("Dan")
-
-    result = knn.find_optimal_clusters(reps=100)
-    print(result)
+    # knn.set_origin("Dan")
+    #
+    # result = knn.find_optimal_clusters(reps=100)
+    # print(result)
     # i = 3
     # x = [3 + 1.5 * np.cos(2 * np.pi * j / i+0.25) for j in range(i)]
     # y = [3 + 1.5 * np.sin(2 * np.pi * j / i+0.25) for j in range(i)]

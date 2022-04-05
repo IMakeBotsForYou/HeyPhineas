@@ -19,45 +19,72 @@ var leader_of_party = false;
 socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 
 $(document).ready(function(){
+//    function update_party_members(data){
+//       var a = document.getElementById("members_panel")
+//       usernames = data[0];
+//       voting = data[1];
+//       if (usernames.length == 0){
+//            return;
+//       }
+//
+//       a.innerHTML = party_text;
+//       leader_of_party = usernames[0] == user;
+//       if(leader_of_party){
+//        $("#start_origin").visibility = 'visible';
+//       }
+//
+//       for(let i = 0; i < usernames.length; i++){
+//
+//           if (voting[usernames[i]] == "Accepted"){
+//              a.innerHTML += `<span id=usernames[i]+"_name" style="color:Aquamarine">${usernames[0]}`;
+//           } else {
+//              a.innerHTML += `<span id=usernames[i]+"_name" style="color:Gainsboro">${usernames[i]}`;
+//           }
+//
+//           if (i == 0)
+//                  a.innerHTML += `<span style="color:red"> (owner)`;
+//            // && voting[usernames[i]]="has not voted"
+//           if (usernames[i] == user) {
+//             a.innerHTML += `<button type="button" id="${usernames[i]}_accept"> <span class="fa fa-check"></span></button>   `;
+//             a.innerHTML += `<button type="button" id="${usernames[i]}_reject"> <span class="fa fa-x"></span></button>   `;
+//           }
+////           if (voting[usernames[i]] == "Accepted"){
+////            a.innerHTML +=  `<span class="fa fa-check-double">0</span>`;
+////           } else {
+////            a.innerHTML +=  `<span class="fa fa-x">0</span>`;
+////           }
+//           a.innerHTML += "<br>";
+//       }
+//      a.style.visibility = 'visible';
+//    }
     function update_party_members(data){
        var a = document.getElementById("members_panel")
-       usernames = data[0];
-       voting = data[1];
-       if (usernames.length == 0){
+       if (data.length == 0){
             return;
        }
 
        a.innerHTML = party_text;
-       leader_of_party = usernames[0] == user;
+       a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
+       leader_of_party = data[0] == user;
        if(leader_of_party){
         $("#start_origin").visibility = 'visible';
        }
 
-       for(let i = 0; i < usernames.length; i++){
-
-           if (voting[usernames[i]] == "Accepted"){
-              a.innerHTML += `<span id=usernames[i]+"_name" style="color:Aquamarine">${usernames[0]}`;
-           } else {
-              a.innerHTML += `<span id=usernames[i]+"_name" style="color:Gainsboro">${usernames[i]}`;
-           }
-
-           if (i == 0)
-                  a.innerHTML += `<span style="color:red"> (owner)`;
-            // && voting[usernames[i]]="has not voted"
-           if (usernames[i] == user) {
-             a.innerHTML += `<button type="button" id="${usernames[i]}_accept"> <span class="fa fa-check"></span></button>   `;
-             a.innerHTML += `<button type="button" id="${usernames[i]}_reject"> <span class="fa fa-x"></span></button>   `;
-           }
-//           if (voting[usernames[i]] == "Accepted"){
-//            a.innerHTML +=  `<span class="fa fa-check-double">0</span>`;
-//           } else {
-//            a.innerHTML +=  `<span class="fa fa-x">0</span>`;
-//           }
-           a.innerHTML += "<br>";
+       for(let i = 1; i < data.length; i++){
+           a.innerHTML += `<p class="white">${data[i]}</p>`
        }
       a.style.visibility = 'visible';
     }
 
+    if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){
+        socket.emit('user_added_locations_get');
+        socket.emit('party_members_list_get');
+        socket.emit('online_members_get');
+        socket.emit('get_destination')
+        // TEMP
+        socket.emit('get_coords_of_party')
+
+    }
     if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){
         socket.emit('user_added_locations_get');
         socket.emit('party_members_list_get');
@@ -153,15 +180,16 @@ $(document).ready(function(){
     });
 
     //update notification count
-    var notifs = 0;
-    socket.on('notif', function(msg) {
-        notifs += 1;
-        $('#inbox').html(`Inbox (${notifs})`);
-    });
+//    socket.on('notif', function(msg) {
+//        notifs += 1;
+//        $('#inbox').html(`Inbox (${notifs})`);
+//    });
+    socket.on('notifications', function(data) {
 
-    socket.on('reset_notifs', function(msg) {
-        notifs = 0;
-        $('#inbox').html(`Inbox`);
+        if (data != 0)
+            $('#inbox').html(`Inbox (${data})`);
+        else
+            $('#inbox').html(`Inbox`);
     });
 
     socket.on('best_3_locations', function(msg) {
