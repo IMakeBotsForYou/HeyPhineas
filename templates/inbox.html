@@ -5,8 +5,8 @@
 <div class="notification">
 <script src="/static/js/socket.js"></script>
 <form name="action_form" id="action_form" method="POST" action="#">
-    <input id="accept" type="text" name="accept" hidden/>
-    <input id="mark-as-read" type="text" name="mark_as_read" hidden/>
+    <input id="message_id" type="text" name="message_id" hidden/>
+    <input id="reaction" type="text" name="action" hidden/>
     <button type="button" id="sort_by_name" style="text-align: center;">Send message</button>
     {% with messages = session['inbox_messages'] %}
         {% if messages %}
@@ -15,23 +15,45 @@
                 <div class="content white">
                     <div><p id="message_content_{{id}}" style="margin: 0 0 14px 0;"><b>Message from {{sender}}:</b><br>{{content}}</p></div>
                         <div style="margin: 0 auto;">
-                            {% if type == "question" %}
+                            {% if type == "simple_question" %}
                                 <button class="form-button" id="confirm-button_{{id}}" style="float: left; color: #000;" >Accept</button>
-                                <script>
+                                <script> 
                                  $("#confirm-button_{{id}}").click(function(e) {
-                                   document.getElementById('accept').value = "{{id}}";
+                                   document.getElementById('message_id').value = "{{id}}";
+                                   document.getElementById('reaction').value = "accept";
                                    document.action_form.submit()
                                    console.log(document.getElementById('accept').value)
                                 });
                                 </script>
                             {% endif %}
-                             <button class="form-button" id="close-button_{{id}}" style="float: left;color: #000;" >Mark as read</button>
+                            {% if type == "group_suggestion" %}
+                                <button class="form-button" id="accept-suggestion-button_{{id}}" style="float: left; color: #000;" >Accept</button>
+                                <button class="form-button" id="reject-button_{{id}}" style="float: left;color: #000;" >Mark as read</button>
+                                <script>
+                                // accept suggestion made by server
+                                     $("#confirm-button_{{id}}").click(function(e) {
+                                       document.getElementById('message_id').value = "{{id}}";
+                                       document.getElementById('reaction').value = "accept_suggestion";
+                                       document.action_form.submit()
+                                       console.log(document.getElementById('accept').value)
+                                    });
+                                // reject suggestion made by server
+                                     $("#close-button_{{id}}").click(function(e) {
+                                       document.getElementById('message_id').value = "{{id}}";
+                                       document.getElementById('reaction').value = "reject_suggestion";
+                                       document.action_form.submit();
+                                    });
+                                </script>
+                            {% else %}
+                            <button class="form-button" id="close-button_{{id}}" style="float: left;color: #000;" >Mark as read</button>
                             <script>
                                  $("#close-button_{{id}}").click(function(e) {
                                    document.getElementById('mark-as-read').value = "{{id}}";
                                    document.action_form.submit();
                                 });
                             </script>
+                            {% endif %}
+
                         </div>
                     </div>
                 <br><br>

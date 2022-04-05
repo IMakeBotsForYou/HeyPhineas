@@ -69,7 +69,10 @@ def find_elbow(points):
 
     # # delta_m = [x if x < 0 else -100 for x in delta_m]
     # print(delta_m, delta_m.index(min(delta_m)))
-    return delta_m.index(min(delta_m))
+    try:
+        return delta_m.index(min(delta_m))
+    except ValueError:
+        return -1
 
 #
 # def valid_distance(center, points, vec):
@@ -185,6 +188,8 @@ class KNN:
         elbow = find_elbow(list(zip(x, error_values)))
         # print("ELBOW =", elbow)
         # if elbow >
+        if elbow == -1:
+            return {}, 10*99
         return centroids_options[elbow], error_values[elbow]
 
     def set_origin(self, name):
@@ -257,6 +262,7 @@ def get_color(x, clusters):
              'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
     for i, cluster in enumerate(clusters):
         # print(x, cluster,[b[1] for b in clusters[cluster]])
+        print("10-1", clusters[cluster], x, )
         if x in [b[0] for b in clusters[cluster]]:
             return colors[i]
     return 'pink'

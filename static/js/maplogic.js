@@ -47,7 +47,6 @@ colours_index = 0;
 paths = {}
 
 
-
 function initMap() {
       // Instantiate a directions service.
       const directionsService = new google.maps.DirectionsService();
@@ -360,9 +359,12 @@ function initMap() {
       directionsRenderer.setMap(map); // Existing map object displays directions
 }
 
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+
 
 
 function calculateAndDisplayRoute(

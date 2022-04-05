@@ -5,6 +5,7 @@ import numpy as np
 from engineio.payload import Payload
 from flask import *
 from flask_socketio import SocketIO, emit
+import re
 from get_query_results import query
 import database_wrapper
 from KNN import get_color
@@ -39,6 +40,25 @@ app.config['SECRET_KEY'] = 'secret!'
 
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
+party_suggestions = {}
+
+
+def parse_action(action):
+    commands = ["accept", "reject_invite", "accept_invite"]
+    actions = action.split("/")[1:]
+    find_cmd = re.compile(r'\w+')
+    find_number = re.compile(r'\d+')
+    for cmd in actions:
+        try:
+            current_command = find_cmd.search(cmd).group()
+            if current_command not in commands:
+                return
+
+        except Exception as e:
+            print(f"Could not process command {cmd} | {e}")
+        # else:
+        #     draw_graph(to_highlight=session['to_highlight'], reload_colors=session['to_highlight'] == 0)
+
 
 
 def filter_dict(d, f):
@@ -168,8 +188,8 @@ def inbox():
 
     if request.method == "POST":
         # it has to be one, and ONLY one of these.
-        message_id = request.form['accept'] + request.form['mark_as_read']
-        reaction = 'accept' if request.form['accept'] != "" else 'mark_as_read'
+        message_id = request.form['message_id']
+        reaction = request.form['action']
         # first grab the message to see what we need to do with it
         _id, title, content, sender, receiver, msg_type, action = \
             db['ex'].get('messages', '*', f'id={message_id}', first=False)[0]
@@ -529,8 +549,8 @@ def logged_on_users():
         clusters = knn.find_optimal_clusters(reps=20, only_these_values=filter_dict(vls, lambda x: x in connected_members))
         user_colors = {}
         for centroid in clusters:
+            suggest_party([x[0] for x in clusters[centroid]])
             for person in clusters[centroid]:
-                print(9000, person, clusters)
                 user_colors[person[0]] = get_color(person[0], clusters)
         # print("USER COLOURS = ", user_colors)
         emit_to("Admin", event_name="user_colors", message=user_colors)
@@ -639,6 +659,20 @@ def invite_user(receiver):
                           action=f"join_party/{session['user']}")
 
     emit_to(receiver, 'notif', namespace='/comms', message='notification!')
+
+
+def suggest_party(users):
+    print(f"creating party for {users}")
+    party_suggestions[users[0]] = {"total": users, "accepted": 0, "rejected": 0}
+    for u in users:
+        u_list = users.copy()
+        u_list.remove(u)
+        db['ex'].send_message(title=f"Party suggestion!",
+                              desc=f"The system has invited you to join a party with {', '.join(u_list[:-1])}, and {u_list[-1]}",
+                              sender="Admin", receiver=u, messagetype="question",
+                              action=f"accept_invite/{users[0]}")
+
+        emit_to(u, 'notif', namespace='/comms', message='notification!')
 
 
 @socketio.on('add_location', namespace='/comms')
