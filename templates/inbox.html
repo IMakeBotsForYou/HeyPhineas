@@ -27,18 +27,18 @@
                                 </script>
                             {% endif %}
                             {% if type == "group_suggestion" %}
-                                <button class="form-button" id="accept-suggestion-button_{{id}}" style="float: left; color: #000;" >Accept</button>
-                                <button class="form-button" id="reject-button_{{id}}" style="float: left;color: #000;" >Mark as read</button>
+                                <button class="form-button" id="accept-suggestion-button_{{id}}" style="float: left; color: #000; margin-left:5px;" >Accept</button>
+                                <button class="form-button" id="reject-button_{{id}}" style="float: left;color: #000; margin-left:5px;" >Mark as read</button>
                                 <script>
                                 // accept suggestion made by server
-                                     $("#confirm-button_{{id}}").click(function(e) {
+                                     $("#accept-suggestion-button_{{id}}").click(function(e) {
                                        document.getElementById('message_id').value = "{{id}}";
                                        document.getElementById('reaction').value = "accept_suggestion";
                                        document.action_form.submit()
                                        console.log(document.getElementById('accept').value)
                                     });
                                 // reject suggestion made by server
-                                     $("#close-button_{{id}}").click(function(e) {
+                                     $("#reject-button_{{id}}").click(function(e) {
                                        document.getElementById('message_id').value = "{{id}}";
                                        document.getElementById('reaction').value = "reject_suggestion";
                                        document.action_form.submit();

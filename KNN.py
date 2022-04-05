@@ -53,7 +53,8 @@ def find_elbow(points):
     """
     delta_m = []
 
-    points = [(0, 0)] + points
+    points = [(0, 0)] + points + [(0, 0)]
+
     for i, point in enumerate(points[1:-1]):
         p_x, p_y = points[i]
         x, y = point
@@ -66,7 +67,7 @@ def find_elbow(points):
             if delta_m[-2] - delta_m[-1] > 0:
                 # print(delta_m)
                 break
-
+    print(delta_m)
     # # delta_m = [x if x < 0 else -100 for x in delta_m]
     # print(delta_m, delta_m.index(min(delta_m)))
     try:
@@ -184,12 +185,12 @@ class KNN:
             centroids_options.append(centroids_dict)
 
         x = [i + 1 for i in range(len(error_values))]
-        print(centroids_options)
+        # print(centroids_options)
         elbow = find_elbow(list(zip(x, error_values)))
         # print("ELBOW =", elbow)
         # if elbow >
         if elbow == -1:
-            return {}, 10*99
+            return {}, 10**99
         return centroids_options[elbow], error_values[elbow]
 
     def set_origin(self, name):
@@ -262,33 +263,53 @@ def get_color(x, clusters):
              'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
     for i, cluster in enumerate(clusters):
         # print(x, cluster,[b[1] for b in clusters[cluster]])
-        print("10-1", clusters[cluster], x, )
+        print("$$$", x, clusters[cluster], )
         if x in [b[0] for b in clusters[cluster]]:
             return colors[i]
     return 'pink'
 
 
 if __name__ == "__main__":
-    values = {
-        "Dan": [5, 5],
-        "Rudich": [4, 4],
-        "Guy": [4.5, 4],
-        # "Shoshani": [4, 5],
-        # #
-        # "Fefer": [1, 2],
-        # "Maya": [2, 2],
-        # "Yasha": [1, 1],
-        # "Eran": [2.5, 2.5],
-        # #
-        # "Yael": [5, 0.9],
-        # "Dana": [4.5, 0.2],
-        #
-        # "Danilin": [1, 5],
-        # "Omer": [1.5, 4.6],
-        # "Manor": [0.5, 4]
-    }
+    # values = {
+    #     "Dan": [5, 5],
+    #     "Rudich": [4, 4],
+    #     "Guy": [4.5, 4],
+    #     # "Shoshani": [4, 5],
+    #     # #
+    #     # "Fefer": [1, 2],
+    #     # "Maya": [2, 2],
+    #     # "Yasha": [1, 1],
+    #     # "Eran": [2.5, 2.5],
+    #     # #
+    #     # "Yael": [5, 0.9],
+    #     # "Dana": [4.5, 0.2],
+    #     #
+    #     # "Danilin": [1, 5],
+    #     # "Omer": [1.5, 4.6],
+    #     # "Manor": [0.5, 4]
+    # }
 
-    knn = KNN(values, k=4)
+    values = {
+        "Dan": [
+            1.4139529501783277,
+            0.19044196186873308,
+            4.6700282728892715,
+            2.618641549773333,
+            4.364774171117821,
+            1.276163339572814,
+            1.3926109624901486
+        ],
+        "Guy": [
+            0.31841902357506446,
+            1.368656652558296,
+            2.4409434881924663,
+            4.1108784884750325,
+            1.8107549521046284,
+            1.2759919830598405,
+            1.392992765834319
+        ]
+    }
+    knn = KNN(values)
 
     knn.set_origin("Dan")
 

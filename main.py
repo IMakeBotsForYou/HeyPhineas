@@ -24,10 +24,15 @@ points_of_interest = {
 user_data = {
 
 }
+voting_status = {
+
+}
 party_locations = {
 
 }
+user_colors = {
 
+}
 # client = pymongo.MongoClient(
 #     "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
 #
@@ -41,24 +46,6 @@ app.config['SECRET_KEY'] = 'secret!'
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 party_suggestions = {}
-
-
-def parse_action(action):
-    commands = ["accept", "reject_invite", "accept_invite"]
-    actions = action.split("/")[1:]
-    find_cmd = re.compile(r'\w+')
-    find_number = re.compile(r'\d+')
-    for cmd in actions:
-        try:
-            current_command = find_cmd.search(cmd).group()
-            if current_command not in commands:
-                return
-
-        except Exception as e:
-            print(f"Could not process command {cmd} | {e}")
-        # else:
-        #     draw_graph(to_highlight=session['to_highlight'], reload_colors=session['to_highlight'] == 0)
-
 
 
 def filter_dict(d, f):
@@ -87,11 +74,12 @@ def get_party_members(username):
 def create_party(user, members=None):
     if members is None:
         members = []
-
     db['ex'].create_party(user)
-    print('123123123')
+    voting_status[get_party_leader(user)] = {}
     for m in members:
+        voting_status[get_party_leader(user)][m] = False
         db['ex'].add_to_party(owner=user, user_to_add=m)
+
     print(f"created party for {user}")
 
 
@@ -174,6 +162,20 @@ def parse_action(command):
          for party_member in get_party_members(party_owner)]
         print("joined party", get_party_members(session['user']))
 
+    if command_name == "accept_suggestion":
+        party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+        PSP = party_suggestions[party_leader]
+        PSP["accepted"] += 1
+        if PSP["accepted"]+PSP["rejected"] == len(PSP["total"]):
+            create_party(party_leader, members=PSP["total"])
+
+    if command_name == "reject_suggestion":
+        party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+        PSP = party_suggestions[party_leader]
+        PSP["rejected"] += 1
+        if PSP["accepted"]+PSP["rejected"] == len(PSP["total"]):
+            create_party(party_leader, members=PSP["total"])
+
 
 @app.route("/inbox", methods=["POST", "GET"])
 def inbox():
@@ -187,7 +189,7 @@ def inbox():
         pass
 
     if request.method == "POST":
-        # it has to be one, and ONLY one of these.
+        print(request.form)
         message_id = request.form['message_id']
         reaction = request.form['action']
         # first grab the message to see what we need to do with it
@@ -545,21 +547,32 @@ def logged_on_users():
 
     broadcast_userdiff()
     actually_users = [x for x in connected_members if x != "Admin"]
-    if len(actually_users) > 1:
+
+    def group_suggestion_filter(u):
+        for leader in party_suggestions:
+            if u in party_suggestions[leader]["total"]:
+                return False
+        if get_party_leader(u) is None:
+            return False
+        return True
+
+    not_in_group_or_suggestion = list(filter(group_suggestion_filter, actually_users))
+
+    if len(not_in_group_or_suggestion) > 1:
         clusters = knn.find_optimal_clusters(reps=20, only_these_values=filter_dict(vls, lambda x: x in connected_members))
-        user_colors = {}
+        print(f"CLUSTERS:{clusters}")
         for centroid in clusters:
             suggest_party([x[0] for x in clusters[centroid]])
             for person in clusters[centroid]:
                 user_colors[person[0]] = get_color(person[0], clusters)
-        # print("USER COLOURS = ", user_colors)
-        emit_to("Admin", event_name="user_colors", message=user_colors)
+        print("USER COLOURS = ", user_colors, "\n", filter_dict(vls, lambda x: x in connected_members))
+    emit_to("Admin", event_name="user_colors", message=user_colors)
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
     emit_to(user=session['user'], event_name="party_members_list_get",
-            message=get_party_members(session['user']))
+            message=[get_party_members(session['user']), voting_status[get_party_leader(session['user'])]])
 
 
 @socketio.on('online_members_get', namespace='/comms')
@@ -667,10 +680,12 @@ def suggest_party(users):
     for u in users:
         u_list = users.copy()
         u_list.remove(u)
+        desc = f"The system has invited you to join a party with {', '.join(u_list[:-1])}, and {u_list[-1]}" if len(u_list) > 1 else \
+            f"The system has invited you to join a party with {u_list[0]}"
         db['ex'].send_message(title=f"Party suggestion!",
-                              desc=f"The system has invited you to join a party with {', '.join(u_list[:-1])}, and {u_list[-1]}",
-                              sender="Admin", receiver=u, messagetype="question",
-                              action=f"accept_invite/{users[0]}")
+                              desc=desc,
+                              sender="Admin", receiver=u, messagetype="group_suggestion",
+                              action=f"accept_suggestion/{users[0]}")
 
         emit_to(u, 'notif', namespace='/comms', message='notification!')
 
