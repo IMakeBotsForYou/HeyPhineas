@@ -12,146 +12,109 @@
 user = "{{session['user']}}";
 </script>
 
-<!--<iframe width="560" height="315" src="/inbox" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>-->
-
-<div class="popup" id="invite_user_popup">
-    <h2>
-        Invite user
-    </h2>
-    <div>
-        <form method="POST" autocomplete="off" action="" id="add_user_form" style="margin: 0 auto;">
-        <div class="autocomplete" style="position: relative;">
-            <input required id="invite_user_input" type="text" name="user_to_add" placeholder="Username">
-        </div><br><br>
-          <input class="form-button confirm-commit" id="confirm_invite" type="button" style="float: left;" value="Invite"/>
-          <button type="button" class="form-button close-button" id="user_invite_close" style="float: right;" value="Close">Close</button>
-        </form>
-    </div>
-</div>
-
-<div class="popup" id="add_loc_popup">
-    <h2>
-        Add Location
-    </h2>
-    <div>
-        <form method="POST" autocomplete="off" action="" id="add_loc_form" style="margin: 0 auto;">
-        <div class="autocomplete" style="position: relative;">
-            <input required id="add_loc_name" type="text" name="lat" placeholder="Place name"><br><br>
-            <input required id="add_loc_type" type="text" name="lat" placeholder="Place Type (e.g park)"><br><br>
-            <input required id="add_loc_lat" type="text" name="lat" placeholder="LAT"><br><br>
-            <input required id="add_loc_lng" type="text" name="lng" placeholder="LNG"><br>
-        </div><br><br><br>
-          <input class="form-button confirm-commit" id="confirm_loc" type="button" style="float: left;" value="Add Location"/>
-          <button type="button" class="form-button close-button" id="close_loc" style="float: right;" value="Close">Close</button>
-        </form>
-    </div>
-</div>
-
-<div class="middle-panel" id="members_panel" style="position:absolute;left:2%;top:10%;margin: 0 auto;width: 15%;visibility:hidden;">
-    <h2 class="white">Party Members</h2>
-    <button type="button" id="invite_user">
-        <span class="fa fa-user-plus"></span>
-    </button><br><br>
-<!--     Members go here      -->
-</div>
-
-<div class="middle-panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
-    <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>
-</div>
-<button style="" type="button" class="center" id="add_loc_button">
-    <span class="fa fa-map-marker" style="width:100px; height:25px;"></span>
-</button><br><br>
-{% if session['user'] == "Admin" %}
-    <button type="button" class="form-button close-button" id="reset_locs" style="float: right;">RESET LOCATIONS</button>
-    <script>
-        $(document).ready(function(){
-        });
-        $("#reset_locs").on("click", function() {
-            socket.emit("reset_locations");
-        });
-    </script>
-{% endif %}
-{% if session['user'] != "Admin" %}
-<button type="button" class="form-button close-button" id="make_step" style="float: right;">Step</button>
-<button type="button" class="form-button close-button" id="start_origin" style="float: right">Start</button>
-{% endif %}
-<!--<div class="slidecontainer">-->
-<!--  <input type="range" min="1" max="15" value="1" class="slider" id="running_speed_slider">-->
+<!--<div class="popup" id="invite_user_popup">-->
+<!--    <h2>-->
+<!--        Invite user-->
+<!--    </h2>-->
+<!--    <div>-->
+<!--        <form method="POST" autocomplete="off" action="" id="add_user_form" style="margin: 0 auto;">-->
+<!--        <div class="autocomplete" style="position: relative;">-->
+<!--            <input required id="invite_user_input" type="text" name="user_to_add" placeholder="Username">-->
+<!--        </div><br><br>-->
+<!--          <input class="form-button confirm-commit" id="confirm_invite" type="button" style="float: left;" value="Invite"/>-->
+<!--          <button type="button" class="form-button close-button" id="user_invite_close" style="float: right;" value="Close">Close</button>-->
+<!--        </form>-->
+<!--    </div>-->
 <!--</div>-->
-<div id="floating-panel">
-<input name="secret_end" id="secret_end" hidden>
-<input name="secret_start" id="secret_start" hidden>
+<!---->
+    <!--<div class="popup" id="add_loc_popup">-->
+    <!--    <h2>-->
+    <!--        Add Location-->
+    <!--    </h2>-->
+    <!--    <div>-->
+    <!--        <form method="POST" autocomplete="off" action="" id="add_loc_form" style="margin: 0 auto;">-->
+    <!--        <div class="autocomplete" style="position: relative;">-->
+    <!--            <input required id="add_loc_name" type="text" name="lat" placeholder="Place name"><br><br>-->
+    <!--            <input required id="add_loc_type" type="text" name="lat" placeholder="Place Type (e.g park)"><br><br>-->
+    <!--            <input required id="add_loc_lat" type="text" name="lat" placeholder="LAT"><br><br>-->
+    <!--            <input required id="add_loc_lng" type="text" name="lng" placeholder="LNG"><br>-->
+    <!--        </div><br><br><br>-->
+    <!--          <input class="form-button confirm-commit" id="confirm_loc" type="button" style="float: left;" value="Add Location"/>-->
+    <!--          <button type="button" class="form-button close-button" id="close_loc" style="float: right;" value="Close">Close</button>-->
+    <!--        </form>-->
+    <!--    </div>-->
+    <!--</div>-->
+
+<div class="panel_parent_row">
+    <div class="panel_parent_column">
+        <div class="middle-panel" id="members_panel" style="position:absolute;left:2%;top:10%;margin: 0 auto;width: 15%;visibility:hidden;">
+            <h2 class="white">Party Members</h2>
+            <button type="button" id="invite_user">
+                <span class="fa fa-user-plus"></span>
+            </button><br><br>
+        <!--     Members go here      -->
+        </div>
+    </div>
+    <div>
+        <iframe width="560" height="315" src="/inbox" title="Inbox" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
 </div>
-<h3 id="msg" class="white" style="text-align: center;"></h3>
-<div id="map" style="height:500px; width: 50%; margin-left:27%;"></div>
-&nbsp;
-<div id="warnings-panel"></div>
+<!--<div class="panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">-->
+<!--    <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>-->
+<!--</div>-->
+<!--<button style="" type="button" class="center" id="add_loc_button">-->
+<!--    <span class="fa fa-map-marker" style="width:100px; height:25px;"></span>-->
+<!--</button><br><br>-->
+<!--{% if session['user'] == "Admin" %}-->
+<!--    <button type="button" class="form-button close-button" id="reset_locs" style="float: right;">RESET LOCATIONS</button>-->
+<!--    <script>-->
+<!--        $(document).ready(function(){-->
+<!--        });-->
+<!--        $("#reset_locs").on("click", function() {-->
+<!--            socket.emit("reset_locations");-->
+<!--        });-->
+<!--    </script>-->
+<!--{% endif %}-->
+<!--{% if session['user'] != "Admin" %}-->
+<!--<button type="button" class="form-button close-button" id="make_step" style="float: right;">Step</button>-->
+<!--<button type="button" class="form-button close-button" id="start_origin" style="float: right">Start</button>-->
+<!--{% endif %}-->
+<!--&lt;!&ndash;<div class="slidecontainer">&ndash;&gt;-->
+<!--&lt;!&ndash;  <input type="range" min="1" max="15" value="1" class="slider" id="running_speed_slider">&ndash;&gt;-->
+<!--&lt;!&ndash;</div>&ndash;&gt;-->
+<!--<div id="floating-panel">-->
+<!--<input name="secret_end" id="secret_end" hidden>-->
+<!--<input name="secret_start" id="secret_start" hidden>-->
+<!--</div>-->
+<!--<h3 id="msg" class="white" style="text-align: center;"></h3>-->
+<!--<div id="map" style="height:500px; width: 50%; margin-left:27%;"></div>-->
+<!--&nbsp;-->
+<!--<div id="warnings-panel"></div>-->
 
 
-<script src="/static/js/maplogic.js"></script>
-<script
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2"
-        async
-></script>
+<!--<script src="/static/js/maplogic.js"></script>-->
+<!--<script-->
+<!--      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2"-->
+<!--        async-->
+<!--&gt;</script>-->
 
 
-<h1 id="users" class="white" style="color: white;"></h1>
-<!--<button type="button" id="sort_by_name" style="text-align: center;right:0;">Sort by name</button>-->
-<!--<button type="button" id="sort_by_rating" style="text-align: center;right:0;">Sort by rating</button>-->
-<!--<button type="button" id="sort_by_distance" style="text-align: center;right:0;">Sort by distance</button>-->
+<!--<h1 id="users" class="white" style="color: white;"></h1>-->
+<!--&lt;!&ndash;<button type="button" id="sort_by_name" style="text-align: center;right:0;">Sort by name</button>&ndash;&gt;-->
+<!--&lt;!&ndash;<button type="button" id="sort_by_rating" style="text-align: center;right:0;">Sort by rating</button>&ndash;&gt;-->
+<!--&lt;!&ndash;<button type="button" id="sort_by_distance" style="text-align: center;right:0;">Sort by distance</button>&ndash;&gt;-->
 
-<h1 class="white">Recommended locations</h1>
-<div class="white" id="recommended"></div>
-<br><br>
+<!--<h1 class="white">Recommended locations</h1>-->
+<!--<div class="white" id="recommended"></div>-->
+<!--<br><br>-->
 
-<div id="distance_s" style="display: block;">
-{% for place_id in session["results"] %}
-    {% with place = session["results"][place_id] %}
-      <button type="button" id="open" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>
-          <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">
-           Open right now!<br><br>
-            {{place["location"]}}<br>
-            {% if place["close_to"] %}
-                Vicinity: {{place["close_to"]}}<br>
-            {% endif %}
-            {% if place["rating"] %}
-            Rating: {{place["rating"]}}<br>
-              {% endif %}<br>
-            {% if place["website"] %}
-              <b>Website</b><br>{{place["website"]}}<br>
-              {% endif %}<br>
-          {% if place["url"] %}
-              <b>Google Maps</b><br>{{place["url"]}}<br>
-              {% endif %}<br>
-          {% if place["open_periods"] %}
-              {%for day in place["open_periods"] %}
-                {{day}}<br>
-              {% endfor %}
-          {% endif %}
-          <button id="get_map_btn_{{place['id']}}" name="get_map" style="text-align: center;">Get Map</button>
-          <script>
-            $("#get_map_btn_{{place['id']}}").click(function(e) {
-                //document.getElementById("secret_end").value = "{{place['id']}}";
-                //console.log(document.getElementById("secret_end").value);
-                destination = new google.maps.LatLng(place["location"][0], place["location"][0]);
-                onChangeHandler();
-
-                // notify the server that we are interest in this location
-                socket.emit("interested", "{{place['id']}}");
-            });
-          </script>
-          </div>
-    {% endwith %}
-
-{% endfor %}
-</div>
-<div id="distance_r" style="display: none;">
-<!--{% for place_id in session["results_rating"] %}-->
-<!--    {% with place = session["results_rating"][place_id] %}-->
-<!--      <button type="button" id="rating" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>-->
-<!--                    <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">-->
+<!--<div id="distance_s" style="display: block;">-->
+<!--{% for place_id in session["results"] %}-->
+<!--    {% with place = session["results"][place_id] %}-->
+<!--      <button type="button" id="open" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>-->
+<!--          <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">-->
 <!--           Open right now!<br><br>-->
-<!--            {{place["location"]}}-->
+<!--            {{place["location"]}}<br>-->
 <!--            {% if place["close_to"] %}-->
 <!--                Vicinity: {{place["close_to"]}}<br>-->
 <!--            {% endif %}-->
@@ -169,58 +132,99 @@ user = "{{session['user']}}";
 <!--                {{day}}<br>-->
 <!--              {% endfor %}-->
 <!--          {% endif %}-->
-<!--          <form action="" method="POST"><br>-->
-<!--                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_1" name="get_map" style="text-align: center;">Get Map</button>-->
-<!--          </form>-->
-<!--          {% if 'route map' in session %}-->
-<!--            <img src="static/{{session['name']}}_route_map.jpg">-->
-<!--          {% endif %}-->
+<!--          <button id="get_map_btn_{{place['id']}}" name="get_map" style="text-align: center;">Get Map</button>-->
+<!--          <script>-->
+<!--            $("#get_map_btn_{{place['id']}}").click(function(e) {-->
+<!--                //document.getElementById("secret_end").value = "{{place['id']}}";-->
+<!--                //console.log(document.getElementById("secret_end").value);-->
+<!--                destination = new google.maps.LatLng(place["location"][0], place["location"][0]);-->
+<!--                onChangeHandler();-->
 
+<!--                // notify the server that we are interest in this location-->
+<!--                socket.emit("interested", "{{place['id']}}");-->
+<!--            });-->
+<!--          </script>-->
 <!--          </div>-->
 <!--    {% endwith %}-->
+
 <!--{% endfor %}-->
-</div>
-<div id="distance_n" style="display: none;">
-<!--{% for place_id in session["results_name"] %}-->
-<!--    {% with place = session["results_name"][place_id] %}-->
-<!--      <button type="button" id="name_btn" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>-->
-<!--                   <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">-->
-<!--           Open right now!<br><br>-->
-<!--            {{place["location"]}}-->
-<!--            {% if place["close_to"] %}-->
-<!--                Vicinity: {{place["close_to"]}}<br>-->
-<!--            {% endif %}-->
-<!--            {% if place["rating"] %}-->
-<!--            Rating: {{place["rating"]}}<br>-->
-<!--              {% endif %}<br>-->
-<!--            {% if place["website"] %}-->
-<!--              <b>Website</b><br>{{place["website"]}}<br>-->
-<!--              {% endif %}<br>-->
-<!--          {% if place["url"] %}-->
-<!--              <b>Google Maps</b><br>{{place["url"]}}<br>-->
-<!--              {% endif %}<br>-->
-<!--          {% if place["open_periods"] %}-->
-<!--              {%for day in place["open_periods"] %}-->
-<!--                {{day}}<br>-->
-<!--              {% endfor %}-->
-<!--          {% endif %}-->
-<!--          <form action="" method="POST"><br>-->
-<!--                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_2" name="get_map" style="text-align: center;">Get Map</button>-->
-<!--          </form>-->
-<!--          {% if 'route map' in session %}-->
-<!--            <img src="static/{{session['name']}}_route_map.jpg">-->
-<!--          {% endif %}-->
-<!--          </div>-->
-<!--    {% endwith %}-->
-<!--{% endfor %}-->
-</div>
-<div class="middle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">
-<!--    <form action="" method="POST"><br>-->
-        <input type="text"  name="type" id="type" placeholder="Type" autocomplete="off"><br><br>
-        <input type="text" name="radius" id="radius" placeholder="Radius" autocomplete="off"><br><br>
-        <input type="text" name="min_rating" id="min_rating" placeholder="Rating" autocomplete="off"><br><br>
-        <input type="text" name="limit" id="limit" placeholder="Limit" autocomplete="off"><br><br>
-        <button type="button" id="submit_place" name="submit_place" class="action_button" style="width: 30%;">Search</button>
-<!--    </form>-->
-</div>
+<!--</div>-->
+<!--<div id="distance_r" style="display: none;">-->
+<!--&lt;!&ndash;{% for place_id in session["results_rating"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;    {% with place = session["results_rating"][place_id] %}&ndash;&gt;-->
+<!--&lt;!&ndash;      <button type="button" id="rating" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>&ndash;&gt;-->
+<!--&lt;!&ndash;                    <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">&ndash;&gt;-->
+<!--&lt;!&ndash;           Open right now!<br><br>&ndash;&gt;-->
+<!--&lt;!&ndash;            {{place["location"]}}&ndash;&gt;-->
+<!--&lt;!&ndash;            {% if place["close_to"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;                Vicinity: {{place["close_to"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;            {% endif %}&ndash;&gt;-->
+<!--&lt;!&ndash;            {% if place["rating"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;            Rating: {{place["rating"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endif %}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;            {% if place["website"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;              <b>Website</b><br>{{place["website"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endif %}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;          {% if place["url"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;              <b>Google Maps</b><br>{{place["url"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endif %}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;          {% if place["open_periods"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;              {%for day in place["open_periods"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;                {{day}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endfor %}&ndash;&gt;-->
+<!--&lt;!&ndash;          {% endif %}&ndash;&gt;-->
+<!--&lt;!&ndash;          <form action="" method="POST"><br>&ndash;&gt;-->
+<!--&lt;!&ndash;                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_1" name="get_map" style="text-align: center;">Get Map</button>&ndash;&gt;-->
+<!--&lt;!&ndash;          </form>&ndash;&gt;-->
+<!--&lt;!&ndash;          {% if 'route map' in session %}&ndash;&gt;-->
+<!--&lt;!&ndash;            <img src="static/{{session['name']}}_route_map.jpg">&ndash;&gt;-->
+<!--&lt;!&ndash;          {% endif %}&ndash;&gt;-->
+
+<!--&lt;!&ndash;          </div>&ndash;&gt;-->
+<!--&lt;!&ndash;    {% endwith %}&ndash;&gt;-->
+<!--&lt;!&ndash;{% endfor %}&ndash;&gt;-->
+<!--</div>-->
+<!--<div id="distance_n" style="display: none;">-->
+<!--&lt;!&ndash;{% for place_id in session["results_name"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;    {% with place = session["results_name"][place_id] %}&ndash;&gt;-->
+<!--&lt;!&ndash;      <button type="button" id="name_btn" class="collapsible" style="text-align: center;right:0;">{{place["name"]}}</button>&ndash;&gt;-->
+<!--&lt;!&ndash;                   <div class="content cen" style="color:#fff; background-color:#23272a; display:none;">&ndash;&gt;-->
+<!--&lt;!&ndash;           Open right now!<br><br>&ndash;&gt;-->
+<!--&lt;!&ndash;            {{place["location"]}}&ndash;&gt;-->
+<!--&lt;!&ndash;            {% if place["close_to"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;                Vicinity: {{place["close_to"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;            {% endif %}&ndash;&gt;-->
+<!--&lt;!&ndash;            {% if place["rating"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;            Rating: {{place["rating"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endif %}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;            {% if place["website"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;              <b>Website</b><br>{{place["website"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endif %}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;          {% if place["url"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;              <b>Google Maps</b><br>{{place["url"]}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endif %}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;          {% if place["open_periods"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;              {%for day in place["open_periods"] %}&ndash;&gt;-->
+<!--&lt;!&ndash;                {{day}}<br>&ndash;&gt;-->
+<!--&lt;!&ndash;              {% endfor %}&ndash;&gt;-->
+<!--&lt;!&ndash;          {% endif %}&ndash;&gt;-->
+<!--&lt;!&ndash;          <form action="" method="POST"><br>&ndash;&gt;-->
+<!--&lt;!&ndash;                <button type="submit" value={{place['id']}} id="get_map_btn_{{place['id']}}_2" name="get_map" style="text-align: center;">Get Map</button>&ndash;&gt;-->
+<!--&lt;!&ndash;          </form>&ndash;&gt;-->
+<!--&lt;!&ndash;          {% if 'route map' in session %}&ndash;&gt;-->
+<!--&lt;!&ndash;            <img src="static/{{session['name']}}_route_map.jpg">&ndash;&gt;-->
+<!--&lt;!&ndash;          {% endif %}&ndash;&gt;-->
+<!--&lt;!&ndash;          </div>&ndash;&gt;-->
+<!--&lt;!&ndash;    {% endwith %}&ndash;&gt;-->
+<!--&lt;!&ndash;{% endfor %}&ndash;&gt;-->
+<!--</div>-->
+<!--<div class="middle-panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">-->
+<!--&lt;!&ndash;    <form action="" method="POST"><br>&ndash;&gt;-->
+<!--        <input type="text"  name="type" id="type" placeholder="Type" autocomplete="off"><br><br>-->
+<!--        <input type="text" name="radius" id="radius" placeholder="Radius" autocomplete="off"><br><br>-->
+<!--        <input type="text" name="min_rating" id="min_rating" placeholder="Rating" autocomplete="off"><br><br>-->
+<!--        <input type="text" name="limit" id="limit" placeholder="Limit" autocomplete="off"><br><br>-->
+<!--        <button type="button" id="submit_place" name="submit_place" class="action_button" style="width: 30%;">Search</button>-->
+<!--&lt;!&ndash;    </form>&ndash;&gt;-->
+<!--</div>-->
 {% endblock %}

@@ -32,15 +32,15 @@ def display_points(values, centroids):
         # print(l, v)
         x, y = v
         # get_color((x, y), centroids_dict)
-        plt.plot(x, y, 'o', c=get_color([x, y], centroids))
+        plt.plot(x, y, 'o', c=get_color(l, centroids))
         plt.text(x + 0.01, y + 0.01, l, fontsize=12)
     for centroid in centroids:
         x, y = centroid.split(" ")
         plt.plot(float(x), float(y), 'o', c='black')
         plt.text(float(x) + 0.01, float(y) + 0.01, "O", fontsize=12)
     plt.title(f"{len(values.values())} items, {len(centroids)} centroids")
-    plt.xlim([0, 6])
-    plt.ylim([0, 6])
+    # plt.xlim([0, 6])
+    # plt.ylim([0, 6])
     plt.show()
 
 
@@ -67,7 +67,7 @@ def find_elbow(points):
             if delta_m[-2] - delta_m[-1] > 0:
                 # print(delta_m)
                 break
-    print(delta_m)
+
     # # delta_m = [x if x < 0 else -100 for x in delta_m]
     # print(delta_m, delta_m.index(min(delta_m)))
     try:
@@ -124,22 +124,24 @@ class KNN:
 
             # Centroids are a tuple of floats, if we want it
             # to be hashable we convert it to a string
-
             temp = " ".join([str(x) for x in best_centroid])
             if temp not in centroids:
                 centroids[temp] = []
+
             # if valid_distance(best_centroid, centroids[temp], vec):
             # if len(centroids[temp]) < 2:
             centroids[temp].append((label, vec))
 
         centroids = {k: v for (k, v) in centroids.items() if len(v) > 1}
-        # print(centroids)
+
         return centroids
 
     def find_optimal_clusters(self, *, reps=10, draw_graphs=False, get_error=False, only_these_values=None):
-        save = self.values
-        if only_these_values:
-            self.values = only_these_values
+        if only_these_values is not None:
+            save_values = self.values.copy()
+            self.set_values(only_these_values)
+            self.labels = list(self.values.keys())
+
         print("Running on values: ", json.dumps(self.values, indent=2))
         results = [self.train(draw_graphs=draw_graphs) for _ in range(reps)]
         errors = [x[1] for x in results]
@@ -147,10 +149,12 @@ class KNN:
         if draw_graphs:
             display_points(self.values, results[best][0])
         ret = results[best] if get_error else results[best][0]
-        print("Running on values:22 ", json.dumps(self.values, indent=2))
-
         print("ret = \n\r", "\n".join([",".join([user[0] for user in ret[c]]) for c in ret]), "\n")
-        self.values = save
+
+        if only_these_values is not None:
+            self.values = save_values.copy()
+            self.labels = list(self.values.keys())
+
         return ret
 
     def train(self, *, draw_graphs=False):
@@ -260,62 +264,52 @@ def get_intersection(a, b):
     return list(set(a) & set(b))
 
 
-def get_color(x, clusters):
+def get_color(target, clusters):
     colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
              'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
     for i, cluster in enumerate(clusters):
-        if x in [b[0] for b in clusters[cluster]]:
+        if target in [b[0] for b in clusters[cluster]]:
             return colors[i]
     return 'pink'
 
 
 if __name__ == "__main__":
-    pass
-    # values = {
-    #     "Dan": [5, 5],
-    #     "Rudich": [4, 4],
-    #     "Guy": [4.5, 4],
-    #     # "Shoshani": [4, 5],
-    #     # #
-    #     # "Fefer": [1, 2],
-    #     # "Maya": [2, 2],
-    #     # "Yasha": [1, 1],
-    #     # "Eran": [2.5, 2.5],
-    #     # #
-    #     # "Yael": [5, 0.9],
-    #     # "Dana": [4.5, 0.2],
-    #     #
-    #     # "Danilin": [1, 5],
-    #     # "Omer": [1.5, 4.6],
-    #     # "Manor": [0.5, 4]
-    # }
+    values = {
+        "Dan": [5, 5],
+        "Rudich": [4, 4],
+        "Guy": [4.5, 4],
+        "Shoshani": [4, 5],
+        #
+        "Fefer": [1, 2],
+        "Maya": [2, 2],
+        "Yasha": [1, 1],
+        "Eran": [2.5, 2.5],
+        #
+        "Yael": [5, 0.9],
+        "Dana": [4.5, 0.2],
 
-    # values = {
-    #     "Dan": [
-    #         1.4139529501783277,
-    #         0.19044196186873308,
-    #         4.6700282728892715,
-    #         2.618641549773333,
-    #         4.364774171117821,
-    #         1.276163339572814,
-    #         1.3926109624901486
-    #     ],
-    #     "Guy": [
-    #         0.31841902357506446,
-    #         1.368656652558296,
-    #         2.4409434881924663,
-    #         4.1108784884750325,
-    #         1.8107549521046284,
-    #         1.2759919830598405,
-    #         1.392992765834319
-    #     ]
-    # }
-    # knn = KNN(values)
+        "Danilin": [1, 5],
+        "Omer": [1.5, 4.6],
+        "Manor": [0.5, 4]
+    }
 
-    # knn.set_origin("Dan")
-    #
-    # result = knn.find_optimal_clusters(reps=100)
-    # print(result)
+    values2 = {
+      "Maya": [
+        31.901569357117097,
+        34.81101036152826
+      ],
+      "Fefer": [
+        31.906109038800487,
+        34.82183979194152
+      ]
+    }
+
+    knn = KNN(values)
+
+    knn.set_origin("Dan")
+
+    result = knn.find_optimal_clusters(reps=1, only_these_values=values2)
+    print(result)
     # i = 3
     # x = [3 + 1.5 * np.cos(2 * np.pi * j / i+0.25) for j in range(i)]
     # y = [3 + 1.5 * np.sin(2 * np.pi * j / i+0.25) for j in range(i)]

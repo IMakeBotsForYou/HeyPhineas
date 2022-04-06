@@ -24,10 +24,10 @@ points_of_interest = {
 user_data = {
 
 }
-voting_status = {
+party_locations = {
 
 }
-party_locations = {
+voting_status = {
 
 }
 user_colors = {
@@ -139,7 +139,6 @@ def login():
 def fav():
     print(os.path.join(app.root_path, 'static'))
     return send_from_directory(app.static_folder, 'static/favicon.ico')  # for sure return the file
-
 
 def parse_action(command):
     args = command.split("/")
@@ -564,23 +563,17 @@ def logged_on_users():
     not_in_group_or_suggestion = list(filter(group_suggestion_filter, actually_users))
 
     if len(not_in_group_or_suggestion) > 1:
-        clusters = knn.find_optimal_clusters(reps=20, only_these_values=filter_dict(vls, lambda x: x in connected_members), get_error=False)
-        # print(f"CLUSTERS:{clusters}")
+        clusters = knn.find_optimal_clusters(draw_graphs=False, reps=20, only_these_values=filter_dict(db["knn"].values, lambda x: x in connected_members), get_error=False)
         for centroid in clusters:
             suggest_party([x[0] for x in clusters[centroid]])
             for person in clusters[centroid]:
-                user_colors[person[0]] = get_color(person[0], clusters)
-        print("USER COLOURS = ", user_colors, "\n", filter_dict(vls, lambda x: x in connected_members))
-    #
-    # [emit_to("Admin", 'my_location', message=[member, [data[0], data[1]]]) for member in
-    #  recipients]
-    # emit_to("Admin", event_name="user_colors", message=user_colors)
+                user_colors[person[0]] = get_color(person, clusters)
+        # print("USER COLOURS = ", user_colors)
+        emit_to("Admin", event_name="user_colors", message=user_colors)
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
 def get_party_memb():
-    # emit_to(user=session['user'], event_name="party_members_list_get",
-    #         message=[get_party_members(session['user']), voting_status[get_party_leader(session['user'])]])
     emit_to(user=session['user'], event_name="party_members_list_get",
             message=get_party_members(session['user']))
 
@@ -842,7 +835,8 @@ if __name__ == '__main__':
         #
         interests = db['ex'].get("users", "interests", condition=f'username="{user}"')[0]
         # db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
-        vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 25, lng / 25]
+        vls[user] = [lat, lng]
+        # vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 25, lng / 25]
 
     # vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
     # vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])
