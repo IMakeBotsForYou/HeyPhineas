@@ -113,7 +113,7 @@ $(document).ready(function(){
 
     socket.on('online_members_get', function(data){
         online_users = data
-        autocomplete(document.getElementById("invite_user_input"), users);
+        autocomplete(document.getElementById("invite_user_input"), online_users);
     });
 
     function ping_every_second(){
@@ -122,7 +122,7 @@ $(document).ready(function(){
         let minutes = "0" + date.getMinutes();
         let seconds = "0" + date.getSeconds();
         let formatTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
-        $('#current_time').html(formatTime);
+//        $('#current_time').html(formatTime);
         socket.emit("ping", online_users);
     };
     const createClock = setInterval(ping_every_second, 1000);

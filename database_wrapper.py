@@ -137,7 +137,7 @@ class UserData(Database):
         super().__init__(path)
         self.admin = "Admin"
         self.parties = []
-        with open('static/users.js', 'w') as f:
+        with open('static/js/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def get_all_names(self, remove_admin=False):
@@ -265,7 +265,7 @@ class UserData(Database):
         self.add("users (username, password, friends, interests)", reformat(username, password, friends, interests))
 
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
-        with open('static/users.js', 'w') as f:
+        with open('static/js/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
 
@@ -289,7 +289,7 @@ class UserData(Database):
         except IndexError:
             print(f"User {name} isn't registered!")
 
-        with open('static/users.js', 'w') as f:
+        with open('static/js/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def close(self):

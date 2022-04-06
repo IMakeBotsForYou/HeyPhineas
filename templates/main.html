@@ -5,9 +5,9 @@
 <script src="/static/js/socket.js"></script>
 <script src="/static/js/buttons.js"></script>
 <script src="/static/js/icons.js"></script>
+<script src="/static/js/users.js"></script>
 <link rel="stylesheet" href="/static/drawing_things.css">
-<br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>
-<h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br><br>
+<!--<br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>-->
 <script>
 user = "{{session['user']}}";
 </script>
@@ -45,19 +45,22 @@ user = "{{session['user']}}";
     <!--    </div>-->
     <!--</div>-->
 
-<div class="panel_parent_row">
-    <div class="panel_parent_column">
-        <div class="middle-panel" id="members_panel" style="position:absolute;left:2%;top:10%;margin: 0 auto;width: 15%;visibility:hidden;">
+<div class="panel_parent_row" style="height: 1000px;">
+    <div class="panel_parent_column" style="">
+        <div class="panel" id="members_panel">
             <h2 class="white">Party Members</h2>
             <button type="button" id="invite_user">
                 <span class="fa fa-user-plus"></span>
             </button><br><br>
-        <!--     Members go here      -->
+<!--             Members go here      -->
         </div>
+
+        <div class="panel">
+            <iframe style="width: 100%; max-height: 500; height: 300px;" src="/inbox" title="Inbox" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+        </div>
+
     </div>
-    <div>
-        <iframe width="560" height="315" src="/inbox" title="Inbox" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-    </div>
+    <h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br>
 </div>
 <!--<div class="panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">-->
 <!--    <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>-->
