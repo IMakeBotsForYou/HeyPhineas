@@ -15,14 +15,16 @@
 <body>
 <div class="topnav">
   {% if 'user' in session %}
-    <div class="navigation_man">
+  <div class="navigation_man">
+      <a style="left: 5%;" id="users_online" class="white" >1 User(s) Online</a>
       <a href="/">{{session['user']}}'s Profile </a>
       <a id="inbox" href="/inbox">Inbox</a>
       <a id="logout_button" href="/logout">Logout</a>
     </div>
+
   {% else %}
     <div class="header_man header">{% block not_yet %}{% endblock %}</div>
-  {% endif %}
+  {% endif %}<br>
 </div>
 {% block form %}{% endblock %}
 </body>

@@ -53,31 +53,34 @@ div.select {
 	font-family: Varela Round;
     width: 100%;
 }
+
 .action_button:hover {
 	background:linear-gradient(to bottom, #6c7c7c 5%, #768d87 100%);
 	background-color:#6c7c7c;
 }
+
 .action_button:active {
 	position:relative;
 }
 
-.panel_parent_row {
+.panel_flex {
   display: flex;
-  flex-direction: row;
   border-top: 3px solid #434a52;
   border-bottom: 3px solid #434a52;
 }
 
+.panel_parent_row {
+  justify-content: space-between;
+  flex-direction: row;
+}
+
 .panel_parent_column {
-  display: flex;
   flex-direction: column;
-  border-top: 3px solid #434a52;
-  border-bottom: 3px solid #434a52;
 }
 
 .panel{
   position:relative;
-  margin: 22px;
+  margin: 11px;
   left: 10%-5px;
   width: 80%;
   max-height: 80%;

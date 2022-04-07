@@ -44,12 +44,29 @@ user = "{{session['user']}}";
     <!--        </form>-->
     <!--    </div>-->
     <!--</div>-->
-
-<div class="panel_parent_row" style="height: 1000px;">
-    <div class="panel_parent_column" style="">
+<div style="height:15px;"></div>
+<div class="panel_flex panel_parent_row" style="height: 1000px;">
+    <div class="panel_flex panel_parent_column" style="width: 30%;">
         <div class="panel" id="members_panel">
             <h2 class="white">Party Members</h2>
             <button type="button" id="invite_user">
+                <span class="fa fa-user-plus"></span>
+            </button><br><br>
+<!--             Members go here      -->
+        </div>
+        <div class="panel">
+            <iframe style="width: 100%; max-height: 500; height: 300px;" src="/inbox" title="Inbox" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+        </div>
+    </div>
+
+    <div class="panel_flex panel_parent_column" style="width: 40%;">
+        <div id="map" style="height:500px;"></div>
+    </div>
+
+   <div class="panel_flex panel_parent_column" style="width: 25%;">
+        <div class="panel" id="temps">
+            <h2 class="white">Party Members</h2>
+            <button type="button" id="temps2">
                 <span class="fa fa-user-plus"></span>
             </button><br><br>
 <!--             Members go here      -->
@@ -58,9 +75,7 @@ user = "{{session['user']}}";
         <div class="panel">
             <iframe style="width: 100%; max-height: 500; height: 300px;" src="/inbox" title="Inbox" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
         </div>
-
     </div>
-    <h1 id="users_online" class="white" style="text-align:center;">1 User(s) Online</h1><br>
 </div>
 <!--<div class="panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">-->
 <!--    <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>-->
@@ -95,11 +110,11 @@ user = "{{session['user']}}";
 <!--<div id="warnings-panel"></div>-->
 
 
-<!--<script src="/static/js/maplogic.js"></script>-->
-<!--<script-->
-<!--      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2"-->
-<!--        async-->
-<!--&gt;</script>-->
+<script src="/static/js/maplogic.js"></script>
+<script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2"
+        async
+></script>
 
 
 <!--<h1 id="users" class="white" style="color: white;"></h1>-->
