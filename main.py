@@ -255,7 +255,7 @@ def main_page():
 
 
 @app.route('/friends')
-def friends_func():
+def friends_func(noodles):
     return render_template("friends.html")
 
 
@@ -581,7 +581,7 @@ def get_party_memb():
 @socketio.on('online_members_get', namespace='/comms')
 def get_online_memb():
     emit_to(user=session['user'], event_name="online_members_get",
-            message=[x for x in connected_members])
+            message=[x for x in connected_members if x != "Admin"])
 
 
 @socketio.on('user_added_locations_get', namespace='/comms')

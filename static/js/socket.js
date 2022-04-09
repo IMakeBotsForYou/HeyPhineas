@@ -85,15 +85,6 @@ $(document).ready(function(){
         socket.emit('get_coords_of_party')
 
     }
-    if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){
-        socket.emit('user_added_locations_get');
-        socket.emit('party_members_list_get');
-        socket.emit('online_members_get');
-        socket.emit('get_destination')
-        // TEMP
-        socket.emit('get_coords_of_party')
-
-    }
 
 
     $(document).on('click', '#submit_place', function(){
@@ -113,6 +104,12 @@ $(document).ready(function(){
 
     socket.on('online_members_get', function(data){
         online_users = data
+        if(user == "Admin"){
+        document.getElementById("users_admin_list").innerHTML = "";
+            for(let i = 0; i < online_users.length; i++){
+                document.getElementById("users_admin_list").innerHTML += `<a>${online_users[i]}</a><b>`;
+            }
+        }
         autocomplete(document.getElementById("invite_user_input"), online_users);
     });
 
