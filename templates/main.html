@@ -84,29 +84,23 @@ var user = "{{session['user']}}";
 <!--       RIGHT PANEL                                    -->
 {% if session['user'] != "Admin" %}
    <div class="panel_flex panel_parent_column" style="width: 25%;">
-        <div class="panel" id="chatroom-title">
-           <div style="display:flex; height:35px;">
-               <input hidden id="current_chatroom" value="Global">
+        <div class="panel panel_flex panel_parent_column" id="chatroom-title" style="height: 400px;">
+           <div style="display:flex; justify-content: space-between; height:35px;">
                 <button class="button-40" id="Global_chat">Global</button>
                 <button class="button-40" id="Party_chat">Party</button>
             </div>
-            <h2 class="white">Chat Room</h2>
-            <p id="chatroom-name">Global</p>
-            <div style="display:flex; flex-direction:column-reverse; justify-content: flex-start;" id="chat_room_messages">
+            <h3 class="white">Chat Room</h3>
+            <p class="white" id="chatroom-name">Global</p>
+
+            <div style="text-align: left; margin-top: auto; display:flex; flex-direction:column-reverse; justify-content: flex-start; width:100%;" id="chat_room_messages">
 
             </div>
 
-            <label class="input">
-              <input class="input__field" type="email" placeholder="Write your message" value="" />
-              <span class="input__label">Send a message</span>
+            <label class="input" style="">
+              <input class="input__field" type="text" placeholder="Write your message" value="" style="" id="chat_input"/>
             </label>
+<!--            <div style="height:5px; margin-top: auto;">-->
         </div>
-
-       {% if in_party %}
-        <div class="panel">
-                <br><br><br><br><br><br><br><br>
-        </div>
-       {% endif %}
     </div>
    </div>
 {% else %}
@@ -142,5 +136,12 @@ for (i = 0; i < coll.length; i++) {
     }
   });
 }
+$("chat_input").on('keyup', function (e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
+        console.log(e);
+    }
+});
+
+
 </script>
 {% endblock %}

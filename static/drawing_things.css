@@ -13,7 +13,7 @@ div.drawing_box {
     right: 0;
     top: 15%;
     width: 30%;
-    height: 80%
+    height: 80%;
     text-align: right;
 }
 
@@ -104,6 +104,8 @@ div.select {
   flex: 1;
 
 }
+
+
 .input {
   --size-bezel-top: 1.4rem;
   --size-bezel: .4rem;
@@ -175,6 +177,8 @@ div.select {
   }
 }
 
+
+
 .button-40:hover {
   background-color: #374151;
 }
@@ -190,13 +194,6 @@ div.select {
     padding: 5px 10px 10px 5px;
   }
 }
-
-
-
-
-
-
-
 
 .panel{
   position:relative;

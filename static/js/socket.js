@@ -103,13 +103,13 @@ $(document).ready(function(){
         console.log(data);
         chat_histories[room].push({"author": data["author"], "message": data["message"]});
         var chatroom = document.getElementById("invite_user_input");
-        if(document.getElementById("current_chatroom").value == room){
+        if(document.getElementById("chatroom-name").innerHTML == room){
             chatroom_element = document.getElementById("chat_room_messages");
             chatroom_element.innerHTML = "";
             for(let i = 0; i < chat_histories[room].length; i++){
                  var message = chat_histories[room][i]["message"];
                  var author =  chat_histories[room][i]["author"];
-                 chatroom_element.innerHTML += `<p class="white" style="margin-left: 5%; order: ${i}; text-align: left;">${author}: ${message}</p>`;
+                 chatroom_element.innerHTML += `<p class="white" style="left: 5%; order: ${i}; text-align: left; width:100%;">${author}: ${message}</p>`;
             }
         }
     });
@@ -129,10 +129,20 @@ $(document).ready(function(){
         autocomplete(document.getElementById("invite_user_input"), online_users);
     });
 
+
+    function openChatTab(evt) {
+      var i, tablinks;
+      tablinks = document.getElementsByClassName("button-40");
+      for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].backgroundColor = "#111827";
+      }
+      evt.currentTarget.backgroundColor = "#777";
+  }
+
     function add_listener_chat(element){
-        element.onclick = function(){
+        element.onclick = function(event){
             chat_room_name = element.id.split("_")[0];
-            document.getElementById("current_chatroom").value = chat_room_name;
+            document.getElementById("chatroom-name").innerHTML = chat_room_name;
             chatroom_element = document.getElementById("chat_room_messages");
             chatroom_element.innerHTML = "";
             for(let i = 0; i < chat_histories[chat_room_name].length; i++){
@@ -140,10 +150,11 @@ $(document).ready(function(){
                  var author =  chat_histories[chat_room_name][i]["author"];
                  chatroom_element.innerHTML += `<p style="order: ${i};">${author}: {message}</p>`;
             }
+            openChatTab(event)
         };
     }
 
-    var collection = document.getElementsByClassName("example");
+    var collection = document.getElementsByClassName("button-40");
     var arr = Array.prototype.slice.call( collection, 0 );
 
     arr.forEach(element => add_listener_chat(element));
