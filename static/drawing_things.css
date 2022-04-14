@@ -78,6 +78,126 @@ div.select {
   flex-direction: column;
 }
 
+.button-40 {
+  background-color: #111827;
+  border: 1px solid transparent;
+  text-align: center;
+  box-sizing: border-box;
+  color: #FFFFFF;
+  cursor: pointer;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  border-radius: .5rem;
+  text-decoration: none #6B7280 solid;
+  text-decoration-thickness: auto;
+  transition-duration: .2s;
+  transition-property: background-color,border-color,color,fill,stroke;
+  transition-timing-function: cubic-bezier(.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  width: auto;
+  text-align: center;
+  padding: 0;
+      vertical-align: middle;
+  flex: 1;
+
+}
+.input {
+  --size-bezel-top: 1.4rem;
+  --size-bezel: .4rem;
+
+
+  --color-bg: transparent;
+  --color-bg--active: #aaf0d1;
+
+  position: relative;
+  display: block;
+
+  background: var(--color-bg);
+  margin-top: 1rem;
+  &__field {
+    opacity: 0;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    background: transparent;
+
+    padding: var(--size-bezel-top) var(--size-bezel) var(--size-bezel);
+    box-shadow: 0 .2rem 0 0 #000;
+
+    transition: 200ms opacity ease-out;
+    &:focus {
+      background: var(--color-bg--active);
+    }
+    &:not(:placeholder-shown),
+    .placeHolderNotSown,
+    &:focus {
+      opacity: 1;
+      transition: 200ms opacity ease-out 100ms;
+      outline: none;
+    }
+    &:not(:placeholder-shown) + .input__label,
+    .placeHolderNotSown + .input__label,
+    &:focus + .input__label {
+      transform: scale(.8) translateY(-50%);
+    }
+
+    &:invalid:not(:placeholder-shown),
+    .placeHolderNotSown:invalid {
+      & + .input__label + .input__error {
+        display: block;
+      }
+    }
+  }
+  &__label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    box-sizing: border-box;
+    padding: var(--size-bezel-top) var(--size-bezel) var(--size-bezel);
+    transform-origin: 0 50%;
+    transition: 200ms transform ease-out;
+  }
+  &__error,
+  &__info {
+    display: block;
+    padding: calc(2 * var(--size-bezel)) var(--size-bezel);
+    font-size: .6em;
+  }
+  &__error {
+    display: none;
+    background: red;
+    color: #fff;
+  }
+}
+
+.button-40:hover {
+  background-color: #374151;
+}
+
+.button-40:focus {
+  box-shadow: none;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .button-40 {
+    padding: 5px 10px 10px 5px;
+  }
+}
+
+
+
+
+
+
+
+
 .panel{
   position:relative;
   width: 90%;

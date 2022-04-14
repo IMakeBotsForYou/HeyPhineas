@@ -1,16 +1,20 @@
 {% extends "log_reg_temp.html" %}
 {% block title %}Inbox{% endblock %}
 {% block form %}
+<script>
+var user = "{{session['user']}}";
+</script>
 <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
-<script src="/static/js/socket.js"></script>
-<script src="/static/js/buttons.js"></script>
 <script src="/static/js/icons.js"></script>
 <script src="/static/js/users.js"></script>
+<script src="/static/js/socket.js"></script>
+<script src="/static/js/buttons.js"></script>
+
+<!--<script src="/static/js/collapse.js"></script>-->
+<link rel="stylesheet" href="/static/register.css">
+<link rel="stylesheet" href="/static/collapse.css">
 <link rel="stylesheet" href="/static/drawing_things.css">
 <!--<br><br><h1 id="current_time" class="white" style="text-align:right;margin-right: 50px;">Time</h1><br><br>-->
-<script>
-user = "{{session['user']}}";
-</script>
 <!--<div class="popup" id="invite_user_popup">-->
 <!--    <h2>-->
 <!--        Invite user-->
@@ -81,8 +85,21 @@ user = "{{session['user']}}";
 {% if session['user'] != "Admin" %}
    <div class="panel_flex panel_parent_column" style="width: 25%;">
         <div class="panel" id="chatroom-title">
+           <div style="display:flex; height:35px;">
+               <input hidden id="current_chatroom" value="Global">
+                <button class="button-40" id="Global_chat">Global</button>
+                <button class="button-40" id="Party_chat">Party</button>
+            </div>
             <h2 class="white">Chat Room</h2>
-            <p id="chatroom-name">(No Room)</p>
+            <p id="chatroom-name">Global</p>
+            <div style="display:flex; flex-direction:column-reverse; justify-content: flex-start;" id="chat_room_messages">
+
+            </div>
+
+            <label class="input">
+              <input class="input__field" type="email" placeholder="Write your message" value="" />
+              <span class="input__label">Send a message</span>
+            </label>
         </div>
 
        {% if in_party %}
@@ -111,4 +128,19 @@ user = "{{session['user']}}";
         async
 ></script>
 
+<script>
+var coll = document.getElementsByClassName("collapsible");
+var i;
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+</script>
 {% endblock %}

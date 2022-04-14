@@ -365,8 +365,6 @@ function sleep(ms) {
 }
 
 
-
-
 function calculateAndDisplayRoute(
   directionsRenderer,
   directionsService,

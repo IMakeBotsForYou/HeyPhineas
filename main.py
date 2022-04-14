@@ -238,6 +238,7 @@ def register():
 
 def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None, verbose=True):
     try:
+        # a = 'chat_socket' if chat else 'sid'
         emit(event_name, message, namespace=namespace, room=connected_members[user]['sid'])
         if verbose:
             print(f"Sent to {user}: {event_name} {message} {namespace} ")
@@ -523,6 +524,11 @@ def get_coords_of_party():
         party_coords(leader, True)
 
 
+chatrooms = {"Global": {"history": [], "members": []},
+             }
+
+
+
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
     # request.sid
@@ -530,13 +536,13 @@ def logged_on_users():
         return redirect(url_for("login"))
 
     # reconnecting = session['user'] in connected_members
-
+    chatrooms["Global"]["members"].append(session['user'])
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
         "sid": request.sid,
         "loc": [0, 0],
-        "current_path": [None, None]
+        "current_path": [None, None],
     }
     if session['user'] not in user_data:
         user_data[session['user']] = {
@@ -570,6 +576,10 @@ def logged_on_users():
                 user_colors[person[0]] = get_color(person, clusters)
         # print("USER COLOURS = ", user_colors)
         emit_to("Admin", event_name="user_colors", message=user_colors)
+
+    chatrooms["Global"]["members"].append(session['user'])
+    emit_to(session['user'], "message",
+            message={"room": "Global", "message": "Welcome!", "author": "(System)"})
 
 
 @socketio.on('party_members_list_get', namespace='/comms')

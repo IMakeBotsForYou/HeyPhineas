@@ -9,7 +9,7 @@ var friends = {
 var lat = 0;
 var lng = 0;
 var socket = 0;
-
+var chat_histories = {"Global": []}
 var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
@@ -17,6 +17,7 @@ var leader_of_party = false;
 
 //connect to the socket server.
 socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
+//chat_socket = io.connect('http://' + document.domain + ':' + location.port + '/chatrooms');
 
 $(document).ready(function(){
 //    function update_party_members(data){
@@ -97,6 +98,21 @@ $(document).ready(function(){
         socket.emit('place_form_data', `${type}|${radius}|${min_rating}|${limit}`)
     });
 
+    socket.on('message', function(data){
+        var room = data["room"];
+        console.log(data);
+        chat_histories[room].push({"author": data["author"], "message": data["message"]});
+        var chatroom = document.getElementById("invite_user_input");
+        if(document.getElementById("current_chatroom").value == room){
+            chatroom_element = document.getElementById("chat_room_messages");
+            chatroom_element.innerHTML = "";
+            for(let i = 0; i < chat_histories[room].length; i++){
+                 var message = chat_histories[room][i]["message"];
+                 var author =  chat_histories[room][i]["author"];
+                 chatroom_element.innerHTML += `<p class="white" style="margin-left: 5%; order: ${i}; text-align: left;">${author}: ${message}</p>`;
+            }
+        }
+    });
 
     socket.on('party_members_list_get', function(data){
         update_party_members(data)
@@ -112,6 +128,29 @@ $(document).ready(function(){
         }
         autocomplete(document.getElementById("invite_user_input"), online_users);
     });
+
+    function add_listener_chat(element){
+        element.onclick = function(){
+            chat_room_name = element.id.split("_")[0];
+            document.getElementById("current_chatroom").value = chat_room_name;
+            chatroom_element = document.getElementById("chat_room_messages");
+            chatroom_element.innerHTML = "";
+            for(let i = 0; i < chat_histories[chat_room_name].length; i++){
+                 var message = chat_histories[chat_room_name][i]["message"];
+                 var author =  chat_histories[chat_room_name][i]["author"];
+                 chatroom_element.innerHTML += `<p style="order: ${i};">${author}: {message}</p>`;
+            }
+        };
+    }
+
+    var collection = document.getElementsByClassName("example");
+    var arr = Array.prototype.slice.call( collection, 0 );
+
+    arr.forEach(element => add_listener_chat(element));
+//
+//    for (let i = 0; i < collection.length; i++) {
+//      collection[i].style.backgroundColor = "red";
+//    }
 
     function ping_every_second(){
         let date = new Date;
