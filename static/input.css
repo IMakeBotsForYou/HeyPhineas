@@ -1,0 +1,37 @@
+/* Varela Round Font Import*/
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round');
+@import url('http://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .navigation_button{
+    @apply text-white text-3xl;
+    @apply hover:bg-[#aaa] ease-in-out duration-300;
+    border-radius: 71px;
+    float: middle;
+    text-align: center;
+    text-decoration: none;
+    padding: 10px 10px;
+    transition: 0.3s;
+  }
+  .center_white{
+    @apply text-white text-center;
+  }
+  .panel{
+    @apply bg-gray-dark border-y-4 border-[#434a52] rounded;
+  }
+  .tab_button{
+    @apply w-40 max-w-[300] h-8 mx-8;
+    @apply hover:bg-[#aaa] ease-in-out duration-300;
+    transition: 0.3s;
+    border-radius: 30px;
+  }
+  .active {
+    @apply bg-gray-light;
+  }
+  .inactive {
+    @apply bg-yellow;
+  }
+}

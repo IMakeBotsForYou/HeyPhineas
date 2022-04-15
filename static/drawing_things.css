@@ -189,11 +189,11 @@ div.select {
   outline-offset: 2px;
 }
 
-@media (min-width: 768px) {
-  .button-40 {
-    padding: 5px 10px 10px 5px;
-  }
+
+.button-40 {
+padding: 5px 10px 10px 5px;
 }
+
 
 .panel{
   position:relative;

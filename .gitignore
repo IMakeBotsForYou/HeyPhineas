@@ -2,10 +2,25 @@
 /shelf/
 /workspace.xml
 
+# Pycharm files
 venv/*
+
+
+# Reqs for project
 req.txt
+
+# Temp files
 losthtml.txt
+
+# Node.JS package
+package-lock.json
+package.json
+
+# Just in case I'm making a rar
+HeyPhinis.rar
 static/js/jquery-3.6.0.min.js
 .idea/*
-HeyPhinis.rar
+
+
 .pre-commit-config.yaml
+/node_modules

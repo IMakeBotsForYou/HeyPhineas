@@ -297,7 +297,6 @@ class UserData(Database):
         self.data.close()
 
 
-
 def reset_locations():
     for name in my_db.get_all_names():
         if name == "Admin":

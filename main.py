@@ -97,17 +97,6 @@ def disconnect_user_from_party(user):
      for usr in members]
 
 
-@app.route("/")
-def home():
-    # If user is logged in
-    if "user" not in session:
-        return redirect(url_for("login"))
-    for key in list(session.keys()):
-        if key != "user":
-            session.pop(key)
-
-    return render_template("main.html")
-
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
@@ -250,13 +239,14 @@ def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None,
 @app.route("/", methods=["POST", "GET"])
 def main_page():
     session["time"] = int(time())
+    # If user is not logged in
     if "user" not in session:
         return redirect(url_for("login"))
-    return render_template("main.html")
+    return render_template("dummy.html")
 
 
 @app.route('/friends')
-def friends_func(noodles):
+def friends_func():
     return render_template("friends.html")
 
 

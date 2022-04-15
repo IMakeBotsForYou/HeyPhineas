@@ -1,13 +1,6 @@
 
 
 
-@media screen and (max-width: 481px){
-
-
-
-
-
-}
 @media screen and (min-width: 482px){
 
     .flashed_messages_div{
@@ -32,7 +25,7 @@
         text-shadow: 0px 0px 0px rgb(42 42 42 / 10%);
         font-weight: bold;
         font-style: none;
-        font-family: Varela Round;
+        font-family: "Varela Round";
     }
 
     .img__img:hover .img__description {
@@ -83,7 +76,6 @@
       margin-top: 35px;
     }
     .topnav:after {
-      clear: both;
       display: block;
       content: "";
     }
