@@ -1,31 +1,43 @@
-{% extends "log_reg_temp.html" %}
-{% block title %}GITGUDHUB Login{% endblock %}
-{% block not_yet %}
-<h4><a href="/register">Not registered yet?</a></h4>
+{% extends "basic_page_template.html" %}
+{% block title %}HeyPhineas Login{% endblock %}
+{% block not_logged_in_nav_bar %}
+<h4><a class="navigation_button" href="/register">Not registered yet?</a></h4>
 {% endblock %}
-{% block form %}
-<br><br><br><br>
-
-    <div id="login">
-        <form name='form-login'
-        action="#" method="POST">
-          <span class="fa fa-user"></span>
-            <input type="text" name="name" id="user" placeholder="Username">
-
-          <span class="fa fa-lock"></span>
-            <input type="password" name="pass" id="pass" placeholder="Password">
-
-          <input type="submit" value="Login">
-
-        </form>
+{% block content_area %}
+<style>
+#login form input[type="submit"] {
+  border: 0;
+  width: 100%;
+  height: 40px;
+  border-radius: 3px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+</style>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for msg in messages %}
+            <p class="flash_msg w-[40%] m-auto mb-[10px] text-center"><b>{{msg}}</b></p>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+<div class="h-[700px] flex flex-col">
+<div id="login" class="w-[25%] m-auto">
+    <form name='form-login' class="login_form"
+    action="#" method="POST">
+    <div class="">
+          <span class="fa fa-user form_span mr-[5px] my-auto"></span>
+            <input class="login_input" type="text" name="name" id="user" placeholder="Username"><br>
     </div>
+    <div class="">
+      <span class="fa fa-lock form_span mr-[5px] my-auto"></span>
+        <input class="login_input" type="password" name="pass" id="pass" placeholder="Password">
+    </div>
+      <input type="submit" value="Login" class="bg-[#16aa56] hover:bg-[#21f27c]">
+    </form>
+</div>
 <div>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for msg in messages %}
-                <p class="flash_msg cen"><b>{{msg}}</b></p>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+</div>
 </div>
 {% endblock %}

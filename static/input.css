@@ -16,6 +16,93 @@
     padding: 10px 10px;
     transition: 0.3s;
   }
+  .login_form {
+      margin: auto;
+      padding: 22px 22px 22px 22px;
+      width: 100%;
+      border-radius: 5px;
+      background: #282e33;
+      border-top: 3px solid #434a52;
+      border-bottom: 3px solid #434a52;
+  }
+  .login_input {
+      background-color: #3b4148;
+      border-radius: 0px 3px 3px 0px;
+      color: #a9a9a9;
+      margin-bottom: 1em;
+      padding: 0 16px;
+      width: 94%;
+      height: 50px;
+   }
+  .flash_msg {
+      position:relative;
+      text-align: center;
+      padding: 0.01em 16px;
+      padding-top: 0.3em;
+      padding-right: 5px;
+      padding-bottom: 0.3em;
+      padding-left: 5px;
+      border: 1px solid #ccc!important;
+      border-top-color: rgb(204, 204, 204) !important;
+      border-top-style: solid !important;
+      border-top-width: 1px !important;
+      border-right-color: rgb(204, 204, 204) !important;
+      border-right-style: solid !important;
+      border-right-width: 1px !important;
+      border-bottom-color: rgb(204, 204, 204) !important;
+      border-bottom-style: solid !important;
+      border-bottom-width: 1px !important;
+      border-left-color: rgb(204, 204, 204) !important;
+      border-left-style: solid !important;
+      border-left-width: 1px !important;
+      border-image-source: initial !important;
+      border-image-slice: initial !important;
+      border-image-width: initial !important;
+      border-image-outset: initial !important;
+      border-image-repeat: initial !important;
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 30px;
+      color: white;
+      border-radius: 16px;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      border-bottom-right-radius: 16px;
+      border-bottom-left-radius: 16px;
+
+    }
+  . form_span {
+      background-color: #363b41;
+      border-radius: 3px 0px 0px 3px;
+      border-right: 3px solid #434a52;
+      color: #606468;
+      display: block;
+      float: left;
+      line-height: 50px;
+      text-align: center;
+      width: 50px;
+      height: 50px;
+  }
+  .collapsible {
+      background-color: #777;
+      color: white;
+      cursor: pointer;
+      padding: 18px;
+      width: 100%;
+      border: none;
+      text-align: left;
+      outline: none;
+      font-size: 15px;
+  }
+  .form_button{
+	display:inline-block;
+	cursor:pointer;
+	font-size:13px;
+	font-weight:bold;
+	border-radius: 10px;
+	padding:6px 12px;
+	text-decoration:none;
+  }
   .center_white{
     @apply text-white text-center;
   }

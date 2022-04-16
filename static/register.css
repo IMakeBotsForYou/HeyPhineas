@@ -1,6 +1,3 @@
-
-
-
 @media screen and (min-width: 482px){
 
     .flashed_messages_div{
@@ -33,63 +30,7 @@
       opacity: 1;
     }
 
-    .img__wrap{
-    position:absolute;
-    right:25%;
-    height: 60px;
-    z-index: 10;
-    }
 
-    .img__img{
-    position: absolute;
-    height: 50px;
-    width: 50px;
-    top: 15%;
-    left:0;
-    }
-
-    .break_text{
-    word-wrap: break-word;
-    }
-
-    .img__description {
-    position:relative;
-    top: 0;
-    visibility: invisible;
-    bottom: 0;
-    left: 60px;
-    right: 0;
-    background: rgba(29, 106, 154, 0.72);
-    color: #fff;
-    z-index: 2001;
-    /* transition effect. not necessary */
-    }
-    .navigation_man {
-      text-align: right;
-      font-size: 30px;
-      margin-top: 35px;
-    }
-
-    .header_man {
-      text-align: right;
-      font-size: 50px;
-      margin-top: 35px;
-    }
-    .topnav:after {
-      display: block;
-      content: "";
-    }
-    .topnav a {
-      -webkit-border-radius: 71px;
-      -moz-border-radius: 71px;
-      border-radius: 71px;
-      float: middle;
-      color: #fff;
-      text-align: center;
-      text-decoration: none;
-      padding: 10px 10px;
-      transition: 0.3s;
-    }
     .autocomplete {
       /*the container must be positioned relative:*/
       position: relative;
@@ -229,12 +170,6 @@
     }
     #register form input[type="submit"]:hover {
       background: #16aa56;
-    }
-
-
-    #login {
-      margin: 50px auto;
-      width: 320px;
     }
 
     #login form {

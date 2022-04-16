@@ -9,7 +9,6 @@ var friends = {
 var lat = 0;
 var lng = 0;
 var socket = 0;
-var chat_histories = {"Global": []}
 var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
@@ -20,50 +19,13 @@ socket = io.connect('http://' + document.domain + ':' + location.port + '/comms'
 //chat_socket = io.connect('http://' + document.domain + ':' + location.port + '/chatrooms');
 
 $(document).ready(function(){
-//    function update_party_members(data){
-//       var a = document.getElementById("members_panel")
-//       usernames = data[0];
-//       voting = data[1];
-//       if (usernames.length == 0){
-//            return;
-//       }
-//
-//       a.innerHTML = party_text;
-//       leader_of_party = usernames[0] == user;
-//       if(leader_of_party){
-//        $("#start_origin").visibility = 'visible';
-//       }
-//
-//       for(let i = 0; i < usernames.length; i++){
-//
-//           if (voting[usernames[i]] == "Accepted"){
-//              a.innerHTML += `<span id=usernames[i]+"_name" style="color:Aquamarine">${usernames[0]}`;
-//           } else {
-//              a.innerHTML += `<span id=usernames[i]+"_name" style="color:Gainsboro">${usernames[i]}`;
-//           }
-//
-//           if (i == 0)
-//                  a.innerHTML += `<span style="color:red"> (owner)`;
-//            // && voting[usernames[i]]="has not voted"
-//           if (usernames[i] == user) {
-//             a.innerHTML += `<button type="button" id="${usernames[i]}_accept"> <span class="fa fa-check"></span></button>   `;
-//             a.innerHTML += `<button type="button" id="${usernames[i]}_reject"> <span class="fa fa-x"></span></button>   `;
-//           }
-////           if (voting[usernames[i]] == "Accepted"){
-////            a.innerHTML +=  `<span class="fa fa-check-double">0</span>`;
-////           } else {
-////            a.innerHTML +=  `<span class="fa fa-x">0</span>`;
-////           }
-//           a.innerHTML += "<br>";
-//       }
-//      a.style.visibility = 'visible';
-//    }
+
     function update_party_members(data){
        var a = document.getElementById("members_panel")
-       if (data.length == 0){
+       if (data.length == 0 || !in_party){
             return;
        }
-
+       console.log(data);
        a.innerHTML = party_text;
        a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
        leader_of_party = data[0] == user;
@@ -84,35 +46,20 @@ $(document).ready(function(){
         socket.emit('get_destination')
         // TEMP
         socket.emit('get_coords_of_party')
-
     }
 
 
-    $(document).on('click', '#submit_place', function(){
-
-        var type = document.getElementById("type").value;
-        var radius = document.getElementById("radius").value;
-        var min_rating = document.getElementById("min_rating").value;
-        var limit = document.getElementById("limit").value;
-        console.log();
-        socket.emit('place_form_data', `${type}|${radius}|${min_rating}|${limit}`)
-    });
-
-    socket.on('message', function(data){
-        var room = data["room"];
-        console.log(data);
-        chat_histories[room].push({"author": data["author"], "message": data["message"]});
-        var chatroom = document.getElementById("invite_user_input");
-        if(document.getElementById("chatroom-name").innerHTML == room){
-            chatroom_element = document.getElementById("chat_room_messages");
-            chatroom_element.innerHTML = "";
-            for(let i = 0; i < chat_histories[room].length; i++){
-                 var message = chat_histories[room][i]["message"];
-                 var author =  chat_histories[room][i]["author"];
-                 chatroom_element.innerHTML += `<p class="white" style="left: 5%; order: ${i}; text-align: left; width:100%;">${author}: ${message}</p>`;
-            }
-        }
-    });
+//
+//    $(document).on('click', '#submit_place', function(){
+//
+//        var type = document.getElementById("type").value;
+//        var radius = document.getElementById("radius").value;
+//        var min_rating = document.getElementById("min_rating").value;
+//        var limit = document.getElementById("limit").value;
+//        console.log();
+//        socket.emit('place_form_data', `${type}|${radius}|${min_rating}|${limit}`)
+//    });
+//
 
     socket.on('party_members_list_get', function(data){
         update_party_members(data)
@@ -126,18 +73,10 @@ $(document).ready(function(){
                 document.getElementById("users_admin_list").innerHTML += `<a>${online_users[i]}</a><b>`;
             }
         }
-        autocomplete(document.getElementById("invite_user_input"), online_users);
+//        autocomplete(document.getElementById("invite_user_input"), online_users);
     });
 
 
-    function openChatTab(evt) {
-      var i, tablinks;
-      tablinks = document.getElementsByClassName("button-40");
-      for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].className = tablinks[i].backgroundColor = "#111827";
-      }
-      evt.currentTarget.backgroundColor = "#777";
-  }
 
     function add_listener_chat(element){
         element.onclick = function(event){
@@ -222,7 +161,6 @@ $(document).ready(function(){
         for (var friend in data['offline']){
             listhtml += "<br>" + friend
         }
-
         $("#friendslist").hmtl = listhtml;
     });
 
@@ -231,8 +169,8 @@ $(document).ready(function(){
 //        notifs += 1;
 //        $('#inbox').html(`Inbox (${notifs})`);
 //    });
-    socket.on('notifications', function(data) {
 
+    socket.on('notifications', function(data) {
         if (data != 0)
             $('#inbox').html(`Inbox (${data})`);
         else

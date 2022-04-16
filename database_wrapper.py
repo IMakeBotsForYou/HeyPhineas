@@ -4,14 +4,35 @@ import threading
 
 
 def st2int(array):
+    """
+    :param array: An array of objects(strings) that can be converted to ints
+    :return: An array of ints
+    """
     return [int(x) for x in array]
 
 
 def int2st(array):
+    """
+    :param array: An array of ints
+    :return: The array but converted into strings
+    """
     return [str(x) for x in array]
 
 
 def smallest_free(array):
+    """
+    :param array: An array of integers
+    :return: The lowest "free" integer.
+    E.g:
+    <- [1, 3, 4]
+    -> 2
+
+    <- [1, 2, 3]
+    -> 4
+
+    <- [2, 3]
+    -> 1
+    """
     lowest = 1
     if not array:
         return 1
@@ -28,7 +49,7 @@ def smallest_free(array):
 
 def reformat(*args):
     """
-    :param args: the variables we put into it
+    :param args: The variables that we want to convert into an SQL-usable string
     :return: formated string (var1, var2, var
     3..) for SQL purposes
     """
@@ -36,17 +57,19 @@ def reformat(*args):
     variables = [i for i in args]
     need_trim = True
     for var in variables:
+        # Loop over variables
+        # Convert int
         if isinstance(var, int):
             st += f'{var}, '
             need_trim = True
+        # Convert list by adding " " and ,
         elif isinstance(var, list):
             st += '"' + ", ".join([str(x) for x in var]) + '"'
             need_trim = False
         else:
+            # Neither an int nor an array, need trimming
             st += f'"{var}", '
             need_trim = True
-
-    print(need_trim, st + ")")
 
     if need_trim:
         return st[:-2] + ")"
@@ -55,15 +78,14 @@ def reformat(*args):
 
 
 class Database:
+    """
+    A class to interact with an SQL database
+    """
     def __init__(self, path):
         self.lock = threading.Lock()
-        # self.admin = "Admin"
         self.path = path.split(".")[0] + '.db'
         self.data = sqlite3.connect(self.path, check_same_thread=False)
         self.cursor = self.data.cursor()
-        # self.parties = []
-        # with open('static/users.js', 'w') as f:
-        #     f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def get(self, table, column, condition=None, limit=None, first=True):
         """
@@ -113,7 +135,11 @@ class Database:
         pass
 
     def add(self, table, values):
-        # try:
+        """
+        :param table: Table in the SQL
+        :param values: Values to add (if multiple, then as a tuple)
+        :return: None
+        """
         self.fix_seq()
         print(F"INSERT INTO {table} VALUES {values}")
         self.execute(F"INSERT INTO {table} VALUES {values}")
@@ -123,6 +149,11 @@ class Database:
         self.data.commit()
 
     def remove(self, table, condition=None):
+        """
+        :param table: Table in SQL
+        :param condition: Condition for the item (E.g. 'name="foo"')
+        :return:
+        """
         self.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
         self.fix_seq()
 
@@ -133,42 +164,84 @@ class Database:
 
 
 class UserData(Database):
+    """
+        Database of users
+    """
     def __init__(self, path):
         super().__init__(path)
+        # Define admin user
         self.admin = "Admin"
         self.parties = []
         with open('static/js/users.js', 'w') as f:
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def get_all_names(self, remove_admin=False):
+        """
+        :param remove_admin: Get all regular users
+        :return: Array of str
+        """
         if remove_admin:
             return [name for name in self.get("users", "username") if name != "Admin"]
 
         return self.get("users", "username")
 
     def send_message(self, title, desc, sender, receiver, messagetype, action):
+        """
+        :param title: Title of message
+        :param desc: description/body of message
+        :param sender: Sender
+        :param receiver: Receiver
+        :param messagetype: Question/Normal/Suggestion ect...
+        :param action: Action for the parser function to run when message accepted/ignored
+        :return: None
+        """
         print("added", title, desc)
         self.add("messages (title, content, sender, receiver, type, action)",
                  reformat(title, desc, sender, receiver, messagetype, action))
 
-    def get_users(self, colum=None):
-        return self.get("users", colum if colum else "*", first=colum)
+    def get_user_data(self, colum=None):
+        """
+        :param colum: Specify a column in the SQL to get, if left empty will return all columns
+        :return: All the user data
+        """
+        return self.get("users", colum if colum else "*", first=colum is not None)
 
     def fix_seq(self):
-        columns = ["users"]
+        """
+        When deleting things like messsages,
+        the sequence number gets really high.
+        This function fixes it, bringing it back down
+        to the lowest free integer.
+        :return: None
+        """
+        columns = ["users", "messages"]
         for na in columns:
             a = self.get(na, "id")
             self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
     def get_user_location(self, username):
+        """
+        :param username: Username of whose location to fetch
+        :return: [float(lat), float(lng)]
+        """
         if username == "Admin":
             return None
         return [float(value) for value in self.get("users", "loc", condition=f'username="{username}"')[0].split(", ")]
 
     def set_user_location(self, username, newvalue):
+        """
+        :param username: Username to update location
+        :param newvalue: Newvalue of location
+        :return: None
+        """
         self.edit('users', 'loc', newvalue=newvalue, condition=f'username="{username}"')
 
     def create_party(self, user):
+        """
+        Creates an empty party with user, deleting any previous party they had.
+        :param user: Leader/Creator of party
+        :return: None
+        """
         if len(self.get('parties', 'creator', condition=f'creator="{user}"')) > 0:
             for member in self.get_party_members(user):
                 print('removing', member)
@@ -179,9 +252,18 @@ class UserData(Database):
         self.add_to_party(user, user)
 
     def set_party_status(self, creator, newvalue):
+        """
+        :param creator: Creator of party
+        :param newvalue: New status
+        :return: None
+        """
         self.edit('parties', 'status', newvalue=newvalue, condition=f'creator="{creator}"')
 
     def get_party_status(self, creator):
+        """
+        :param creator: Creator of party
+        :return: Status of party (str)
+        """
         data = self.get('parties', 'status', condition=f'creator="{creator}"', first=False)
         if len(data) == 0:
             return "No Party"
@@ -189,16 +271,34 @@ class UserData(Database):
             return data[0]
 
     def reset_notifs(self, user):
+        """
+        :param user: User to reset
+        :return: None
+        """
         return self.edit("users", "notifications", newvalue=0, condition=f'username="{user}"')
 
     def add_notif(self, user):
+        """
+        :param user: User to add notif to
+        :return: Amount of new notifications
+        """
         num = self.get_notifs(user)
-        return self.edit("users", "notifications", newvalue=num+1, condition=f'username="{user}"')
+        self.edit("users", "notifications", newvalue=num+1, condition=f'username="{user}"')
+        return num+1
 
     def get_notifs(self, user):
+        """
+        :param user: User to fetch
+        :return: amount of notifications user has
+        """
         return int(self.get("users", "notifications", condition=f'username="{user}"')[0])
 
     def add_to_party(self, owner, user_to_add):
+        """
+        :param owner: Owner of party
+        :param user_to_add: User to add to said party
+        :return: None
+        """
         members = self.get('parties', 'members', condition=f'creator="{owner}"')
         if len(members) == 0:
             members = []
@@ -210,12 +310,21 @@ class UserData(Database):
         self.edit('users', 'current_party', newvalue=owner, condition=f'username="{user_to_add}"')
 
     def remove_from_party(self, owner, user_to_remove):
+        """
+        :param owner: Owner of party
+        :param user_to_remove: User to remove from said party
+        :return: None
+        """
         members = self.get('parties', 'members', condition=f'creator="{owner}"')[0].split(", ")
         members.remove(user_to_remove)
         self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
         self.edit('users', 'current_party', newvalue="", condition=f'username="{user_to_remove}"')
 
     def get_party_members(self, owner):
+        """
+        :param owner: Owner of party
+        :return: Get members of owner's party
+        """
         a = self.get('parties', 'members', condition=f'creator="{owner}"')
         if len(a) == 0:
             return []
@@ -225,6 +334,10 @@ class UserData(Database):
             return [owner] + a
 
     def get_messages(self, user=None):
+        """
+        :param user: User to fetch
+        :return: All messages to user in json format
+        """
         mes = self.get('messages', '*', condition=f'receiver="{user}"' if user else None, first=False)
         ret = {"status": "empty", "messages": {}}
         for message in mes:
@@ -251,6 +364,10 @@ class UserData(Database):
         return ret
 
     def get_friends(self, user):
+        """
+        :param user: User to fetch
+        :return: All friends of user (array[str])
+        """
         f = self.get("users", "friends", condition=f'username="{user}"')
         print(f)
         if len(f) > 0 and f != [None]:
@@ -259,9 +376,25 @@ class UserData(Database):
             return []
 
     def add_location(self, loc_name, lat, lng, loc_type):
+        """
+        Add a user-added location to the database
+        :param loc_name: Location name
+        :param lat: lat coordinate (float)
+        :param lng: lng coordinate (float)
+        :param loc_type: E.g. Restaurant...
+        :return: None
+        """
         self.add('user_added_locations (name, latlng, type)', reformat(loc_name, f"{lat}, {lng}", loc_type))
 
     def add_user(self, username, password, friends="", interests="parks|0|restaurant|0|"):
+        """
+        Add new user to the database
+        :param username: Name
+        :param password: Password
+        :param friends: Array of strings. No friends initially
+        :param interests: Interests of user, default: parks|0|restaurant|0|
+        :return: None
+        """
         self.add("users (username, password, friends, interests)", reformat(username, password, friends, interests))
 
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
@@ -270,6 +403,12 @@ class UserData(Database):
         # # # #  # # #  # # #  # # #  # # #  # # #  # # #
 
     def make_friends(self, user1, user2):
+        """
+        Make two 2 users friends of each other
+        :param user1: First uername
+        :param user2: Second username
+        :return: None
+        """
         current_friends1 = self.get("users", "friends", condition=f'name="{user1}"')[0].split(", ")
         current_friends2 = self.get("users", "friends", condition=f'name="{user2}"')[0].split(", ")
         current_friends1.append(user2)
@@ -281,6 +420,10 @@ class UserData(Database):
         return self.get('user_added_locations', 'name, latlng, type', first=False)
 
     def remove_user(self, name):
+        """
+        :param name: User to delete from the database
+        :return: None
+        """
         try:
             # if password == self.execute(f'SELECT password FROM users WHERE username="{name}"', 1)[0][0]:
             self.execute(f'DELETE FROM users WHERE username="{name}"')
@@ -293,11 +436,20 @@ class UserData(Database):
             f.write(f'var users = {json.dumps(self.get("users", "username"))}')
 
     def close(self):
+        """
+        Closes connection with the database
+        :return: None
+        """
         print("Finished")
         self.data.close()
 
 
 def reset_locations():
+    """
+    Resets location of all users to "their houses"
+    This is an "Admin User" feature for debuging purposes
+    :return: None
+    """
     for name in my_db.get_all_names():
         if name == "Admin":
             continue

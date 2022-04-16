@@ -6,9 +6,6 @@ from requests import get
 from keys import *
 
 
-# import gmaps as map_maker
-
-
 class results:
     def __init__(self, r):
         self.results = r

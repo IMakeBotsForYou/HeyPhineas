@@ -1,31 +1,53 @@
-<!DOCTYPE html>
-<link href="../static/tailwind.css" rel="stylesheet">
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body class="bg-gray font-varela overflow-hidden">
-<div title="main" class="bg-gray color text-white">
+<!--<!DOCTYPE html>-->
+<!--<link href="../static/tailwind.css" rel="stylesheet">-->
+<!--&lt;!&ndash;<link rel="stylesheet" href="{{url_for('static',filename='/main.css')}}" />&ndash;&gt;-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Title</title>-->
+<!--</head>-->
+<!--<body class="bg-gray font-varela overflow-hidden">-->
+<!--<div title="main" class="bg-gray color text-white">-->
 
-    <div title="navbar" class="block">
-      <!-- {% if 'user' in session %} -->
-      <div title="nav_bar_user" class="text-right text-3xl my-9">
-          <span style="left: 5%;" id="users_online" class="white navigation_button" >1 User(s) Online</span>
-          <!-- <a href="/">{{session['user']}}'s Profile </a> -->
-          <a class="navigation_button" href="/">Test's Profile </a>
-          <a class="navigation_button" id="inbox" href="/inbox">Inbox</a>
-          <a class="navigation_button" id="logout_button" href="/logout">Logout</a>
-      </div>
-      <!-- {% else %}
-        <div class="header_man header">{% block not_yet %}{% endblock %}</div>
-      {% endif %}<br> -->
-    </div>
+<!--    <div title="navbar" class="block">-->
+<!--      &lt;!&ndash; {% if 'user' in session %} &ndash;&gt;-->
+<!--      <div title="nav_bar_user" class="text-right text-3xl my-9">-->
+<!--          <span style="left: 5%;" id="users_online" class="white navigation_button" >1 User(s) Online</span>-->
+<!--          &lt;!&ndash; <a href="/">{{session['user']}}'s Profile </a> &ndash;&gt;-->
+<!--          <a class="navigation_button" href="/">Test's Profile </a>-->
+<!--          <a class="navigation_button" id="inbox" href="/inbox">Inbox</a>-->
+<!--          <a class="navigation_button" id="logout_button" href="/logout">Logout</a>-->
+<!--      </div>-->
+<!--      &lt;!&ndash; {% else %}-->
+<!--        <div class="header_man header">{% block not_yet %}{% endblock %}</div>-->
+<!--      {% endif %}<br> &ndash;&gt;-->
+<!--    </div>-->
+{% extends "basic_page_template.html" %}
+{% block title %}HeyPhineas{% endblock %}
+{% block content_area %}
+<!-- JAVASCRIPT IMPORTS-->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
 
-    <div title="content-area" class="flex flex-row justify-around">
+<!--         USERS OBJECT                -->
+<script>var user = "{{session['user']}}"</script>
+<!-- JAVASCRIPT PROJECT FILES -->
+<script src="/static/js/users.js"></script>
+<script src="/static/js/icons.js"></script>
+<script src="/static/js/buttons.js"></script>
+<script src="/static/js/notification.js"></script>
+<script src="/static/js/socket.js"></script>
+<!--<script src="/static/js/chat.js"></script>-->
+<script src="/static/js/maplogic.js"></script>
+<!--<script src="/static/js/ac.js"></script>-->
 
+
+
+<div title="content-area" class="flex flex-row justify-around">
       <!--            NOTIFICATION AREA    -->
-        <div title="notification-area" class="flex flex-col justify-between w-[25%] ">
+        <div title="notification-area" class="flex flex-col justify-between w-[25%] max-w-[25%] ">
+        {% if in_party %}
             <div title="party-menu" class="flex flex-col panel h-[45%]">
                 <h2 class="center_white font-bold text-3xl mb-4">
                   Party Members
@@ -34,27 +56,84 @@
                     <span class="fa fa-user-plus"></span>
                 </button>
                 <div title="party-members" class="center_white">
-                    <p>text<br>text</p>
+
                 </div>
             </div>
-
-
-            <div title="notification-inbox" class="panel max-h-[45%]">
-                <p class="center_white font-bold text-3xl">Notifications</p>
+        {% endif %}
+            <div title="notification-inbox" class="panel overflow-x-auto h-[{{'90%' if not in_party else '45%'}}]">
+                <p class="center_white font-bold text-3xl my-[20px]">Notifications</p>
                 <div>
-                  <br><br><br><br><br><br><br><br><br><br><br><br>
+                    <form name="action_form" id="action_form" method="POST" action="#" class="w-[90%] mx-auto">
+                        <input id="message_id" type="text" name="message_id" hidden/>
+                        <input id="reaction" type="text" name="action" hidden/>
+                        {% with messages = session['inbox_messages'] %}
+                            {% if messages %}
+                                {% for id, title, content, sender, type in messages %}
+                                    <div class="mb-[10px]">
+                                        <button type="button" class="collapsible mb-1" style="">{{title}}</button>
+                                        <div class="content white" style="display: block;">
+                                            <div><p id="message_content_{{id}}" style="margin: 0 0 14px 0;"><b>Message from {{sender}}:</b><br>{{content}}</p></div>
+                                                <div style="margin: 0 auto; text-white">
+                                                    {% if type == "simple_question" %}
+                                                        <button class="form_button mb-[10px] bg-white text-black hover:text-white hover:bg-black transition-300" id="confirm-button_{{id}}" >Accept</button>
+                                                        <script>
+                                                         $("#confirm-button_{{id}}").click(function(e) {
+                                                           document.getElementById('message_id').value = "{{id}}";
+                                                           document.getElementById('reaction').value = "accept";
+                                                           document.action_form.submit()
+                                                           console.log(document.getElementById('accept').value)
+                                                        });
+                                                        </script>
+                                                    {% endif %}
+                                                    {% if type == "group_suggestion" %}
+                                                        <button class="form_button mb-[10px] bg-white text-black hover:bg-black hover:text-white transition-300" id="accept-suggestion-button_{{id}}" >Accept</button>
+                                                        <button class="form_button mb-[10px] bg-white text-black hover:bg-black hover:text-white transition-300" id="reject-button_{{id}}" >Mark as read</button>
+                                                        <script>
+                                                        // accept suggestion made by server
+                                                             $("#accept-suggestion-button_{{id}}").click(function(e) {
+                                                               document.getElementById('message_id').value = "{{id}}";
+                                                               document.getElementById('reaction').value = "accept_suggestion";
+                                                               document.action_form.submit()
+                                                            });
+                                                        // reject suggestion made by server
+                                                             $("#reject-button_{{id}}").click(function(e) {
+                                                               document.getElementById('message_id').value = "{{id}}";
+                                                               document.getElementById('reaction').value = "reject_suggestion";
+                                                               document.action_form.submit();
+                                                            });
+                                                        </script>
+                                                    {% else %}
+                                                    <button class="form_button mb-[10px] bg-white text-black hover:bg-black hover:text-white transition-300" id="close-button_{{id}}" >Mark as read</button>
+                                                    <script>
+                                                         $("#close-button_{{id}}").click(function(e) {
+                                                           document.getElementById('mark-as-read').value = "{{id}}";
+                                                           document.action_form.submit();
+                                                        });
+                                                    </script>
+                                                    {% endif %}
+
+                                                </div>
+                                            </div>
+                                        <script>
+                                            var x = document.getElementById("message_content_{{id}}");
+                                            x.innerHTML = `Message from {{sender}}:</b><br>{{content}}</p>`.replace("\\n", "<pre>").replace("\n", "<pre>");
+                                        </script>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <h1 class="white">No messages</h1>
+                            {% endif %}
+                        {% endwith %}
+                    </form>
                 </div>
-<!--                For each notification
-                        <div>
-                            notification
-                        </div>
--->
             </div>
-
         </div>
-
+<!---->
+<!--        -->
+<!--        -->
         <!--       MAP                                            -->
         <div title="map" class="w-[40%] panel">
+            <p class="text-white text-center my-2" id="msg"></p>
             <div id="map" style="height:690px;"></div>
         </div>
 
@@ -82,26 +161,27 @@
 -->
             </div>
             <div title="input-area" class="mx-4 mt-2 rounded bg-white h-[10%] flex">
-                <textarea type="text" placeholder="Send a message" class="break-words text-black text-center m-auto rounded w-[100%] h-[100%]"></textarea>
+                <textarea placeholder="Send a message" class="break-words text-black text-center m-auto rounded w-[100%] h-[100%]"></textarea>
             </div>
         </div>
     </div>
-</div>
-
-<script>
-function initMap() {
-      // Instantiate a directions service.
-      const directionsService = new google.maps.DirectionsService();
-
-      // Create a map and center it on my house.
-      const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 14,
-        center: { lat: 31.894756, lng: 34.809322 },
-      });
-}
-</script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2">
         async
 </script>
-</body>
-</html>
+<script>
+var coll = document.getElementsByClassName("collapsible");
+var i;
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    console.log(content);
+    if (content.style.display == "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+</script>
+{% endblock %}

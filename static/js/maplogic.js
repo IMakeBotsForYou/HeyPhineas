@@ -381,9 +381,6 @@ function calculateAndDisplayRoute(
 //  secret_start = document.getElementById("secret_start").value;
 //  secret_end =   document.getElementById("secret_end").value;
 
-  if(secret_end == '' || secret_start == ''){
-    return;
-  }
   if (!(user in user_locations)){
    socket.emit('user_added_locations_get');
         socket.emit('party_members_list_get');
@@ -423,8 +420,8 @@ function calculateAndDisplayRoute(
           if (leader_of_party){
             socket.emit('send_dest', destination);
           }
-          document.getElementById("warnings-panel").innerHTML =
-          "<b>" + directionsData.warnings + "</b>";
+//          document.getElementById("warnings-panel").innerHTML =
+//          "<b>" + directionsData.warnings + "</b>";
 
           directionsRenderer.setDirections(result);
 
