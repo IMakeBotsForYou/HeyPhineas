@@ -157,11 +157,14 @@ def parse_action(command):
         print("joined party", get_party_members(session['user']))
 
     if command_name == "accept_suggestion":
-        party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
-        PSP = party_suggestions[party_leader]
-        PSP["accepted"] += 1
-        if PSP["accepted"]+PSP["rejected"] == len(PSP["total"]):
-            create_party(party_leader, members=PSP["total"])
+        try:
+            party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+            PSP = party_suggestions[party_leader]
+            PSP["accepted"] += 1
+            if PSP["accepted"]+PSP["rejected"] == len(PSP["total"]):
+                create_party(party_leader, members=PSP["total"])
+        except IndexError:
+            print('lol sucks for u')
 
     if command_name == "reject_suggestion":
         party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
@@ -380,6 +383,8 @@ def check_ping(*args):
         if message_amount != user_notification_tracking[session['user']]:
             emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
             user_notification_tracking[session['user']] = message_amount
+        elif message_amount == 0:
+            emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
 
 
 def weight_values(name, value):
@@ -429,6 +434,7 @@ def location_recommendation_request():
 
 def send_path_to_party(user_to_track):
     party_members = get_party_members(user_to_track)
+    party_leader = get_party_leader(user_to_track)
     paths = []
 
     for member in party_members:
@@ -441,6 +447,13 @@ def send_path_to_party(user_to_track):
                 print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
     emit_to(session["user"], 'user_paths', message=paths)
     emit_to("Admin", 'user_paths', message=paths)
+
+    # all the paths are done
+    # if sum([len(path[1]) for path in paths]) == 0:
+    #     db['ex'].send_message(title=f"Party Reached Destination",
+    #                           desc=f"{party_leader}'s party has reached their destination.",
+    #                           sender="[System]", receiver="Admin", messagetype="ignore",
+    #                           action=None)
 
 
 @socketio.on('send_current_path', namespace='/comms')

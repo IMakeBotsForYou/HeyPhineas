@@ -121,4 +121,40 @@
   .inactive {
     @apply bg-yellow;
   }
+
+  .form_button{
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family: Varela Round;
+	font-size:13px;
+	font-weight:bold;
+	padding:6px 12px;
+	text-decoration:none;
+    }
+  .confirm{
+    background:linear-gradient(to bottom, #77b55a 5%, #72b352 100%);
+    background-color:#77b55a;
+    @apply hover:bg-gradient-to-r from-[#72b352] to-[#77b55a] bg-[#72b352] active:top-[1px] active:relative;
+  }
+  .close_button{
+	background:linear-gradient(to bottom, #e67a73 5%, #e67a73 100%);
+	background-color:#e67a73;
+    @apply hover:bg-gradient-to-r from-[#e67a73] to-[#e67a73] bg-[#e67a73] active:top-[1px] active:relative;
+  }
+
+  .popup{
+    position: absolute;
+    z-index: 1000;
+    display:none;
+    background-color:#000;
+    -webkit-border-radius:15px;
+    -moz-border-radius:15px;
+    color:#fff;
+    padding: 0 10px 10px 10px;
+    width: 25%;
+    margin-top: 5px;
+    margin-left: 35%;
+    text-align: center;
+  }
 }
