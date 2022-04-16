@@ -81,6 +81,7 @@ class Database:
     """
     A class to interact with an SQL database
     """
+
     def __init__(self, path):
         self.lock = threading.Lock()
         self.path = path.split(".")[0] + '.db'
@@ -167,6 +168,7 @@ class UserData(Database):
     """
         Database of users
     """
+
     def __init__(self, path):
         super().__init__(path)
         # Define admin user
@@ -283,8 +285,8 @@ class UserData(Database):
         :return: Amount of new notifications
         """
         num = self.get_notifs(user)
-        self.edit("users", "notifications", newvalue=num+1, condition=f'username="{user}"')
-        return num+1
+        self.edit("users", "notifications", newvalue=num + 1, condition=f'username="{user}"')
+        return num + 1
 
     def get_notifs(self, user):
         """
@@ -339,28 +341,17 @@ class UserData(Database):
         :return: All messages to user in json format
         """
         mes = self.get('messages', '*', condition=f'receiver="{user}"' if user else None, first=False)
-        ret = {"status": "empty", "messages": {}}
+        ret = {"messages": []}
         for message in mes:
-            xx, title, content, sender, receiver, m_type, action = message
-            ret["status"] = "200"
-            if receiver in ret['messages']:
-                ret["messages"][receiver].append(
-                    {"id": xx,
-                     "title": title,
-                     "content": content,
-                     "sender": sender,
-                     "type": m_type,
-                     "action": action
-                     })
-            else:
-                ret["messages"][receiver] = \
-                    [{"id": xx,
-                      "title": title,
-                      "content": content,
-                      "sender": sender,
-                      "type": m_type,
-                      "action": action
-                      }]
+            message_id, title, content, sender, receiver, m_type, action = message
+
+            ret["messages"].append({"id": message_id,
+                                    "title": title,
+                                    "content": content,
+                                    "sender": sender,
+                                    "type": m_type,
+                                    "action": action
+                                    })
         return ret
 
     def get_friends(self, user):

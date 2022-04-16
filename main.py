@@ -33,6 +33,9 @@ voting_status = {
 user_colors = {
 
 }
+user_notification_tracking = {
+
+}
 # client = pymongo.MongoClient(
 #     "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
 #
@@ -128,6 +131,7 @@ def login():
 def fav():
     print(os.path.join(app.root_path, 'static'))
     return send_from_directory(app.static_folder, 'static/favicon.ico')  # for sure return the file
+
 
 def parse_action(command):
     args = command.split("/")
@@ -361,7 +365,21 @@ def check_ping(*args):
         # user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
 
         emit_to("Admin", event_name="user_colors", message=user_colors)
-    emit_to(session['user'], event_name="notifications", message=db['ex'].get_notifs(session['user']))
+
+    # notif_amount = db['ex'].get_notifs(session['user'])
+    # emit_to(session['user'], event_name="notifications",
+    #         message=notif_amount)
+
+    messages = db['ex'].get_messages(user=session['user'])["messages"]
+    message_amount = len(messages)
+    # emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
+    if session['user'] not in user_notification_tracking:
+        user_notification_tracking[session['user']] = message_amount
+        emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
+    else:
+        if message_amount != user_notification_tracking[session['user']]:
+            emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
+            user_notification_tracking[session['user']] = message_amount
 
 
 def weight_values(name, value):
@@ -518,6 +536,20 @@ chatrooms = {"Global": {"history": [], "members": []},
              }
 
 
+@socketio.on('inbox_notification_react', namespace='/comms')
+def notification_parse(data):
+    message_id, reaction = data["message_id"], data["reaction"]
+
+    # first grab the message to see what we need to do with it
+    _id, title, content, sender, receiver, msg_type, action = \
+        db['ex'].get('messages', '*', f'id={message_id}', first=False)[0]
+    print(f"{reaction}: {title} | {msg_type}")
+    if reaction != "mark_as_read":
+        parse_action(action)
+
+        db['ex'].remove("messages", f'id={message_id}')
+    session['inbox_messages'] = get_messages(session['user'])
+
 
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
@@ -547,6 +579,8 @@ def logged_on_users():
 
     broadcast_userdiff()
     actually_users = [x for x in connected_members if x != "Admin"]
+
+    user_notification_tracking[session['user']] = 0
 
     def group_suggestion_filter(u):
         for leader in party_suggestions:

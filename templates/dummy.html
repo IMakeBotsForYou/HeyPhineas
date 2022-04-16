@@ -36,8 +36,8 @@
 <script src="/static/js/users.js"></script>
 <script src="/static/js/icons.js"></script>
 <script src="/static/js/buttons.js"></script>
-<script src="/static/js/notification.js"></script>
 <script src="/static/js/socket.js"></script>
+<script src="/static/js/notifications.js"></script>
 <!--<script src="/static/js/chat.js"></script>-->
 <script src="/static/js/maplogic.js"></script>
 <!--<script src="/static/js/ac.js"></script>-->
@@ -61,70 +61,14 @@
             </div>
         {% endif %}
             <div title="notification-inbox" class="panel overflow-x-auto h-[{{'90%' if not in_party else '45%'}}]">
-                <p class="center_white font-bold text-3xl my-[20px]">Notifications</p>
+                <p class="center_white font-bold text-3xl my-[20px]">Inbox</p>
                 <div>
-                    <form name="action_form" id="action_form" method="POST" action="#" class="w-[90%] mx-auto">
+                    <div id="action_form" class="w-[90%] mx-auto">
                         <input id="message_id" type="text" name="message_id" hidden/>
                         <input id="reaction" type="text" name="action" hidden/>
-                        {% with messages = session['inbox_messages'] %}
-                            {% if messages %}
-                                {% for id, title, content, sender, type in messages %}
-                                    <div class="mb-[10px]">
-                                        <button type="button" class="collapsible mb-1" style="">{{title}}</button>
-                                        <div class="content white" style="display: block;">
-                                            <div><p id="message_content_{{id}}" style="margin: 0 0 14px 0;"><b>Message from {{sender}}:</b><br>{{content}}</p></div>
-                                                <div style="margin: 0 auto; text-white">
-                                                    {% if type == "simple_question" %}
-                                                        <button class="form_button mb-[10px] bg-white text-black hover:text-white hover:bg-black transition-300" id="confirm-button_{{id}}" >Accept</button>
-                                                        <script>
-                                                         $("#confirm-button_{{id}}").click(function(e) {
-                                                           document.getElementById('message_id').value = "{{id}}";
-                                                           document.getElementById('reaction').value = "accept";
-                                                           document.action_form.submit()
-                                                           console.log(document.getElementById('accept').value)
-                                                        });
-                                                        </script>
-                                                    {% endif %}
-                                                    {% if type == "group_suggestion" %}
-                                                        <button class="form_button mb-[10px] bg-white text-black hover:bg-black hover:text-white transition-300" id="accept-suggestion-button_{{id}}" >Accept</button>
-                                                        <button class="form_button mb-[10px] bg-white text-black hover:bg-black hover:text-white transition-300" id="reject-button_{{id}}" >Mark as read</button>
-                                                        <script>
-                                                        // accept suggestion made by server
-                                                             $("#accept-suggestion-button_{{id}}").click(function(e) {
-                                                               document.getElementById('message_id').value = "{{id}}";
-                                                               document.getElementById('reaction').value = "accept_suggestion";
-                                                               document.action_form.submit()
-                                                            });
-                                                        // reject suggestion made by server
-                                                             $("#reject-button_{{id}}").click(function(e) {
-                                                               document.getElementById('message_id').value = "{{id}}";
-                                                               document.getElementById('reaction').value = "reject_suggestion";
-                                                               document.action_form.submit();
-                                                            });
-                                                        </script>
-                                                    {% else %}
-                                                    <button class="form_button mb-[10px] bg-white text-black hover:bg-black hover:text-white transition-300" id="close-button_{{id}}" >Mark as read</button>
-                                                    <script>
-                                                         $("#close-button_{{id}}").click(function(e) {
-                                                           document.getElementById('mark-as-read').value = "{{id}}";
-                                                           document.action_form.submit();
-                                                        });
-                                                    </script>
-                                                    {% endif %}
-
-                                                </div>
-                                            </div>
-                                        <script>
-                                            var x = document.getElementById("message_content_{{id}}");
-                                            x.innerHTML = `Message from {{sender}}:</b><br>{{content}}</p>`.replace("\\n", "<pre>").replace("\n", "<pre>");
-                                        </script>
-                                    </div>
-                                {% endfor %}
-                            {% else %}
-                                <h1 class="white">No messages</h1>
-                            {% endif %}
-                        {% endwith %}
-                    </form>
+                        <div id="notification_autogenerated_div">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -167,21 +111,5 @@
     </div>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2">
         async
-</script>
-<script>
-var coll = document.getElementsByClassName("collapsible");
-var i;
-for (i = 0; i < coll.length; i++) {
-  coll[i].addEventListener("click", function() {
-    this.classList.toggle("active");
-    var content = this.nextElementSibling;
-    console.log(content);
-    if (content.style.display == "block") {
-      content.style.display = "none";
-    } else {
-      content.style.display = "block";
-    }
-  });
-}
 </script>
 {% endblock %}

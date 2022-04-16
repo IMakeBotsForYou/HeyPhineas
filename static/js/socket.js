@@ -8,14 +8,13 @@ var friends = {
 }
 var lat = 0;
 var lng = 0;
-var socket = 0;
+var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');;
 var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
 var leader_of_party = false;
 
 //connect to the socket server.
-socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 //chat_socket = io.connect('http://' + document.domain + ':' + location.port + '/chatrooms');
 
 $(document).ready(function(){
@@ -164,18 +163,7 @@ $(document).ready(function(){
         $("#friendslist").hmtl = listhtml;
     });
 
-    //update notification count
-//    socket.on('notif', function(msg) {
-//        notifs += 1;
-//        $('#inbox').html(`Inbox (${notifs})`);
-//    });
 
-    socket.on('notifications', function(data) {
-        if (data != 0)
-            $('#inbox').html(`Inbox (${data})`);
-        else
-            $('#inbox').html(`Inbox`);
-    });
 
     socket.on('best_3_locations', function(msg) {
         $('#recommended').html(msg);
@@ -218,6 +206,28 @@ $(document).ready(function(){
         $("#add_loc_button").fadeOut();
         $("#invite_user").prop("disabled", false);
     });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 });

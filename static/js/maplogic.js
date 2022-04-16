@@ -382,11 +382,12 @@ function calculateAndDisplayRoute(
 //  secret_end =   document.getElementById("secret_end").value;
 
   if (!(user in user_locations)){
-   socket.emit('user_added_locations_get');
+        socket.emit('user_added_locations_get');
         socket.emit('party_members_list_get');
         socket.emit('online_members_get');
         socket.emit('get_destination')
         // TEMP
+
         socket.emit('get_coords_of_party')
   }
   var origin = user_locations[user].location;
