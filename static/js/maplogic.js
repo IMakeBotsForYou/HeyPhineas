@@ -132,73 +132,73 @@ function initMap() {
 
 
       $("#start_origin").on("click", function() {
-        var myInterval = setInterval(move_towards_next_point, running_delay);
-        var meter = running_speed;
-        var unit = meter * 0.0000089;
-        function distance(lat1, lng1, lat2, lng2){
-            return Math.sqrt((lat1-lat2)*(lat1-lat2)+(lng2-lng1)*(lng2-lng1));
-        }
-        function toDegrees (angle) {
-          return angle * (180 / Math.PI);
-        }
-        function toRadians (angle) {
-          return angle * (Math.PI / 180);
-        }
-
-        function move_towards_next_point() {
-            var current_pos = user_locations[user].marker.getPosition().toJSON();
-            var my_lat = current_pos.lat;
-            var my_long = current_pos.lng;
-            var next_point = current_directions[step_index];
-
-            if(next_point == undefined || next_point == null){
-                clearInterval(myInterval);
-                return;
-             }
-
-            var new_lat = 0;
-            var new_long = 0;
-
-            var d = distance(next_point[0], next_point[1], my_lat, my_long);
-            if (d < unit){
-                new_lat = next_point[0];
-                new_long = next_point[1];
-            } else
-            {
-
-            var percent = unit / d;
-
-            new_lat = my_lat+(next_point[0]-my_lat) * percent;
-            new_long = my_long+(next_point[1]-my_long) * percent;
-
+            var myInterval = setInterval(move_towards_next_point, running_delay);
+            var meter = running_speed;
+            var unit = meter * 0.0000089;
+            function distance(lat1, lng1, lat2, lng2){
+                return Math.sqrt((lat1-lat2)*(lat1-lat2)+(lng2-lng1)*(lng2-lng1));
+            }
+            function toDegrees (angle) {
+              return angle * (180 / Math.PI);
+            }
+            function toRadians (angle) {
+              return angle * (Math.PI / 180);
             }
 
-//
-//            var theta = Math.atan2((next_point[1]-my_long),(next_point[0]-my_lat));
-//
-//            console.log(theta);
-//
-//            var new_lat = my_lat + unit * Math.sin(toRadians(theta));
-//
-//            var new_long = my_long + unit * Math.cos(toRadians(theta)) / Math.cos(my_lat * 0.018);
-//
-//            new_lat = distance(new_lat, new_long, next_point[0], next_point[1]) >
-//                      unit ? new_lat : next_point[0]
-//
-//            new_long = distance(new_lat, new_long, next_point[0], next_point[1]) >
-//                      unit ? new_long : next_point[1]
+            function move_towards_next_point() {
+                var current_pos = user_locations[user].marker.getPosition().toJSON();
+                var my_lat = current_pos.lat;
+                var my_long = current_pos.lng;
+                var next_point = current_directions[step_index];
 
-            if (new_lat == next_point[0]){
-                step_index += 1;
-                if(current_directions.length == step_index)
+                if(next_point == undefined || next_point == null){
                     clearInterval(myInterval);
-                socket.emit('step');
-            }
+                    return;
+                 }
 
-//            user_locations[user].marker.setPosition(new google.maps.LatLng(new_lat, new_long));
-//            user_locations[user].position = new google.maps.LatLng(new_lat, new_long);
-            socket.emit('my_location', [new_lat, new_long, step_index])
-        }
+                var new_lat = 0;
+                var new_long = 0;
+
+                var d = distance(next_point[0], next_point[1], my_lat, my_long);
+                if (d < unit){
+                    new_lat = next_point[0];
+                    new_long = next_point[1];
+                } else
+                {
+
+                var percent = unit / d;
+
+                new_lat = my_lat+(next_point[0]-my_lat) * percent;
+                new_long = my_long+(next_point[1]-my_long) * percent;
+
+                }
+
+    //            start simulation
+    //            var theta = Math.atan2((next_point[1]-my_long),(next_point[0]-my_lat));
+    //
+    //            console.log(theta);
+    //
+    //            var new_lat = my_lat + unit * Math.sin(toRadians(theta));
+    //
+    //            var new_long = my_long + unit * Math.cos(toRadians(theta)) / Math.cos(my_lat * 0.018);
+    //
+    //            new_lat = distance(new_lat, new_long, next_point[0], next_point[1]) >
+    //                      unit ? new_lat : next_point[0]
+    //
+    //            new_long = distance(new_lat, new_long, next_point[0], next_point[1]) >
+    //                      unit ? new_long : next_point[1]
+
+                if (new_lat == next_point[0]){
+                    step_index += 1;
+                    if(current_directions.length == step_index)
+                        clearInterval(myInterval);
+                    socket.emit('step');
+                }
+
+    //            user_locations[user].marker.setPosition(new google.maps.LatLng(new_lat, new_long));
+    //            user_locations[user].position = new google.maps.LatLng(new_lat, new_long);
+                socket.emit('my_location', [new_lat, new_long, step_index])
+            }
       });
 
 
@@ -391,10 +391,10 @@ function calculateAndDisplayRoute(
         socket.emit('get_coords_of_party')
   }
   var origin = user_locations[user].location;
-  if(destination == null){
-    destination = deshalit;
-  }
-  if (first){
+//  if(destination == null){
+//    destination = deshalit;
+//  }
+  if (first && destination != null){
       directionsService
         .route({
           origin: origin,

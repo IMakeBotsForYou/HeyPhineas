@@ -4,7 +4,8 @@ $(document).ready(function(){
 
 function openChatTab(target_tab) {
   var i, tab_links;
-  tab_links = document.getElementsByClassName("tab_button");
+  var tab_element = document.getElementById('tabs')
+  var tablinks = Array.from(tab_element.querySelectorAll(".tab_button"));
   for (i = 0; i < tab_links.length; i++) {
     tab_links[i].className = tab_links[i].className.replace("_active", "_inactive");
   }
@@ -19,7 +20,8 @@ function openChatTab(target_tab) {
   }
 }
 
-var tablinks = Array.from(document.getElementsByClassName("tab_button"));
+var tab_element = document.getElementById('tabs')
+var tablinks = Array.from(tab_element.querySelectorAll(".tab_button"));
 tablinks.forEach(function(item){
     item.addEventListener('click', function(event, a){
         openChatTab(item);
@@ -41,10 +43,10 @@ socket.on('message', function(data){
     if(current_chat == room){
         chatroom_element = document.getElementById("chat_room_messages");
         chatroom_element.innerHTML = "";
-        for(let i = 0; i < chat_histories[room].history.length; i++){
+        for(let i = chat_histories[room].history.length-1; i >= 0; i--){
              var message = chat_histories[room].history[i]["message"];
              var author =  chat_histories[room].history[i]["author"];
-             chatroom_element.innerHTML += `<p class="left-[5%] mb-[5px] order-[${i}] text-left text-white w-[100%]">${author}: ${message}</p>`;
+             chatroom_element.innerHTML += `<p class="mx-[5px] mb-[5px] order-[{i}] text-left text-white w-[95%] hover:bg-gray-light rounded-md">${author}: ${message}</p>`;
         }
     }
 });
@@ -55,7 +57,6 @@ document.getElementById('chat_input_area').addEventListener('keydown', function(
         text = input.value;
         if (text == "")
             return;
-        console.log(current_chat);
         socket.emit('chat_message', {"message": text, "room": current_chat});
         input.value = "";
     }
