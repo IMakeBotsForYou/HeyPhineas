@@ -623,14 +623,14 @@ Ensure the default browser behavior of the `hidden` attribute.
   border-radius: 30px;
 }
 
-.active{
-  --tw-bg-opacity: 1;
-  background-color: rgb(119 119 119 / var(--tw-bg-opacity));
-}
-
-.inactive{
+._active{
   --tw-bg-opacity: 1;
   background-color: rgb(255 200 44 / var(--tw-bg-opacity));
+}
+
+._inactive{
+  --tw-bg-opacity: 1;
+  background-color: rgb(119 119 119 / var(--tw-bg-opacity));
 }
 
 .form_button{
@@ -747,9 +747,8 @@ Ensure the default browser behavior of the `hidden` attribute.
   margin-bottom: auto;
 }
 
-.mx-0{
-  margin-left: 0px;
-  margin-right: 0px;
+.mt-\[20px\]{
+  margin-top: 20px;
 }
 
 .mb-\[40px\]{
@@ -772,10 +771,6 @@ Ensure the default browser behavior of the `hidden` attribute.
   margin-right: 5px;
 }
 
-.mt-\[20px\]{
-  margin-top: 20px;
-}
-
 .block{
   display: block;
 }
@@ -784,12 +779,16 @@ Ensure the default browser behavior of the `hidden` attribute.
   display: flex;
 }
 
-.h-\[40px\]{
-  height: 40px;
+.h-\[200px\]{
+  height: 200px;
 }
 
 .h-\[100\%\]{
   height: 100%;
+}
+
+.h-\[40px\]{
+  height: 40px;
 }
 
 .h-\[80\%\]{
@@ -802,14 +801,6 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .h-\[700px\]{
   height: 700px;
-}
-
-.h-\[400px\]{
-  height: 400px;
-}
-
-.h-\[200px\]{
-  height: 200px;
 }
 
 .w-\[25\%\]{
@@ -838,22 +829,6 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .max-w-\[25\%\]{
   max-width: 25%;
-}
-
-.flex-1{
-  flex: 1 1 0%;
-}
-
-.basis-1\/4{
-  flex-basis: 25%;
-}
-
-.basis-1\/2{
-  flex-basis: 50%;
-}
-
-.basis-3\/4{
-  flex-basis: 75%;
 }
 
 .flex-row{
@@ -916,6 +891,10 @@ Ensure the default browser behavior of the `hidden` attribute.
   padding: 18px;
 }
 
+.text-left{
+  text-align: left;
+}
+
 .text-center{
   text-align: center;
 }
@@ -933,12 +912,12 @@ Ensure the default browser behavior of the `hidden` attribute.
   line-height: 2.25rem;
 }
 
-.text-\[20px\]{
-  font-size: 20px;
-}
-
 .text-\[35px\]{
   font-size: 35px;
+}
+
+.text-\[20px\]{
+  font-size: 20px;
 }
 
 .font-bold{

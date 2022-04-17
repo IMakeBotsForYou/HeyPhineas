@@ -8,7 +8,9 @@ from flask_socketio import SocketIO, emit
 import re
 from get_query_results import query
 import database_wrapper
+from database_wrapper import smallest_free
 from KNN import get_color
+
 # import pymongo
 
 Payload.max_decode_packets = 1000
@@ -82,7 +84,7 @@ def create_party(user, members=None):
     for m in members:
         voting_status[get_party_leader(user)][m] = False
         db['ex'].add_to_party(owner=user, user_to_add=m)
-
+    create_chat(name="Party", members=[user]+members)
     print(f"created party for {user}")
 
 
@@ -98,7 +100,6 @@ def disconnect_user_from_party(user):
     members = get_party_members(current_leader)
     [emit_to(user=usr, event_name="update_party_members", namespace="/comms", message=members)
      for usr in members]
-
 
 
 @app.route("/login", methods=["POST", "GET"])
@@ -155,13 +156,15 @@ def parse_action(command):
                  message=get_party_members(party_owner))
          for party_member in get_party_members(party_owner)]
         print("joined party", get_party_members(session['user']))
+        # chatrooms[get_party_chat_id(session['user'])]["members"].append(session['user'])
 
     if command_name == "accept_suggestion":
         try:
-            party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+            party_leader = \
+                [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
             PSP = party_suggestions[party_leader]
             PSP["accepted"] += 1
-            if PSP["accepted"]+PSP["rejected"] == len(PSP["total"]):
+            if PSP["accepted"] + PSP["rejected"] == len(PSP["total"]):
                 create_party(party_leader, members=PSP["total"])
         except IndexError:
             print('lol sucks for u')
@@ -170,7 +173,7 @@ def parse_action(command):
         party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
         PSP = party_suggestions[party_leader]
         PSP["rejected"] += 1
-        if PSP["accepted"]+PSP["rejected"] == len(PSP["total"]):
+        if PSP["accepted"] + PSP["rejected"] == len(PSP["total"]):
             create_party(party_leader, members=PSP["total"])
 
 
@@ -386,6 +389,9 @@ def check_ping(*args):
         elif message_amount == 0:
             emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
 
+    # CREATE CHATS
+    [emit_to(session['user'], "create_chat", message=room) for room in get_all_user_chats(session['user'])]
+
 
 def weight_values(name, value):
     origin = db['knn'].origin
@@ -545,8 +551,11 @@ def get_coords_of_party():
         party_coords(leader, True)
 
 
-chatrooms = {"Global": {"history": [], "members": []},
-             }
+chatrooms = {"0": {"name": "Global", "history": [], "members": []}}
+
+
+def get_all_user_chats(target):
+    return [{"id": room, **chatrooms[room]} for room in chatrooms if target in chatrooms[room]["members"]]
 
 
 @socketio.on('inbox_notification_react', namespace='/comms')
@@ -564,6 +573,13 @@ def notification_parse(data):
     session['inbox_messages'] = get_messages(session['user'])
 
 
+def create_chat(*, name, members=None):
+    if members is None:
+        members = []
+    smallest_free_chat_id = str(smallest_free(list(chatrooms.keys())))
+    chatrooms[smallest_free_chat_id] = {"name": name, "members": members, "history": []}
+
+
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
     # request.sid
@@ -571,7 +587,8 @@ def logged_on_users():
         return redirect(url_for("login"))
 
     # reconnecting = session['user'] in connected_members
-    chatrooms["Global"]["members"].append(session['user'])
+    chatrooms["0"]["members"].append(session['user'])
+    chatrooms["0"]["members"] = list(set(chatrooms["0"]["members"]))
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
@@ -591,7 +608,6 @@ def logged_on_users():
     emit_to(session['user'], 'my_location', message=[session['user'], connected_members[session['user']]["loc"]])
 
     broadcast_userdiff()
-    actually_users = [x for x in connected_members if x != "Admin"]
 
     user_notification_tracking[session['user']] = 0
 
@@ -603,10 +619,14 @@ def logged_on_users():
             return False
         return True
 
-    not_in_group_or_suggestion = list(filter(group_suggestion_filter, actually_users))
-
+    # actually_users = [x for x in connected_members if x != "Admin"]
+    # not_in_group_or_suggestion = list(filter(group_suggestion_filter, actually_users))
+    not_in_group_or_suggestion = []
     if len(not_in_group_or_suggestion) > 1:
-        clusters = knn.find_optimal_clusters(draw_graphs=False, reps=20, only_these_values=filter_dict(db["knn"].values, lambda x: x in connected_members), get_error=False)
+        clusters = knn.find_optimal_clusters(draw_graphs=False, reps=20, only_these_values=filter_dict(db["knn"].values,
+                                                                                                       lambda
+                                                                                                           x: x in connected_members),
+                                             get_error=False)
         for centroid in clusters:
             suggest_party([x[0] for x in clusters[centroid]])
             for person in clusters[centroid]:
@@ -614,9 +634,8 @@ def logged_on_users():
         # print("USER COLOURS = ", user_colors)
         emit_to("Admin", event_name="user_colors", message=user_colors)
 
-    chatrooms["Global"]["members"].append(session['user'])
     emit_to(session['user'], "message",
-            message={"room": "Global", "message": "Welcome!", "author": "(System)"})
+            message={"id": "0", "message": "Welcome!", "author": "(System)"})
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
@@ -730,7 +749,8 @@ def suggest_party(users):
     for u in users:
         u_list = users.copy()
         u_list.remove(u)
-        desc = f"The system has invited you to join a party with {', '.join(u_list[:-1])}, and {u_list[-1]}" if len(u_list) > 1 else \
+        desc = f"The system has invited you to join a party with {', '.join(u_list[:-1])}, and {u_list[-1]}" if len(
+            u_list) > 1 else \
             f"The system has invited you to join a party with {u_list[0]}"
         db['ex'].send_message(title=f"Party suggestion!",
                               desc=desc,
@@ -795,6 +815,25 @@ def set_user_location(username, lat, lng):
         return
     connected_members[username]["loc"] = (lat, lng)
     db['ex'].set_user_location(username, f"{lat}, {lng}")
+
+
+@socketio.on('chat_message', namespace='/comms')
+def chat_message(data):
+    """
+    Multicast message from user to
+    appropriate chat
+    """
+    room, message, author = data["room"], data["message"], session['user']
+    chatrooms[room]["history"].append(message)
+    members = chatrooms[room]["members"]
+    print(123, members, message)
+    for member in members:
+        emit_to(member, 'message', message={
+            "id": room,
+            "author": author,
+            "message": message
+        })
+    pass
 
 
 @socketio.on('my_location', namespace='/comms')
@@ -891,4 +930,4 @@ if __name__ == '__main__':
     knn = KNN(vls=vls, k=3)
     db["knn"] = knn
 
-    socketio.run(app, host="0.0.0.0", port=8080, debug=False)
+    socketio.run(app, host="0.0.0.0", port=8080)

@@ -115,11 +115,11 @@
     transition: 0.3s;
     border-radius: 30px;
   }
-  .active {
-    @apply bg-gray-light;
-  }
-  .inactive {
+  ._active {
     @apply bg-yellow;
+  }
+  ._inactive {
+    @apply bg-gray-light;
   }
 
   .form_button{

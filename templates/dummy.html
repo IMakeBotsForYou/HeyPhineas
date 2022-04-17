@@ -17,7 +17,7 @@
 <script src="/static/js/buttons.js"></script>
 <script src="/static/js/socket.js"></script>
 <script src="/static/js/notifications.js"></script>
-<!--<script src="/static/js/chat.js"></script>-->
+<script src="/static/js/chat.js"></script>
 <script src="/static/js/maplogic.js"></script>
 <!--<script src="/static/js/ac.js"></script>-->
 
@@ -115,26 +115,26 @@
       <!--                     CHAT  AREA                  -->
         <div title="chat-room-area" class="flex flex-col w-[25%] panel">
             <div title="chat-room-tabs">
-                   <div title="tabs" class="flex flex-row justify-around">
-                       <button class="my-2 tab_button active" type="button">
-                           [Public]
+                   <div id="tabs" title="tabs" class="flex flex-row justify-around">
+                       <button title="0" class="my-2 tab_button _active" type="button">
+                           Public
                        </button>
-                       <button class="my-2 tab_button inactive" type="button">
-                           [A user]
-                       </button>
+<!--                       <button class="my-2 tab_button _inactive" type="button">-->
+<!--                           A user-->
+<!--                       </button>-->
   <!--                       for each tab-->
   <!--                            display a tab :)-->
                    </div>
                     <div title="active tab" class="w-[94%] mx-4">
                     </div>
             </div>
-            <div title="chat" class="mx-4 bg-[#202329] rounded h-[80%]">
+            <div id="chat_room_messages" title="chat" class="flex flex-col text-left mx-4 bg-[#202329] rounded h-[80%]">
 <!--                For each message
                         <p> or whatever
 -->
             </div>
             <div title="input-area" class="mx-4 mt-2 rounded bg-white h-[10%] flex">
-                <textarea placeholder="Send a message" class="break-words text-black text-center m-auto rounded w-[100%] h-[100%]"></textarea>
+                <input id="chat_input_area" name="chat_input_area" placeholder="Send a message" class="break-words text-black text-center m-auto rounded w-[100%] h-[100%]">
             </div>
         </div>
     </div>
