@@ -393,15 +393,16 @@ def check_ping(*args):
     send_path_to_party(session['user'])
     # if get_party_leader(session['user']) == session['user']:
     #     party_locations[session['user']] = db['ex'].get_user_location(session['user'])
-    if session['user'] == "Admin":
-        members = db['ex'].get_all_names(remove_admin=True)
-        for member in members:
-            lat, lng = db['ex'].get_user_location(member)
-            emit_to("Admin", 'my_location', message=[member, [lat, lng]])
 
-        # user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
-
-        emit_to("Admin", event_name="user_colors", message=user_colors)
+    # if session['user'] == "Admin":
+    #     members = db['ex'].get_all_names(remove_admin=True)
+    #     for member in members:
+    #         lat, lng = db['ex'].get_user_location(member)
+    #         emit_to("Admin", 'my_location', message=[member, [lat, lng]])
+    #
+    #     # user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
+    #
+    #     emit_to("Admin", event_name="user_colors", message=user_colors)
 
     # notif_amount = db['ex'].get_notifs(session['user'])
     # emit_to(session['user'], event_name="notifications",
@@ -620,8 +621,6 @@ def create_chat(*, name, members=None, chat_type="party"):
     smallest_free_chat_id = str(smallest_free(list(chatrooms.keys())))
     if members:
         parties[members[0]]["chat_id"] = smallest_free_chat_id
-    if session['user'] in [name] + members:
-        session['visible_chats'].append((name, smallest_free_chat_id))
     chatrooms[smallest_free_chat_id] = {"name": name, "members": members, "history": [], "type": chat_type}
     return smallest_free_chat_id
 
@@ -631,7 +630,6 @@ def logged_on_users():
     # request.sid
     if 'user' not in session:
         return redirect(url_for("login"))
-    session['visible_chats'] = [0]
     # reconnecting = session['user'] in connected_members
     chatrooms["0"]["members"].append(session['user'])
     chatrooms["0"]["members"] = list(set(chatrooms["0"]["members"]))
