@@ -4,8 +4,9 @@ $(document).ready(function(){
 
 function openChatTab(target_tab) {
   var i, tab_links;
-  var tab_element = document.getElementById('tabs')
-  var tablinks = Array.from(tab_element.querySelectorAll(".tab_button"));
+  var tab_element = document.getElementById('tabs');
+  var tab_links = Array.from(tab_element.querySelectorAll(".tab_button"));
+//  console.log(tab_links, tab_element);
   for (i = 0; i < tab_links.length; i++) {
     tab_links[i].className = tab_links[i].className.replace("_active", "_inactive");
   }
@@ -35,6 +36,13 @@ socket.on('create_chat', function(data){
         var tabs = document.getElementById('tabs');
         tabs.innerHTML += `<button class="my-2 tab_button _inactive" title="${data['id']}" type="button">${data["name"]}</button>`
     }
+    var tab_element = document.getElementById('tabs')
+    var tablinks = Array.from(tab_element.querySelectorAll(".tab_button"));
+    tablinks.forEach(function(item){
+        item.addEventListener('click', function(event, a){
+            openChatTab(item);
+        }, false);
+    });
 });
 
 socket.on('message', function(data){

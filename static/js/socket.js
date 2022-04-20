@@ -1,6 +1,6 @@
 var online_users = [];
 var current_time;
-var current_users_online = 0;
+var online_users_num = 0;
 
 var party_users = [];
 var friends = {
@@ -20,20 +20,21 @@ var leader_of_party = false;
 $(document).ready(function(){
 
     function update_party_members(data){
-       var a = document.getElementById("members_panel")
-       if (data.length == 0 || !in_party){
+       var a = document.getElementById("party-members")
+       if (data.length == 0){
             return;
        }
+       in_party = true;
        console.log(data);
-       a.innerHTML = party_text;
-       a.innerHTML += `<span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br>`;
+       a.innerHTML = "";
+       a.innerHTML += `<div class="hover:bg-gray-light rounded"><span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br></div>`;
        leader_of_party = data[0] == user;
        if(leader_of_party){
         $("#start_origin").visibility = 'visible';
        }
 
        for(let i = 1; i < data.length; i++){
-           a.innerHTML += `<p class="white">${data[i]}</p>`
+           a.innerHTML += `<div class="hover:bg-gray-light rounded"><p class="white">${data[i]}</p></div>`
        }
       a.style.visibility = 'visible';
     }
@@ -71,31 +72,32 @@ $(document).ready(function(){
             for(let i = 0; i < online_users.length; i++){
                 document.getElementById("users_admin_list").innerHTML += `<a>${online_users[i]}</a><b>`;
             }
+        } else {
+            autocomplete(document.getElementById("invite_user_input"))
         }
 //        autocomplete(document.getElementById("invite_user_input"), online_users);
     });
 
 
-
-    function add_listener_chat(element){
-        element.onclick = function(event){
-            chat_room_name = element.id.split("_")[0];
-            document.getElementById("chatroom-name").innerHTML = chat_room_name;
-            chatroom_element = document.getElementById("chat_room_messages");
-            chatroom_element.innerHTML = "";
-            for(let i = 0; i < chat_histories[chat_room_name].length; i++){
-                 var message = chat_histories[chat_room_name][i]["message"];
-                 var author =  chat_histories[chat_room_name][i]["author"];
-                 chatroom_element.innerHTML += `<p style="order: ${i};">${author}: {message}</p>`;
-            }
-            openChatTab(event)
-        };
-    }
-
-    var collection = document.getElementsByClassName("button-40");
-    var arr = Array.prototype.slice.call( collection, 0 );
-
-    arr.forEach(element => add_listener_chat(element));
+//    function add_listener_chat(element){
+//        element.onclick = function(event){
+//            chat_room_name = element.id.split("_")[0];
+//            document.getElementById("chatroom-name").innerHTML = chat_room_name;
+//            chatroom_element = document.getElementById("chat_room_messages");
+//            chatroom_element.innerHTML = "";
+//            for(let i = 0; i < chat_histories[chat_room_name].length; i++){
+//                 var message = chat_histories[chat_room_name][i]["message"];
+//                 var author =  chat_histories[chat_room_name][i]["author"];
+//                 chatroom_element.innerHTML += `<p style="order: ${i};">${author}: {message}</p>`;
+//            }
+//            openChatTab(event)
+//        };
+//    }
+//
+//    var collection = document.getElementsByClassName("button-40");
+//    var arr = Array.prototype.slice.call( collection, 0 );
+//
+//    arr.forEach(element => add_listener_chat(element));
 //
 //    for (let i = 0; i < collection.length; i++) {
 //      collection[i].style.backgroundColor = "red";
@@ -114,26 +116,23 @@ $(document).ready(function(){
     //update online user count
     socket.on('user_diff', function(msg) {
 //        alert("User diff")
-        if (typeof(msg.amount) != "undefined"){
-            current_users_online = msg.amount;
+//        console.log(msg);
+        if (typeof(msg.length) != "undefined"){
+            online_users_num = msg.length;
         } else {
-            console.log(current_users_online);
+            console.log(online_users_num);
         }
-        online_users = msg.names;
-//        if (typeof(current_users_online) != "undefined"){
-        $('#users_online').html(`${current_users_online} User(s) Online`);
-//        }
-//        else{
-//        $('#users_online').html("You are logged in on another device.");
-//        }
+        online_users = msg;
+        $('#users_online').html(`${online_users_num} User(s) Online`);
+        autocomplete(document.getElementById("invite_user_input"))
 
         // autofill
-        $(function() {
-            $("#user_to_invite").autocomplete({
-                source: online_users,
-                delay: 100,
-            });
-        });
+//        $(function() {
+//            $("#user_to_invite").autocomplete({
+//                source: online_users,
+//                delay: 100,
+//            });
+//        });
 
     });
 
@@ -192,7 +191,7 @@ $(document).ready(function(){
     $("#confirm_invite").on("click", function() {
         var invite_user_input = document.getElementById("invite_user_input")
         socket.emit('invite_user', invite_user_input.value);
-        console.log(invite_user_input.value);
+//        console.log(invite_user_input.value);
         $("#invite_user_popup").fadeOut()
         $("#invite_user").prop("disabled", false);
     });

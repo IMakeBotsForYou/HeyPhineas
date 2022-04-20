@@ -101,7 +101,8 @@ class Database:
         s = f"SELECT {column} FROM {table}"
         if condition: s += f" WHERE {condition}"
         if limit: s += f" LIMIT {limit}"
-        return [x[0] if first else x for x in self.execute(s)]
+        a = self.execute(s)
+        return [x[0] if first else x for x in a]
 
     def execute(self, line, fetch=None):
         """
@@ -238,9 +239,10 @@ class UserData(Database):
         """
         self.edit('users', 'loc', newvalue=newvalue, condition=f'username="{username}"')
 
-    def create_party(self, user):
+    def create_party(self, user, chat_id=-1):
         """
         Creates an empty party with user, deleting any previous party they had.
+        :param chat_id: Chat id
         :param user: Leader/Creator of party
         :return: None
         """
@@ -250,7 +252,7 @@ class UserData(Database):
                 self.remove_from_party(user, member)
             self.remove('parties', condition=f'creator="{user}"')
 
-        self.add('parties', reformat(user, "", "no current request"))
+        self.add('parties', reformat(user, "", "no current request", chat_id))
         self.add_to_party(user, user)
 
     def set_party_status(self, creator, newvalue):
@@ -272,28 +274,28 @@ class UserData(Database):
         else:
             return data[0]
 
-    def reset_notifs(self, user):
-        """
-        :param user: User to reset
-        :return: None
-        """
-        return self.edit("users", "notifications", newvalue=0, condition=f'username="{user}"')
-
-    def add_notif(self, user):
-        """
-        :param user: User to add notif to
-        :return: Amount of new notifications
-        """
-        num = self.get_notifs(user)
-        self.edit("users", "notifications", newvalue=num + 1, condition=f'username="{user}"')
-        return num + 1
-
-    def get_notifs(self, user):
-        """
-        :param user: User to fetch
-        :return: amount of notifications user has
-        """
-        return int(self.get("users", "notifications", condition=f'username="{user}"')[0])
+    # def reset_notifs(self, user):
+    #     """
+    #     :param user: User to reset
+    #     :return: None
+    #     """
+    #     return self.edit("users", "notifications", newvalue=0, condition=f'username="{user}"')
+    #
+    # def add_notif(self, user):
+    #     """
+    #     :param user: User to add notif to
+    #     :return: Amount of new notifications
+    #     """
+    #     num = self.get_notifs(user)
+    #     self.edit("users", "notifications", newvalue=num + 1, condition=f'username="{user}"')
+    #     return num + 1
+    #
+    # def get_notifs(self, user):
+    #     """
+    #     :param user: User to fetch
+    #     :return: amount of notifications user has
+    #     """
+    #     return int(self.get("users", "notifications", condition=f'username="{user}"', first=True)[0])
 
     def add_to_party(self, owner, user_to_add):
         """
@@ -464,7 +466,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+    # print(my_db.get("users", "notifications", condition=f'username="Dvir"'))
     # names = ["Mike", "Manor", "Liza", "Maya", "Yakov"]
     # import random
     # for name in names:

@@ -1,9 +1,10 @@
-function autocomplete(inp, arr) {
+function autocomplete(inp) {
+  var arr = online_users;
   /*the autocomplete function takes two arguments,
   the text field element and an array of possible autocompleted values:*/
   var currentFocus;
   /*execute a function when someone writes in the text field:*/
-  inp.addEventListener("input", function(e) {
+  inp.addEventListener("input", function input_event(e) {
       var a, b, i, val = this.value;
       /*close any already open lists of autocompleted values*/
       closeAllLists();
@@ -21,7 +22,7 @@ function autocomplete(inp, arr) {
         if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
                   /*create a DIV element for each matching element:*/
           b = document.createElement("DIV");
-          b.style.color = "black";
+          b.setAttribute("class", "text-white autocomplete-items-div my-2 hover:bg-gray-light rounded-full");
           /*make the matching letters bold:*/
           b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
           b.innerHTML += arr[i].substr(val.length);
@@ -95,3 +96,7 @@ document.addEventListener("click", function (e) {
     closeAllLists(e.target);
 });
 }
+$(document).ready(function(){
+    autocomplete(document.getElementById("invite_user_input"));
+});
+

@@ -391,9 +391,7 @@ function calculateAndDisplayRoute(
         socket.emit('get_coords_of_party')
   }
   var origin = user_locations[user].location;
-//  if(destination == null){
-//    destination = deshalit;
-//  }
+
   if (first && destination != null){
       directionsService
         .route({
@@ -423,7 +421,7 @@ function calculateAndDisplayRoute(
           }
 //          document.getElementById("warnings-panel").innerHTML =
 //          "<b>" + directionsData.warnings + "</b>";
-
+　
           directionsRenderer.setDirections(result);
 
 

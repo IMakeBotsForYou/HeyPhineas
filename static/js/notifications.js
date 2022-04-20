@@ -24,7 +24,7 @@ $(document).ready(function(){
                         <div style="margin: 0 auto; text-white">
             `
 
-            if (type == "simple_question"){
+            if (type == "question"){
                 final_string += `
                     <button type="button" class="form_button mb-[10px] bg-white text-black hover:text-white hover:bg-black transition-300" id="confirm-button_${id}" >Accept</button>
                             <script>
