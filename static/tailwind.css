@@ -735,6 +735,11 @@ Ensure the default browser behavior of the `hidden` attribute.
   margin-right: 1rem;
 }
 
+.mx-2{
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+}
+
 .mb-\[10px\]{
   margin-bottom: 10px;
 }
@@ -859,12 +864,12 @@ Ensure the default browser behavior of the `hidden` attribute.
   overflow-wrap: break-word;
 }
 
-.rounded{
-  border-radius: 0.25rem;
-}
-
 .rounded-full{
   border-radius: 9999px;
+}
+
+.rounded{
+  border-radius: 0.25rem;
 }
 
 .border{
@@ -956,11 +961,6 @@ Ensure the default browser behavior of the `hidden` attribute.
   transition-duration: 150ms;
 }
 
-.hover\:bg-gray-light:hover{
-  --tw-bg-opacity: 1;
-  background-color: rgb(119 119 119 / var(--tw-bg-opacity));
-}
-
 .hover\:bg-\[\#555\]:hover{
   --tw-bg-opacity: 1;
   background-color: rgb(85 85 85 / var(--tw-bg-opacity));
@@ -969,4 +969,9 @@ Ensure the default browser behavior of the `hidden` attribute.
 .hover\:bg-\[\#21f27c\]:hover{
   --tw-bg-opacity: 1;
   background-color: rgb(33 242 124 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-gray-light:hover{
+  --tw-bg-opacity: 1;
+  background-color: rgb(119 119 119 / var(--tw-bg-opacity));
 }

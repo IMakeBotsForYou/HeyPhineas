@@ -146,11 +146,16 @@ function initMap() {
             }
 
             function move_towards_next_point() {
+            try{
                 var current_pos = user_locations[user].marker.getPosition().toJSON();
                 var my_lat = current_pos.lat;
                 var my_long = current_pos.lng;
-                var next_point = current_directions[step_index];
 
+                var next_point = current_directions[step_index];
+                } catch(e){
+                clearInterval(myInterval);
+                    return;
+                }
                 if(next_point == undefined || next_point == null){
                     clearInterval(myInterval);
                     return;

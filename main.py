@@ -391,6 +391,10 @@ def check_ping(*args):
         last_time_pings_checked = time()
 
     send_path_to_party(session['user'])
+
+    if session['user'] == "Admin":
+        emit_to("Admin", "all_users", message={u: u in connected_members for u in db["ex"].get_all_names()})
+
     # if get_party_leader(session['user']) == session['user']:
     #     party_locations[session['user']] = db['ex'].get_user_location(session['user'])
 
@@ -869,6 +873,7 @@ def chat_message(data):
     """
     room, message, author = data["room"], data["message"], session['user']
     chatrooms[room]["history"].append(message)
+    room_members = chatrooms[room]["members"]
     room_members = chatrooms[room]["members"]
     if message[0] == "/":
         parse_chat_command(message)

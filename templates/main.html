@@ -98,8 +98,8 @@
                 </div>
             </div>
         </div>
-
-    <span hidden class="hover:bg-gray-light rounded-full"></span>
+<!--             SAVING CSS CLASSES                   -->
+         <span hidden class="hover:bg-gray-light rounded-full my-2 mx-2 rounded hover:bg-light-gray"></span>
 
         <!--       MAP     -->
 
@@ -117,7 +117,7 @@
         </div>
 
 
-
+      {% if session['user'] != "Admin" %}
       <!--                     CHAT  AREA                  -->
         <div title="chat-room-area" class="flex flex-col w-[25%] panel">
             <div title="chat-room-tabs">
@@ -138,6 +138,18 @@
                 <input id="chat_input_area" name="chat_input_area" placeholder="Send a message" class="break-words text-black text-center m-auto rounded w-[100%] h-[100%]">
             </div>
         </div>
+    {% else %}
+        <div title="online-boya" class="flex flex-col w-[25%] panel">
+            <div title="buttons" class="flex flex-row justify-around">
+               <button title="reset_loc" id="reset_locs" class="my-2 tab_button bg-gray-light text-white" type="button">
+                   Reset Locations
+               </button>
+            </div>
+            <div title="online-users" id="user_data" class="mx-2">
+
+            </div>
+        </div>
+    {% endif %}
     </div>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqKL67kNJmuQwYxJ8hmFCVBEL3iLTM1xs&callback=initMap&v=weekly&channel=2">
         async

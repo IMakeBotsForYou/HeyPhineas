@@ -68,10 +68,10 @@ $(document).ready(function(){
     socket.on('online_members_get', function(data){
         online_users = data
         if(user == "Admin"){
-        document.getElementById("users_admin_list").innerHTML = "";
-            for(let i = 0; i < online_users.length; i++){
-                document.getElementById("users_admin_list").innerHTML += `<a>${online_users[i]}</a><b>`;
-            }
+//        document.getElementById("users_admin_list").innerHTML = "";
+//            for(let i = 0; i < online_users.length; i++){
+//                document.getElementById("users_admin_list").innerHTML += `<a>${online_users[i]}</a><b>`;
+//            }
         } else {
             autocomplete(document.getElementById("invite_user_input"))
         }
@@ -136,6 +136,16 @@ $(document).ready(function(){
 
     });
 
+    socket.on('all_users', function(data){
+        var d = document.getElementById('user_data');
+        d.innerHTML = "Online users<br>";
+        Object.keys(data).forEach(function(name) {
+            var online = data[name];
+            d.innerHTML += `<p class="my-2 mx-2 rounded hover:bg-gray-light"><span style="color: ${online?'green':'red'};">${online?'+':'-'}</span> ${name}</p>`
+        });
+
+
+    });
     socket.on('update_party_members', function(data){
        update_party_members(data);
     });
@@ -205,6 +215,10 @@ $(document).ready(function(){
         $("#add_loc_button").fadeOut();
         $("#invite_user").prop("disabled", false);
     });
+    $('#reset_locs').on("click", function() {
+        socket.emit('reset_locations');
+    });
+
 
 
 
