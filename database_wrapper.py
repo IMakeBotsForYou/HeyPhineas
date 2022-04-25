@@ -131,11 +131,10 @@ class Database:
             return ret
 
     def fix_seq(self):
-        # columns = ["users"]
-        # for na in columns:
-        #     a = self.get(na, "id")
-        #     self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
-        pass
+        columns = ["users", "messages"]
+        for na in columns:
+            a = self.get(na, "id")
+            self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
     def add(self, table, values):
         """

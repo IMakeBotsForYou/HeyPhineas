@@ -63,7 +63,7 @@ class Place:
     def to_json(self):
         return {
             'id': self.id,
-            'location': self.location,
+            'location': list(self.location),
             'name': self.name,
             'icon': self.icon,
             'close_to': self.vicinity,
@@ -148,7 +148,7 @@ class query:
                 print(e)
 
 
-def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", limit=-1):
+def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="restaurant", limit=-1):
     lat, lng = loc
     # if page_token:
     #     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?" \
@@ -162,22 +162,22 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="park", lim
     #           f"&type={place_type}" \
     #           f"&key={APIKEY}" \
     #           f"&language=en"
+
     reverse_geocoded_data = json.loads(get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={apikey}").text)
     reverse_geocoded_city = reverse_geocoded_data["results"][0]["address_components"][2]["long_name"]
 
-    req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry"]
-    req_comp = [f"query={place_type}_in_{reverse_geocoded_city}", f"fields={','.join(req_fields)}", f"key={apikey}", f"locationbias=circle:{radius}@{lat},{lng}"]
-    req_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{'&'.join(req_comp)}"
+    req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry", "place_id"]
+    req_comp = [f"input={place_type} in {reverse_geocoded_city}", "inputtype=textquery", f"fields={','.join(req_fields)}", f"key={apikey}", f"locationbias=circle:{radius}@{lat},{lng}"]
+    req_url = f"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?{'&'.join(req_comp)}"
     print(req_url)
     req_res = get(req_url)
     json_res = json.loads(req_res.text)
     final_results = []
-
-    print(reverse_geocoded_city)
-
     # print(req_url, json.dumps(json_res, indent=4))
     if limit != -1:
-        api_responds = json_res["results"][:limit]
+        api_responds = json_res["candidates"][:limit]
+    else:
+        api_responds = json_res["candidates"]
     geometry = ["location"]
     for result in api_responds:
         info = {}
@@ -244,3 +244,5 @@ def decode_polyline(polyline_str):
         coordinates.append((lat / 100000.0, lng / 100000.0))
     return coordinates
 
+if __name__ == "__main__":
+    print(find_places())

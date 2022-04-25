@@ -17,7 +17,7 @@ $(document).ready(function(){
             var type = messages[i].type;
 
             final_string += `
-            <div class="mb-[10px]">
+            <div class="mb-[10px] inbox_deletion_item" id="message-div-${id}">
                 <button type="button" class="collapsible mb-1" style="">${title}</button>
                 <div class="content white" style="display: none;">
                     <div><p id="message_content_${id}" class="break-words" style="margin: 0 0 14px 0;"><b>Message from ${sender}:</b><br>${content}</p></div>
@@ -30,6 +30,11 @@ $(document).ready(function(){
                             <script>
                             document.getElementById("confirm-button_${id}").addEventListener("click", function() {
                                socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept"});
+                               var box = document.getElementById("message-div-${id}")
+                               box.classList.toggle('hide');
+                               setTimeout(function(){
+                                   box.remove();
+                               },500);
                             });
                             </script>
                 `
@@ -42,11 +47,21 @@ $(document).ready(function(){
                         // accept suggestion made by server
                         document.getElementById("accept-suggestion-button_${id}").addEventListener("click", function() {
                            socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept_suggestion"});
+                           var box = document.getElementById("message-div-${id}")
+                           box.classList.toggle('hide');
+                           setTimeout(function(){
+                               box.remove();
+                           },500);
                         });
 //                        console.log(document.getElementById("accept-suggestion-button_${id}"));
                         // reject suggestion made by server
                         document.getElementById("reject-button_${id}").addEventListener("click", function() {
-                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "reject_suggestion"});
+                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "mark_as_read"});
+                           var box = document.getElementById("message-div-${id}")
+                           box.classList.toggle('hide');
+                           setTimeout(function(){
+                               box.remove();
+                           },500);
                         });
                         </script>
             `
@@ -56,6 +71,11 @@ $(document).ready(function(){
                     <script>
                         document.getElementById("close-button_${id}").addEventListener("click", function() {
                            socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "ignore"});
+                           var box = document.getElementById("message-div-${id}")
+                           box.classList.toggle('hide');
+                           setTimeout(function(){
+                               box.remove();
+                           },500);
                         });
                     </script>
                 `

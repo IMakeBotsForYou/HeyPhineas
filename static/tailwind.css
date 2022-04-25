@@ -743,14 +743,14 @@ Ensure the default browser behavior of the `hidden` attribute.
   margin-bottom: 0.5rem;
 }
 
-.mx-4{
-  margin-left: 1rem;
-  margin-right: 1rem;
-}
-
 .mx-2{
   margin-left: 0.5rem;
   margin-right: 0.5rem;
+}
+
+.mx-4{
+  margin-left: 1rem;
+  margin-right: 1rem;
 }
 
 .mb-\[10px\]{
@@ -813,6 +813,10 @@ Ensure the default browser behavior of the `hidden` attribute.
   height: 10%;
 }
 
+.max-h-\[590px\]{
+  max-height: 590px;
+}
+
 .w-\[40\%\]{
   width: 40%;
 }
@@ -871,6 +875,10 @@ Ensure the default browser behavior of the `hidden` attribute.
 
 .overflow-x-auto{
   overflow-x: auto;
+}
+
+.overflow-y-scroll{
+  overflow-y: scroll;
 }
 
 .break-words{
@@ -982,11 +990,6 @@ Ensure the default browser behavior of the `hidden` attribute.
 .hover\:bg-\[\#21f27c\]:hover{
   --tw-bg-opacity: 1;
   background-color: rgb(33 242 124 / var(--tw-bg-opacity));
-}
-
-.hover\:bg-gray-light:hover{
-  --tw-bg-opacity: 1;
-  background-color: rgb(119 119 119 / var(--tw-bg-opacity));
 }
 
 .hover\:bg-gray-light:hover{
