@@ -106,6 +106,7 @@ class Database:
 
     def execute(self, line, fetch=None):
         """
+
         :param line: SQL command
         :param fetch: Number to of results to return
         :return: The results
@@ -446,9 +447,8 @@ def reset_locations():
     for name in my_db.get_all_names():
         if name == "Admin":
             continue
-        my_db.edit("users", "loc",
-                   newvalue=def_locations.get("locations", "latlng", condition=f'username="{name}"')[0],
-                   condition=f'username="{name}"')
+        new_value = def_locations.get("locations", "latlng", condition=f'username="{name}"')[0]
+        my_db.edit("users", "loc", newvalue=new_value, condition=f'username="{name}"')
 
 
 def main():

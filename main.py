@@ -9,20 +9,45 @@ import re
 from get_query_results import query
 import database_wrapper
 from database_wrapper import smallest_free
-from KNN import get_color, distance
-
+from KNN import distance, category_values, get_color
+import threading
 # import pymongo
 
 Payload.max_decode_packets = 1000
 __author__ = 'Rock'
 last_time_pings_checked = time()
+
+# all parties
 parties = {}
+
+# delete chat queue
+delete_chats = {}
+
+# currently connected members and their data
 connected_members = {}
+
+# colors of online users
+online_user_colors = {}
+
+# lmao will probably be used at some point
 points_of_interest = {}
+
+# ??? probably not used
 user_data = {}
+
+# party location suggestion voting process
 voting_status = {}
+
+# everyone's color incase they disconnect or whatev
 user_colors = {}
+
+# keep track of notifications so we can
+# notify the user properly
 user_notification_tracking = {}
+
+# party creation suggestions
+party_suggestions = {}
+
 # client = pymongo.MongoClient(
 #     "mongodb+srv://school_computer:school_computer123@cluster0.6igys.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
 #
@@ -35,7 +60,7 @@ app.config['SECRET_KEY'] = 'secret!'
 
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
-party_suggestions = {}
+
 
 
 def filter_dict(d, f):
@@ -53,19 +78,70 @@ def filter_dict(d, f):
 
 
 def parse_chat_command(command):
-    args = command.split(" ")
-    arguments = []
-    if len(args) > 1:
-        cmd, arguments = args[0], args[1:]
-    else:
-        cmd = args[0]
+    try:
+        args = command[1:].split(" ")
 
-    if cmd == "vote":
-        decision = arguments[0].tolower() in ["yes", "y"]
-        if decision:
+        if len(args) > 1:
+            cmd, arguments = args[0], args[1:]
+        else:
+            cmd, arguments = args[0], []
+
+        if cmd == "vote":
             party_owner = get_party_leader(session['user'])
             vote_status = parties[party_owner]["votes"]
-            vote_status[session["user"]] = True
+            decision = arguments[0].lower() in ["yes", "y"]
+            vote_status[session["user"]] = decision
+            votes_required = int(len(parties[party_owner]["members"])/2)+1
+            send_message_to_party(party_owner, message=f'{session["user"]} has voted {"Yes" if decision else "No"}. '
+                                                       f'({len(vote_status.keys())}/'
+                                                       f'{votes_required})')
+
+            # A majority has voted to some either go or not go
+            voted_yes = [name for name in vote_status if vote_status[name]]
+            voted_no = [name for name in vote_status if not vote_status[name]]
+
+            # Vote has resulted in rejecting the sever's suggestion
+            if votes_required == voted_no:
+                send_message_to_party(session['user'],
+                                      message=f"{votes_required} people have voted NO.")
+
+            if votes_required == voted_yes:
+                update_destination(parties[party_owner]["destination"], session['user'])
+                send_message_to_party(session['user'],
+                                      message=f"{votes_required} people have voted YES.<br>"
+                                              f"Calculating route...")
+
+        if cmd == "sug":
+            # lat, lng = get_location_request(session['user'])
+            location = {"name": "De-Shalit High-school", "lat": 31.89961596028198, "lng": 34.816320411774875}
+            emit_to_party(session['user'], event_name='location_suggestion', message=[location])
+            send_message_to_party(session['user'],
+                                  message=f"How about < {location['name']} > ?  Vote now! (/vote y) ")
+
+        if cmd == "leave_group":
+            disconnect_user_from_party(session['user'])
+
+        if cmd == "disband":
+            if session['user'] == get_party_leader(session['user']):
+                chat_id = get_party_chat_id(session['user'])
+                # First disconnect everyone else
+                emit_to_party(session['user'], event_name="update_party_members", namespace="/comms", message=[])
+                # Get party members
+                users_without_admin = get_party_members(session['user'])
+                # Remove admin
+                users_without_admin.remove(session['user'])
+                # Disconnect everyone else
+                [disconnect_user_from_party(u) for u in users_without_admin]
+                # Then disconnect you
+                disconnect_user_from_party(session['user'])
+                # Not a trace ....
+                del parties[session['user']]
+                del chatrooms[chat_id]
+
+    except Exception as e:
+        return "Error", e
+    else:
+        return "Success"
 
 
 def emit_to_everyone(**kwargs):
@@ -73,8 +149,8 @@ def emit_to_everyone(**kwargs):
 
 
 def emit_to_party(member, **kwargs):
-    owner = get_party_leader(member)
-    members = get_party_members(owner)
+    members = get_party_members(member)
+    print(members, f"{kwargs}")
     [emit_to(user=m, **kwargs) for m in members]
 
 
@@ -94,31 +170,93 @@ def get_party_members(username):
 def create_party(user, members=None):
     if members is None:
         members = []
-    parties[user] = {"status": "Not Decided", "destination": None, "locations": {}, "votes": {}, "chat_id": None, "members": [user]}
+    members = [user]+members
+    parties[user] = {"status": "Not Decided", "destination": None, "locations": {}, "votes": {}, "chat_id": None,
+                     "members": members, "lock": threading.Lock()}
     voting_status[get_party_leader(user)] = {}
     for m in members:
         voting_status[get_party_leader(user)][m] = False
         # db['ex'].add_to_party(owner=user, user_to_add=m)
-    chat_id = create_chat(name="Party", members=[user] + members)
-    [chatrooms[chat_id]["members"].append(m) for m in members]
+    chat_id = create_chat(name="Party", members=members)
+
+    for m in members:
+        chatrooms[chat_id]["members"][m] = False
+
     # db['ex'].create_party(user, chat_id=chat_id)
-    print(f"created party for {user} {members}")
+    print(f"created party for {members}")
+    return chat_id
 
 
 def join_party(owner, username):
     parties[owner]["members"].append(username)
+    party_coords(owner, False)
+    chatrooms[parties[owner]["chat_id"]]["members"][username] = False
     # db['ex'].add_to_party(owner=owner, user_to_add=username)
 
 
-def disconnect_user_from_party(user):
-    # first we update the local data
+def disconnect_user_from_party(user, chat_is_disbanded=False):
+    # Get current leader
     current_leader = get_party_leader(user)
+    # Get party members
+    all_members = get_party_members(current_leader)
     print('disconnecting', user, 'from', current_leader)
-    db['ex'].remove_from_party(owner=current_leader, user_to_remove=user)
-    members = get_party_members(current_leader)
-    # [emit_to(user=usr, event_name="update_party_members", namespace="/comms", message=members)
-    #  for usr in members]
-    emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
+
+    # Send message to party, announcing the user that left
+    send_message_to_party(current_leader, f"{user} left!")
+
+    # If user leaving is the leader
+    if current_leader == user:
+        if len(all_members) == 1:
+            # Disband party, kick last user
+            chat_is_disbanded = True
+        else:
+            print("Not disbanded")
+            # Remove user from members
+            all_members.remove(user)
+            # Pick new leader
+            new_leader = all_members[0]
+            # Copy over the party data to entry
+            # On new leader's name
+            parties[new_leader] = parties[user].copy()
+            # Remove the user from the new party
+            parties[new_leader].remove(user)
+            print(parties[new_leader])
+            # Send update message to party about the new leader
+            send_message_to_party(new_leader, f"{new_leader} is now the party leader")
+            # Change current_leader to the new leader
+            current_leader = new_leader
+            emit_to(user, event_name="update_party_members", namespace="/comms", message=[])
+
+    # If the chat is disbanded
+    if chat_is_disbanded:
+        # Update leader's party members to an empty array
+        emit_to(current_leader, event_name="update_party_members", namespace="/comms", message=[])
+
+        # Add chat_id to delete queue
+        if user not in delete_chats:
+            delete_chats[user] = [get_party_chat_id(current_leader)]
+        else:
+            delete_chats[user].append(get_party_chat_id(current_leader))
+
+        # delete chatroom
+        del chatrooms[get_party_chat_id(current_leader)]
+        # delete party entry
+        del parties[current_leader]
+    else:
+        # Not disbanded, keep the chatroom and party entry
+        # Add chat_id to delete chat queue
+        if user not in delete_chats:
+            delete_chats[user] = [get_party_chat_id(current_leader)]
+        else:
+            delete_chats[user].append(get_party_chat_id(current_leader))
+
+        # Remove user from party members
+        parties[current_leader]["members"].remove(user)
+        # Send to remaining party to update member list
+        members = get_party_members(current_leader)
+        emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
+        # Send path to delete the old one from the now-gone user
+        send_path_to_party(current_leader)
 
 
 @app.route("/login", methods=["POST", "GET"])
@@ -175,32 +313,38 @@ def parse_action(command):
     if command_name == "join_party":
         party_owner = args[1]
         if len(get_party_members(party_owner)) == 0:
-            create_party(party_owner)
-        join_party(party_owner, session['user'])
+            create_party(party_owner, members=[session['user']])
+        else:
+            join_party(party_owner, session['user'])
+
         # [emit_to(user=party_member, event_name="party_members_list_get",
         #          message=get_party_members(party_owner))
         #  for party_member in get_party_members(party_owner)]
         emit_to_party(party_owner, event_name="party_members_list_get", message=get_party_members(party_owner))
-        print("joined party", get_party_members(session['user']))
-        chatrooms[get_party_chat_id(session['user'])]["members"].append(session['user'])
+        # print("joined party", get_party_members(session['user']))
 
     if command_name == "accept_suggestion":
         try:
-            party_leader = \
+            party_owner = \
                 [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
-            PSP = party_suggestions[party_leader]
-            PSP["accepted"] += 1
-            if PSP["accepted"] + PSP["rejected"] == len(PSP["total"]):
-                create_party(party_leader, members=PSP["total"])
+            if len(get_party_members(party_owner)) == 0:
+                create_party(party_owner, members=[session['user']])
+            else:
+                get_party_chat_id(party_owner)
+                join_party(party_owner, session['user'])
+
+            PSP = party_suggestions[party_owner]
+            PSP["accepted"].append(session['user'])
+            emit_to(party_owner, event_name='can_start_vote')
+            # if len(PSP["accepted"]) + len(PSP["rejected"]) == len(PSP["total"]):
+            #     emit_to(party_owner, event_name='can_start_vote')
         except IndexError:
             print('lol sucks for u')
 
     if command_name == "reject_suggestion":
-        party_leader = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
-        PSP = party_suggestions[party_leader]
-        PSP["rejected"] += 1
-        if PSP["accepted"] + PSP["rejected"] == len(PSP["total"]):
-            create_party(party_leader, members=PSP["total"])
+        party_owner = [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+        PSP = party_suggestions[party_owner]
+        PSP["accepted"].append(session['user'])
 
 
 @app.route("/inbox", methods=["POST", "GET"])
@@ -220,7 +364,7 @@ def inbox():
         _id, title, content, sender, receiver, msg_type, action = \
             db['ex'].get('messages', '*', f'id={message_id}', first=False)[0]
         print(f"{reaction}: {title} | {msg_type}")
-        if reaction != "mark_as_read":
+        if reaction != "ignore":
             parse_action(action)
 
         db['ex'].remove("messages", f'id={message_id}')
@@ -297,29 +441,32 @@ def broadcast_userdiff():
     # update friends data
     fr = db["ex"].get_friends(session["user"])
 
-    visisble_uses = [x for x in connected_members if x != "Admin"]
+    visible_users = [x for x in connected_members if x != "Admin"]
 
-    session["friend_data"] = {'online': [friend for friend in fr if friend in visisble_uses],
-                              'offline': [friend for friend in fr if friend not in visisble_uses]}
+    session["friend_data"] = {'online': [friend for friend in fr if friend in visible_users],
+                              'offline': [friend for friend in fr if friend not in visible_users]}
 
     emit_to(session["user"], 'friend_data', message=session["friend_data"])
     # [emit_to(us, 'user_diff',
     #          message=visisble_uses) for us in
     #  connected_members]
-    emit_to_everyone(event_name='user_diff', message=visisble_uses)
+    emit_to_everyone(event_name='user_diff', message=visible_users)
+    emit_to("Admin", "all_users", message={u: u in connected_members for u in db["ex"].get_all_names()})
     print("Data:")
-    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visisble_uses]))
+    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visible_users]))
     print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
+
+
+def update_destination(data, user):
+    leader = get_party_leader(user)
+    parties[leader]["destination"] = data
+    parties[leader]["status"] = "Has Destination"
+    emit_to_party(session['user'], event_name='update_destination', message=data)
 
 
 @socketio.on('request_destination_update', namespace='/comms')
 def destination_update_request(data):
-    parties[get_party_leader(session['user'])]["destination"] = data
-    parties[get_party_leader(session['user'])]["status"] = "Has Destination"
-    # [emit_to(user=party_m, event_name='update_destination',
-    #          message=data)
-    #  for party_m in get_party_members(session['user']) if party_m in connected_members]
-    emit_to_party(session['user'], event_name='update_destination', message=data)
+    update_destination(data, session['user'])
 
 
 @socketio.on('place_form_data', namespace='/comms')
@@ -384,7 +531,6 @@ def check_ping(*args):
     # # # # #
     if time() - last_time_pings_checked > 2:
         for username in connected_members.copy():
-            print(username, connected_members[username]["sid"])
             if int(time()) - connected_members[username]["last ping"] > 2:
                 del connected_members[username]
                 broadcast_userdiff()
@@ -393,20 +539,17 @@ def check_ping(*args):
     send_path_to_party(session['user'])
 
     if session['user'] == "Admin":
-        emit_to("Admin", "all_users", message={u: u in connected_members for u in db["ex"].get_all_names()})
+        members = connected_members
+        for member in members:
+            if member == "Admin":
+                continue
 
-    # if get_party_leader(session['user']) == session['user']:
-    #     party_locations[session['user']] = db['ex'].get_user_location(session['user'])
+            lat, lng = db['ex'].get_user_location(member)
+            emit_to("Admin", 'my_location', message=[member, [lat, lng]])
 
-    # if session['user'] == "Admin":
-    #     members = db['ex'].get_all_names(remove_admin=True)
-    #     for member in members:
-    #         lat, lng = db['ex'].get_user_location(member)
-    #         emit_to("Admin", 'my_location', message=[member, [lat, lng]])
-    #
-    #     # user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
-    #
-    #     emit_to("Admin", event_name="user_colors", message=user_colors)
+        online_user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
+        if online_user_colors:
+            emit_to("Admin", event_name="user_colors", message=online_user_colors)
 
     # notif_amount = db['ex'].get_notifs(session['user'])
     # emit_to(session['user'], event_name="notifications",
@@ -422,11 +565,23 @@ def check_ping(*args):
         if message_amount != user_notification_tracking[session['user']]:
             emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
             user_notification_tracking[session['user']] = message_amount
-        elif message_amount == 0:
-            emit_to(session['user'], event_name="inbox_update", message=[message_amount, messages])
 
-    # CREATE CHATS
-    [emit_to(session['user'], "create_chat", message=room) for room in get_all_user_chats(session['user'])]
+    if session['user'] != "Admin":
+
+        # CREATE CHATS that have not yet been confirmed by the client
+        # run over all chats user should have, and check if they've been
+        # confirmed.
+        [emit_to(session['user'], "create_chat", message=room)
+         for room
+         in get_all_user_chats(session['user'])
+         if not chatrooms[room["id"]]["members"][session['user']]]
+
+        # DELETE CHATS that need to be deleted, them remove them from
+        # the deletion queue. repeats until confirmed by user.
+        if session['user'] in delete_chats:
+            [emit_to(session['user'], event_name="del_chat", message=chat_id)
+             for chat_id
+             in delete_chats[session['user']]]
 
 
 def weight_values(name, value):
@@ -474,12 +629,20 @@ def location_recommendation_request():
     # [emit_to(member, 'suggestions', message=place_locations) for member in get_party_members(session["user"])]
 
 
+def send_message_to_party(member, message, author="(System)"):
+    chat_id = get_party_chat_id(member)
+    emit_to_party(member, event_name="message",
+                  message={"id": chat_id, "message": message, "author": author})
+
+
 def send_path_to_party(user_to_track):
     party_members = get_party_members(user_to_track)
     party_leader = get_party_leader(user_to_track)
     if len(party_members) == 0:
         return
     paths = []
+    if parties[party_leader]["status"] == "Reached Destination":
+        return
     done = True
     for member in party_members:
         if member != user_to_track and member in connected_members:
@@ -487,8 +650,9 @@ def send_path_to_party(user_to_track):
                 path, index = connected_members[member]['current_path']
                 paths.append((member, [connected_members[member]['loc']] + path[index:]))
                 destination = path[-1]
-                meters = 1  # ten metres
+                meters = 5
                 min_distance = meters * 0.0000089  # convert to lng/lat scale
+                print(min_distance, distance(destination, path[index]))
                 if distance(destination, path[index]) > min_distance:
                     done = False
                 print(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
@@ -499,12 +663,14 @@ def send_path_to_party(user_to_track):
 
     # all the paths are dones
     if done and len(party_members) > 1 and parties[party_leader]["status"] != "Reached Destination":
-        print("DONE", session['user'])
         parties[party_leader]["status"] = "Reached Destination"
-        db['ex'].send_message(title=f"Party Reached Destination",
-                              desc=f"{party_leader}'s party has reached their destination.",
-                              sender="[System]", receiver="Admin", messagetype="ignore",
-                              action=None)
+        # online party members in order
+        list_of_priorities = [x for x in party_members if x in connected_members]
+        if session['user'] == list_of_priorities[0]:
+            db['ex'].send_message(title=f"Party Reached Destination",
+                                  desc=f"{party_leader}'s party has reached their destination.",
+                                  sender="[System]", receiver="Admin", messagetype="ignore",
+                                  action=None)
 
 
 @socketio.on('send_current_path', namespace='/comms')
@@ -518,19 +684,22 @@ def return_path(data):
 
 @socketio.on('send_dest', namespace='/comms')
 def return_path(data):
-    # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
-    parties[get_party_leader(session['user'])]["location"][session['user']] = data
+    # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    parties[get_party_leader(session['user'])]["location"] = data
     # send_path_to_party(user_to_track=session['user'])
     # print(json.dumps(connected_members[session['user']]))
 
 
 def try_reset_first(user):
-    route, lng = connected_members[user]['current_path']
-    if route is None:
-        emit_to(user, 'reset_first')
-        return
-    if lng >= len(route):
-        emit_to(user, 'reset_first')
+    try:
+        route, lng = connected_members[user]['current_path']
+        if route is None:
+            emit_to(user, 'reset_first')
+            return
+        if lng >= len(route):
+            emit_to(user, 'reset_first')
+    except KeyError:
+        pass
 
 
 @socketio.on('step', namespace='/comms')
@@ -565,7 +734,7 @@ def party_coords(username, request_directions=False):
     data = [request_directions, data]
     # [emit_to(member, event_name='party_member_coords', namespace= '/comms',
     #          message=data) for member in members if member in connected_members]
-    emit_to("Admin",        event_name='party_member_coords', namespace='/comms', message=data)
+    emit_to("Admin", event_name='party_member_coords', namespace='/comms', message=data)
     emit_to_party(username, event_name='party_member_coords', namespace='/comms', message=data)
 
 
@@ -597,11 +766,11 @@ def get_coords_of_party():
         party_coords(leader, True)
 
 
-chatrooms = {"0": {"name": "Global", "history": [], "members": [], "type": "global"}}
+chatrooms = {"0": {"name": "Global", "history": [], "members": {}, "type": "global"}}
 
 
 def get_all_user_chats(target):
-    return [{"id": room, **chatrooms[room]} for room in chatrooms if target in chatrooms[room]["members"]]
+    return [{"id": room, **chatrooms[room]} for room in chatrooms if target in list(chatrooms[room]["members"].keys())]
 
 
 @socketio.on('inbox_notification_react', namespace='/comms')
@@ -614,7 +783,6 @@ def notification_parse(data):
     print(f"{reaction}: {title} | {msg_type}")
     if reaction != "mark_as_read":
         parse_action(action)
-
         db['ex'].remove("messages", f'id={message_id}')
     session['inbox_messages'] = get_messages(session['user'])
 
@@ -625,8 +793,21 @@ def create_chat(*, name, members=None, chat_type="party"):
     smallest_free_chat_id = str(smallest_free(list(chatrooms.keys())))
     if members:
         parties[members[0]]["chat_id"] = smallest_free_chat_id
-    chatrooms[smallest_free_chat_id] = {"name": name, "members": members, "history": [], "type": chat_type}
+    chatrooms[smallest_free_chat_id] = {"name": name, "members": {m: False for m in members}, "history": [], "type": chat_type}
     return smallest_free_chat_id
+
+
+@socketio.on('confirm_chat', namespace='/comms')
+def confirm_chat(chat_id):
+    chatrooms[chat_id]["members"][session['user']] = True
+
+
+@socketio.on('confirm_del_chat', namespace='/comms')
+def confirm_delete_chat(chat_id):
+    try:
+        delete_chats[session['user']].remove(chat_id)
+    except KeyError:
+        pass
 
 
 @socketio.on('connect', namespace='/comms')
@@ -635,8 +816,10 @@ def logged_on_users():
     if 'user' not in session:
         return redirect(url_for("login"))
     # reconnecting = session['user'] in connected_members
-    chatrooms["0"]["members"].append(session['user'])
-    chatrooms["0"]["members"] = list(set(chatrooms["0"]["members"]))
+    chatrooms["0"]["members"][session['user']] = False
+    for chat_id in get_all_user_chats(session['user']):
+        chatrooms[chat_id["id"]]["members"][session['user']] = False
+
     connected_members[session['user']] = {
         "last ping": int(time()),
         "remote addr": request.remote_addr,
@@ -659,31 +842,43 @@ def logged_on_users():
 
     user_notification_tracking[session['user']] = 0
 
+    if session['user'] != "Admin":
+        [emit_to(session['user'], "create_chat", message=room) for room in get_all_user_chats(session['user'])]
+        emit_to(session['user'], "message",
+                message={"id": "0", "message": "Welcome!", "author": "(System)"})
+    else:
+        members = db['ex'].get_all_names(remove_admin=True)
+        for member in members:
+            lat, lng = db['ex'].get_user_location(member)
+            emit_to("Admin", 'my_location', message=[member, [lat, lng]])
+
+    # Get all users that are online,
+    # not in a group, and have not
+    # received a suggestion from the server
+    # (have an active suggestion)
     def group_suggestion_filter(u):
+        # Check if user is in a suggestion list
         for leader in party_suggestions:
             if u in party_suggestions[leader]["total"]:
                 return False
-        if get_party_leader(u) is None:
+        # If user has a party return false
+        if get_party_leader(u):
             return False
+        # Return true, user fits qualifications
         return True
 
-    # actually_users = [x for x in connected_members if x != "Admin"]
-    # not_in_group_or_suggestion = list(filter(group_suggestion_filter, actually_users))
-    not_in_group_or_suggestion = []
-    if len(not_in_group_or_suggestion) > 1:
-        clusters = knn.find_optimal_clusters(draw_graphs=False, reps=20, only_these_values=filter_dict(db["knn"].values,
-                                                                                                       lambda
-                                                                                                           x: x in connected_members),
-                                             get_error=False)
-        for centroid in clusters:
-            suggest_party([x[0] for x in clusters[centroid]])
-            for person in clusters[centroid]:
-                user_colors[person[0]] = get_color(person, clusters)
-        # print("USER COLOURS = ", user_colors)
-        emit_to("Admin", event_name="user_colors", message=user_colors)
-
-    emit_to(session['user'], "message",
-            message={"id": "0", "message": "Welcome!", "author": "(System)"})
+    dont_have_suggestions = filter_dict(d=connected_members, f=group_suggestion_filter)
+    if len(dont_have_suggestions) > 1:
+        suggestion_groups = knn.find_optimal_clusters(
+            only_these_values=filter_dict(db["knn"].values, lambda x: x in dont_have_suggestions),
+            verbose=False
+        )
+        for center in suggestion_groups:
+            names = [person[0] for person in suggestion_groups[center]]
+            for name in names:
+                user_colors[name] = get_color(name, suggestion_groups)
+            suggest_party(names, knn.find_best_category(names, category_values))
+        online_user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
 
 
 @socketio.on('party_members_list_get', namespace='/comms')
@@ -698,17 +893,17 @@ def get_online_memb():
             message=[x for x in connected_members if x != "Admin"])
 
 
-@socketio.on('user_added_locations_get', namespace='/comms')
-def get_user_added_loc():
-    data = [
-        # a[0] = NAME: STR
-        # a[1] = LAT, LNG: STR
-        # a[2] = TYPE: STR
-        (a[0], [float(x) for x in a[1].split(", ")], a[2])
-        for a in db['ex'].get_user_added_locations()
-    ]
-    emit_to(user=session['user'], event_name="user_added_locations",
-            message=data)
+# @socketio.on('user_added_locations_get', namespace='/comms')
+# def get_user_added_loc():
+#     data = [
+#         # a[0] = NAME: STR
+#         # a[1] = LAT, LNG: STR
+#         # a[2] = TYPE: STR
+#         (a[0], [float(x) for x in a[1].split(", ")], a[2])
+#         for a in db['ex'].get_user_added_locations()
+#     ]
+#     emit_to(user=session['user'], event_name="user_added_locations",
+#             message=data)
 
 
 def send_user_added_locations(username):
@@ -752,7 +947,7 @@ def reset_locs():
                         message=party_data[get_party_leader(member)])
 
     except KeyError:
-        print("Error KEYERROR 594 reset locations")
+        print("Error KEYERROR 788 reset locations")
 
 
 @socketio.on('interested', namespace="/comms")
@@ -777,7 +972,7 @@ def interest(data):
 
 
 @socketio.on('disconnect', namespace='/comms')
-def logged_on_users():
+def disconnect_event():
     # broadcast_userdiff()
     pass
 
@@ -785,6 +980,8 @@ def logged_on_users():
 @socketio.on('invite_user', namespace='/comms')
 def invite_user(receiver):
     print("inviting", receiver)
+    if receiver == session['user']:
+        return
     # user has no party, this creates it.
     # print(123, get_party_members(session['user']))
     db['ex'].send_message(title=f"Party invite from {session['user']}!",
@@ -795,9 +992,9 @@ def invite_user(receiver):
     # emit_to(receiver, 'notif', namespace='/comms', message='notification!')
 
 
-def suggest_party(users):
+def suggest_party(users, place_type):
     print(f"creating party for {users}")
-    party_suggestions[users[0]] = {"total": users, "accepted": 0, "rejected": 0}
+    party_suggestions[users[0]] = {"total": users, "accepted": [], "rejected": [], "place_type": place_type}
     for u in users:
         u_list = users.copy()
         u_list.remove(u)
@@ -808,13 +1005,12 @@ def suggest_party(users):
                               desc=desc,
                               sender="Admin", receiver=u, messagetype="group_suggestion",
                               action=f"accept_suggestion/{users[0]}")
-        # db['ex'].add_notif(u)
 
         # emit_to(u, 'notif', namespace='/comms', message='notification!')
 
 
 @socketio.on('add_location', namespace='/comms')
-def invite_user(data):
+def add_location_func(data):
     name, lat, lngm, loc_type = data.split(", ")
     db['ex'].add_location(name, lat, lng, loc_type)
     [send_user_added_locations(online_user) for online_user in connected_members]
@@ -831,15 +1027,6 @@ def get_destination():
                 message=parties[get_party_leader(session['user'])]["destination"])
     except:
         pass
-
-
-@socketio.on('joined', namespace='/comms')
-def party(data):
-    if 'current party' not in session:
-        session['current party'] = 0
-    if data == "__self__":
-        print("creating party for ", session['user'])
-        create_party(session["user"])
 
 
 def get_party_leader(username):
@@ -873,18 +1060,16 @@ def chat_message(data):
     """
     room, message, author = data["room"], data["message"], session['user']
     chatrooms[room]["history"].append(message)
-    room_members = chatrooms[room]["members"]
-    room_members = chatrooms[room]["members"]
-    if message[0] == "/":
-        parse_chat_command(message)
+    room_members = list(chatrooms[room]["members"].keys())
+
     for member in room_members:
         emit_to(member, 'message', message={
             "id": room,
             "author": author,
             "message": message
         })
-    pass
-
+    if message[0] == "/":
+        parse_chat_command(message)
 
 @socketio.on('my_location', namespace='/comms')
 def my_location(data):
@@ -895,60 +1080,9 @@ def my_location(data):
     # recipients = get_party_members(session['user']) + ["Admin"]
     # [emit_to(member, event_name='my_location', message=[session['user'], [data[0], data[1]]]) for member in
     #  recipients]
-    emit_to("Admin",               event_name='my_location', message=[session['user'], [data[0], data[1]]])
+    emit_to("Admin", event_name='my_location', message=[session['user'], [data[0], data[1]]])
     emit_to_party(session['user'], event_name='my_location', message=[session['user'], [data[0], data[1]]])
     send_path_to_party(session['user'])
-
-    # emit_to("Admin", 'my_location', message=[session['user'], data[0], data[1]])
-
-
-@socketio.on('in_progress', namespace='/comms')
-def in_progress():
-    # path_coords = []
-    # myroute = data["legs"][0]
-    # for step in myroute["steps"]:
-    #     for coords in step["path"]:
-    #         path_coords.append((coords["lat"], coords["lng"]))
-
-    sessionuser = session['user']
-    leader = get_party_leader(sessionuser)
-    if db['ex'].get_party_status(leader) == "no current request":
-        db['ex'].set_party_status(leader, "in progress")
-        print('starting new request')
-
-    # # simulation
-    # for coords in path_coords:
-    #     if db['ex'].get_party_status(leader) == "halt":
-    #         print('halting')
-    #         break
-    #
-    #     lat, lng = coords
-    #     # set_user_location(leader, lat, lng)
-    #     connected_members[leader]["loc"] = (lat, lng)
-    #
-    #     data = [False, [(member, connected_members[member]["loc"]) for member in get_party_members(sessionuser)]]
-    #
-    #     [emit_to(member, 'party_member_coords', '/comms',
-    #              message=data) for member in get_party_members(session['user'])]
-    #
-    #     sleep(0.1)
-    #
-    # lat, lng = connected_members[leader]["loc"]
-    # set_user_location(leader, lat, lng)
-    # db['ex'].set_party_status(leader, "no current request")
-
-
-@socketio.on('left_party', namespace='/comms')
-def party(data):
-    if 'current party' not in session:
-        session['current party'] = 0
-    if data == "__self__":
-        leader = get_party_leader(session['user'])
-        if leader == session['user']:
-            for member in get_party_members(session['user']):
-                db['ex'].remove_from_party(session["user"], member)
-        else:
-            db['ex'].remove_from_party(leader, session["user"])
 
 
 if __name__ == '__main__':
@@ -972,8 +1106,9 @@ if __name__ == '__main__':
         #
         interests = db['ex'].get("users", "interests", condition=f'username="{user}"')[0]
         # db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
-        vls[user] = [lat, lng]
-        # vls[user] = [float(x) for x in interests.split("|")[1::2]] + [lat / 25, lng / 25]
+        # vls[user] = [lat, lng]
+        # + [lat / 25, lng / 25]
+        vls[user] = [float(x) for x in interests.split("|")[1::2]]
 
     # vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
     # vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])

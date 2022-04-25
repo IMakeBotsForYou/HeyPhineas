@@ -552,6 +552,19 @@ Ensure the default browser behavior of the `hidden` attribute.
   border-bottom-left-radius: 16px;
 }
 
+.\! form_span {
+  background-color: #363b41 !important;
+  border-radius: 3px 0px 0px 3px !important;
+  border-right: 3px solid #434a52 !important;
+  color: #606468 !important;
+  display: block !important;
+  float: left !important;
+  line-height: 50px !important;
+  text-align: center !important;
+  width: 50px !important;
+  height: 50px !important;
+}
+
 .collapsible {
   background-color: #777;
   color: white;
@@ -969,6 +982,11 @@ Ensure the default browser behavior of the `hidden` attribute.
 .hover\:bg-\[\#21f27c\]:hover{
   --tw-bg-opacity: 1;
   background-color: rgb(33 242 124 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-gray-light:hover{
+  --tw-bg-opacity: 1;
+  background-color: rgb(119 119 119 / var(--tw-bg-opacity));
 }
 
 .hover\:bg-gray-light:hover{

@@ -2,6 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 
+category_values = {
+    "sport": [5, 1, 0, 3, 2],
+    "computer": [2, 0, 5, 2, 4],
+    "restaurant": [0, 1, 2, 4, 5],
+    "park": [0, 0, 0, 5, 3],
+}
 
 def distance(a, b):
     return np.linalg.norm(np.array(a) - np.array(b))
@@ -75,20 +81,13 @@ def find_elbow(points):
     except ValueError:
         return -1
 
-#
-# def valid_distance(center, points, vec):
-#     if len(points) < 3:
-#         return True
-#     avg_dist = sum([distance(a[1], center) for a in points])
-#     print(f"{avg_dist = }, allowed = {avg_dist * 1.5} {points}")
-#     return avg_dist * 2 <= distance(vec, center)
-
 
 class KNN:
     def __init__(self, vls=None, k: int = 0):
 
         if vls is None:
             vls = {}
+
         '''
         ### The values parameter should look like this:
                 {
@@ -136,20 +135,21 @@ class KNN:
 
         return centroids
 
-    def find_optimal_clusters(self, *, reps=10, draw_graphs=False, get_error=False, only_these_values=None):
+    def find_optimal_clusters(self, *, reps=10, draw_graphs=False, get_error=False, only_these_values=None, verbose=False):
         if only_these_values is not None:
             save_values = self.values.copy()
             self.set_values(only_these_values)
             self.labels = list(self.values.keys())
-
-        print("Running on values: ", json.dumps(self.values, indent=2))
+        if verbose:
+            print("Running on values: ", json.dumps(self.values, indent=2))
         results = [self.train(draw_graphs=draw_graphs) for _ in range(reps)]
         errors = [x[1] for x in results]
         best = errors.index(min(errors))
         if draw_graphs:
             display_points(self.values, results[best][0])
         ret = results[best] if get_error else results[best][0]
-        print("ret = \n\r", "\n".join([",".join([user[0] for user in ret[c]]) for c in ret]), "\n")
+        if verbose:
+            print("ret = \n\r", "\n".join([",".join([user[0] for user in ret[c]]) for c in ret]), "\n")
 
         if only_these_values is not None:
             self.values = save_values.copy()
@@ -206,14 +206,20 @@ class KNN:
         self.values = vls
 
     def _euclidean_dist(self, target_point: np.array) -> float:
-        if self.origin in self.values:
-            return distance(np.array(self.values[self.origin]), np.array(target_point))
-        else:
-            return distance(np.array(self.origin), np.array(target_point))
+        try:
+            if self.origin in self.values:
+                return distance(np.array(self.values[self.origin]), np.array(target_point))
+            else:
+                return distance(np.array(self.origin), np.array(target_point))
+        except TypeError:
+            return distance(self.origin, np.array(target_point))
 
     def get_closest(self, n=None, weigh_values=None, only_these_values=None,
                     names_only=False, verbose=False, remove_first=True):
         """
+        :param remove_first: remove the first result (not include the person in question)
+        :param verbose: make function print things
+        :param names_only: only return names, not coordinates
         :param only_these_values: only run on certain values
         :param weigh_values: user-controlled function to weigh the
         :param n: Number of nearest neighbours to return
@@ -259,6 +265,17 @@ class KNN:
         self.k = save_k
         return final_values
 
+    def find_best_category(self, people, categories, center=None):
+        if center is None:
+            center = np.array([self.values[person] for person in people])
+            center = np.sum(center, axis=0) / center.shape[0]
+
+        self.set_origin(center)
+        distances = [(category_name, self._euclidean_dist(categories[category_name]))
+                     for category_name in categories]
+
+        return sorted(distances, key=lambda x: x[1])[0][0]
+
 
 def get_intersection(a, b):
     return list(set(a) & set(b))
@@ -292,24 +309,16 @@ if __name__ == "__main__":
         "Omer": [1.5, 4.6],
         "Manor": [0.5, 4]
     }
-
-    values2 = {
-      "Maya": [
-        31.901569357117097,
-        34.81101036152826
-      ],
-      "Fefer": [
-        31.906109038800487,
-        34.82183979194152
-      ]
-    }
+    # sport|theater|computer|park|restaurant|
 
     knn = KNN(values)
 
     knn.set_origin("Dan")
+    a = knn.find_optimal_clusters(draw_graphs=True)
+    print(a)
+    # for center in a:
+    #     print(knn.find_best_category([person[0] for person in a[center]], category_values))
 
-    result = knn.find_optimal_clusters(reps=1, only_these_values=values2)
-    print(result)
     # i = 3
     # x = [3 + 1.5 * np.cos(2 * np.pi * j / i+0.25) for j in range(i)]
     # y = [3 + 1.5 * np.sin(2 * np.pi * j / i+0.25) for j in range(i)]

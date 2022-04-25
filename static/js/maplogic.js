@@ -58,11 +58,9 @@ function initMap() {
       });
 
       socket.on('my_location', function(data){
-        var name = data[0];
-        var latlng = data[1];
-        var myLatLng = new google.maps.LatLng(latlng[0], latlng[1])
-//        console.log(name, latlng);
-//        console.log(`${name}, ${latlng}`);
+        var name = data.name;
+        var myLatLng = new google.maps.LatLng(data.lat, data.lng)
+
         if (name in user_locations){
             user_locations[name].location = myLatLng;
         } else {
@@ -106,29 +104,31 @@ function initMap() {
         }
       });
 
-      var place_markers = [];
-      socket.on('recommended_places', function(data){
-            for (let i = 0; i < place_markers.length; i++) {
-                place_markers[i].setMap(null);
+      var suggestion_markers = [];
+
+      socket.on('location_suggestion', function(data){
+            for (let i = 0; i < suggestion_markers.length; i++) {
+                suggestion_markers[i].setMap(null);
             }
-
             for(let i = 0; i < data.length; i++){
-                var location = data[i].location;
-
-                var myLatLng = new google.maps.LatLng(location[0], location[1]);
+                var location = data[i];
+                console.log(location.lat, location.lng, location.name);
+                var myLatLng = new google.maps.LatLng(location.lat, location.lng);
                 var marker = new google.maps.Marker({
                     position: myLatLng,
                     label: data[i].name,
                     map: map
                 });
 
-                place_markers.push(marker);
-                place_markers[place_markers.length-1].addListener("click", () => {
-                    //socket.emit('knn_select', user_locations[data[i][0]]["marker"].label)
-                    console.log(place_markers[place_markers.length-1].label);
-                });
+                suggestion_markers.push(marker);
             }
-       });
+
+            suggestion_markers.forEach(function(item){
+                item.addListener('click', () => {
+                    console.log(item.label);
+                });
+            });
+      });
 
 
       $("#start_origin").on("click", function() {
@@ -315,11 +315,8 @@ function initMap() {
                 user_location_markers.push(m);
                 user_added_locations[`${latlng[0]}, ${latlng[1]}`] = 1;
                 user_location_markers[i].addListener("click", () => {
-
-
-                console.log([user_location_markers[i].getPosition().lat(), user_location_markers[i].getPosition().lng()])
-                    socket.emit('request_destination_update', [user_location_markers[i].getPosition().lat(), user_location_markers[i].getPosition().lng()])
-                    map.setCenter(user_location_markers[i].getPosition());
+                socket.emit('request_destination_update', [user_location_markers[i].getPosition().lat(), user_location_markers[i].getPosition().lng()])
+                map.setCenter(user_location_markers[i].getPosition());
                 });
             }
         }

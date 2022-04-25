@@ -9,7 +9,7 @@ var friends = {
 var lat = 0;
 var lng = 0;
 var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');;
-var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
+//var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
 var leader_of_party = false;
@@ -21,12 +21,14 @@ $(document).ready(function(){
 
     function update_party_members(data){
        var a = document.getElementById("party-members")
+       a.innerHTML = "";
        if (data.length == 0){
+            in_party = false;
+            leader_of_party = false;
+            party_users = [];
             return;
        }
        in_party = true;
-       console.log(data);
-       a.innerHTML = "";
        a.innerHTML += `<div class="hover:bg-gray-light rounded"><span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br></div>`;
        leader_of_party = data[0] == user;
        if(leader_of_party){
@@ -138,7 +140,7 @@ $(document).ready(function(){
 
     socket.on('all_users', function(data){
         var d = document.getElementById('user_data');
-        d.innerHTML = "Online users<br>";
+        d.innerHTML = `Online users (${online_users_num}) <br>`;
         Object.keys(data).forEach(function(name) {
             var online = data[name];
             d.innerHTML += `<p class="my-2 mx-2 rounded hover:bg-gray-light"><span style="color: ${online?'green':'red'};">${online?'+':'-'}</span> ${name}</p>`
@@ -183,21 +185,21 @@ $(document).ready(function(){
 
 
 
-    $("#create_party").on("click", function() {
-        var a = document.getElementById("members_panel")
-        if (!in_party){
-           update_party_members([user])
-           socket.emit("joined", "__self__");
-           a.style.visibility = 'visible';
-       } else {
-           in_party = false;
-           leader_of_party = false;
-           socket.emit("left_party", 'foo');
-           a.innerHTML = party_text;
-           a.style.visibility = 'hidden';
-           party_users=[];
-        }
-    });
+//    $("#create_party").on("click", function() {
+//        var a = document.getElementById("members_panel")
+//        if (!in_party){
+//           update_party_members([user])
+//           socket.emit("joined", "__self__");
+//           a.style.visibility = 'visible';
+//       } else {
+//           in_party = false;
+//           leader_of_party = false;
+//           socket.emit("left_party", 'foo');
+//           a.innerHTML = party_text;
+//           a.style.visibility = 'hidden';
+//           party_users=[];
+//        }
+//    });
     $("#confirm_invite").on("click", function() {
         var invite_user_input = document.getElementById("invite_user_input")
         socket.emit('invite_user', invite_user_input.value);
