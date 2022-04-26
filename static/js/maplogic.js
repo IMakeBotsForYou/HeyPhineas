@@ -1,7 +1,3 @@
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function showSteps(directionResult, markerArray, stepDisplay, map) {
   // For each step, place a marker, and add the text to the marker's infowindow.
   // Also attach the marker to an array so we can keep track of it and remove it
@@ -57,7 +53,7 @@ function initMap() {
         center: { lat: 31.894756, lng: 34.809322 },
       });
 
-      socket.on('my_location', function(data){
+      socket.on('my_location_from_server', function(data){
         var name = data[0];
         var location = data[1];
         console.log("my_location", name, location);
@@ -97,15 +93,6 @@ function initMap() {
 //          running_speed =  this.value;
 ////          console.log(500000, running_delay);
 //      }
-
-      $("#make_step").on("click", function() {
-        if (current_directions != null && current_directions.length > step_index - 1){
-            step_index += 1;
-            socket.emit('my_location', current_directions[step_index])
-            socket.emit('step')
-//            console.log(current_directions[step_index]);
-        }
-      });
 
       var suggestion_markers = [];
 
@@ -185,15 +172,13 @@ function initMap() {
                 socket.emit('step');
             }
 //            console.log(3, new_lat, new_long);
-            var new_loc = new google.maps.LatLng( new_lat, new_long )
+
+
+//            var new_loc = new google.maps.LatLng( new_lat, new_long )
 //            user_locations[user].marker.setPosition(new_loc);
 //            user_locations[user].location = new_loc;
-            socket.emit('my_location', [new_lat, new_long, step_index])
+            socket.emit('my_location_from_user', [new_lat, new_long, step_index])
             }
-
-            var myInterval = setInterval(move_towards_next_point, running_delay);
-            console.log('start simulation!!');
-
             function distance(lat1, lng1, lat2, lng2){
                 return Math.sqrt((lat1-lat2)*(lat1-lat2)+(lng2-lng1)*(lng2-lng1));
             }
@@ -203,6 +188,9 @@ function initMap() {
             function toRadians (angle) {
               return angle * (Math.PI / 180);
             }
+            var myInterval = setInterval(move_towards_next_point, running_delay);
+            console.log('start simulation!!');
+
 
 
       });
@@ -216,7 +204,7 @@ function initMap() {
             // get current user
             var current_user_data = data[i];
             // name
-            var user_name = current_user_data[0];
+            var name = current_user_data[0];
             // path
             var user_path = current_user_data[1];
             // format path into google maps' LatLng format
@@ -233,7 +221,6 @@ function initMap() {
                     strokeWeight: 5,
                     map: map
                 });
-                console.log(2);
             } else{
                 paths[name] = {"path": null, "colour": colours[colours_index]};
                 colours_index += 1;
@@ -247,9 +234,7 @@ function initMap() {
                     strokeWeight: 5,
                     map: map
                 });
-                console.log(3);
             }
-            console.log(4, paths[name].path);
         }
     });
 
@@ -320,7 +305,7 @@ function initMap() {
         return "https://maps.google.com/mapfiles/ms/icons/"+ colour + "-dot.png"
       }
       socket.on('user_colors', function(data){
-         console.log(data);
+//         console.log(data);
          for (const [username, colour] of Object.entries(data)) {
             if (username in user_locations)
             user_locations[username].marker.setIcon(color_dot_link(colour));
@@ -353,11 +338,6 @@ function initMap() {
       };
       // Listen to change events from the start and end lists.
       directionsRenderer.setMap(map); // Existing map object displays directions
-}
-
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
