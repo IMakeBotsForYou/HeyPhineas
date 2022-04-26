@@ -38,11 +38,10 @@ function loadChat(room){
 }
 update_tabs();
 socket.on('create_chat', function(data){
-    if(!(data["id"] in chat_histories)){
-        chat_histories[data["id"]] = {"name": data["name"], "history": data["history"], "members": data["members"]};
-        var tabs = document.getElementById('tabs');
-        tabs.innerHTML += `<button class="my-2 tab_button _inactive" id="chat_${data['id']}" type="button">${data["name"]}</button>`;
-    }
+    chat_histories[data["id"]] = {"name": data["name"], "history": data["history"], "members": data["members"]};
+    var tabs = document.getElementById('tabs');
+    tabs.innerHTML += `<button class="my-2 tab_button _inactive" id="chat_${data['id']}" type="button">${data["name"]}</button>`;
+
     update_tabs();
     socket.emit('confirm_chat', data["id"])
     if (Object.keys(chat_histories).length == 1){

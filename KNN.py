@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 import json
 
 category_values = {
-    "sport": [5, 1, 0, 3, 2],
-    "computer": [2, 0, 5, 2, 4],
+    # "sport": [5, 1, 0, 3, 2],
+    # "computer": [2, 0, 5, 2, 4],
     "restaurant": [0, 1, 2, 4, 5],
     "park": [0, 0, 0, 5, 3],
 }
+
 
 def distance(a, b):
     return np.linalg.norm(np.array(a) - np.array(b))
