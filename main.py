@@ -86,14 +86,19 @@ def parse_chat_command(command, chat_id):
         cmd, arguments = args[0], []
 
     if cmd == "vote" and in_party_chat:
+
         party_owner = get_party_leader(session['user'])
         vote_status = parties[party_owner]["votes"]
+        if session["user"] in vote_status:
+            # already voted
+            return
         decision = arguments[0].lower() in ["yes", "y"]
         vote_status[session["user"]] = decision
         votes_required = int(len(parties[party_owner]["members"])/2)+1
-
+        # filter function, vote_status[x] == True -> voted yes
+        have_voted_yes = lambda x: vote_status[x]
         send_message_to_party(party_owner, message=f'{session["user"]} has voted {"Yes" if decision else "No"}. '
-                                                   f'({len(vote_status.keys())}/'
+                                                   f'({len(filter_dict(vote_status, have_voted_yes).keys())}/'
                                                    f'{votes_required})')
 
         # A majority has voted to some either go or not go
@@ -645,23 +650,20 @@ def send_path_to_party(user_to_track):
     if parties[party_leader]["status"] in ["Reached Destination", "No Destination"]:
         return
     done = True
+    meters = 5
     for member in party_members:
         if member != user_to_track and member in connected_members:
             try:
                 path, index = connected_members[member]['current_path']
                 current_user_path = [{'lat': x[0], 'lng': x[1]} for x in [connected_members[member]['loc']] + path[index:]]
-                print(123, current_user_path)
                 paths.append((member, current_user_path))
                 destination = path[-1]
-                meters = 5
                 min_distance = meters * 0.0000089  # convert to lng/lat scale
-                print(min_distance, distance(destination, path[index]))
-                if distance(destination, path[index]) > min_distance:
+                if distance(destination, path[index]) < min_distance:
                     done = False
                 print(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
             except Exception as e:
                 print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
-    print(234, paths)
     emit_to(session["user"], 'user_paths', message=paths)
     emit_to("Admin", 'user_paths', message=paths)
 
