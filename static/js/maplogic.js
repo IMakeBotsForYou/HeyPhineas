@@ -140,8 +140,11 @@ function initMap() {
                 console.log('stop simulation!! 1');
                 return;
             }
-            if(next_point == undefined || next_point == null){
+
+            if(next_point == undefined || next_point == null || step_index == current_directions.length){
                 clearInterval(myInterval);
+                socket.on('arrived')
+                console.log('arrived!')
                 console.log('stopp simulation!! 2');
                 return;
              }
@@ -165,12 +168,12 @@ function initMap() {
                 // are we finished?
                 if(current_directions.length == step_index){
                     clearInterval(myInterval);
+                    socket.emit('arrived')
+                    console.log('arrived!')
                     return
                 }
             } else {
                 var percent = unit / d;
-                console.log(1, `${percent}%, unit ${unit}, d ${d}, next ${next_point}`) ;
-                console.log(2, my_lat, my_long);
                 new_lat = my_lat + (next_point[0]-my_lat) * percent;
                 new_long = my_long + (next_point[1]-my_long) * percent;
             }

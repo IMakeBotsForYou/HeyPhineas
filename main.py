@@ -92,6 +92,7 @@ def parse_chat_command(command, chat_id):
         if session["user"] in vote_status or not parties[party_owner]["in_vote"]:
             # already voted
             return
+
         decision = arguments[0].lower() in ["yes", "y"]
         vote_status[session["user"]] = decision
         votes_required = int(len(parties[party_owner]["members"]) / 2) + 1
@@ -108,7 +109,8 @@ def parse_chat_command(command, chat_id):
         # Vote has resulted in rejecting the sever's suggestion
         if len(voted_no) > len(parties[party_owner]["members"]) - votes_required:
             send_message_to_party(session['user'],
-                                  message=f"{len(voted_no)} people have voted NO.")
+                                  message=f"{len(voted_no)} people have voted NO.<br>"
+                                          f"Vote canceled. You can request another suggestion.")
             parties[party_owner]["in_vote"] = False
 
         if votes_required == len(voted_yes):
@@ -194,8 +196,10 @@ def create_party(user, members=None):
     if members is None:
         members = []
     members = [user] + members
-    parties[user] = {"status": "Not Decided", "destination": None, "locations": {}, "votes": {}, "chat_id": None,
-                     "members": members, "lock": threading.Lock(), "place_type": None, "in_vote": False}
+    parties[user] = {"status": "Not Decided", "destination": None,
+                     "locations": {}, "votes": {}, "chat_id": None,
+                     "members": members, "lock": threading.Lock(),
+                     "place_type": None, "in_vote": False, "arrived": []}
     voting_status[get_party_leader(user)] = {}
     for m in members:
         voting_status[get_party_leader(user)][m] = False
@@ -487,10 +491,18 @@ def update_destination(data, user):
         return
     parties[leader]["destination"] = data
     parties[leader]["status"] = "Has Destination"
-
+    parties[leader]["arrived"] = []
     lat, lng = data
     emit_to_party(user, event_name='update_destination',
                   message={"lat": lat, "lng": lng})
+
+
+@socketio.on('arrived', namespace='/comms')
+def arrived():
+    leader = get_party_leader(session['user'])
+    if session['user'] not in parties[leader]["arrived"]:
+        parties[leader]["arrived"].append(session['user'])
+        send_path_to_party(session['user'])
 
 
 @socketio.on('request_destination_update', namespace='/comms')
@@ -662,10 +674,17 @@ def send_path_to_party(user_to_track):
         return
 
     paths = []
+
     print(party_leader, parties[party_leader]["status"])
     if parties[party_leader]["status"] in ["No Destination"]:
         return
+
     print(f"tracc {user_to_track}, {party_members}")
+    done = False
+
+    if len(parties[party_leader]["arrived"]) == len(party_members):
+        done = True
+
     """ done = True
     # meters = 5"""
     for member in party_members:
@@ -694,16 +713,15 @@ def send_path_to_party(user_to_track):
     emit_to(session["user"], 'user_paths', message=paths)
     emit_to("Admin", 'user_paths', message=paths)
 
-    """ all the paths are dones
-        if done and len(party_members) > 1 and parties[party_leader]["status"] != "Reached Destination":
-            parties[party_leader]["status"] = "Reached Destination"
-            online party members in order
-            list_of_priorities = [x for x in party_members if x in connected_members]
-            if session['user'] == list_of_priorities[0]:
-            db['ex'].send_message(title=f"Party Reached Destination",
-                                   desc=f"{party_leader}'s party has reached their destination.",
-                                   sender="[System]", receiver="Admin", messagetype="ignore",
-                                   action=None)"""
+    # all the paths are dones
+    if done and len(party_members) > 1 and parties[party_leader]["status"] != "Reached Destination":
+        parties[party_leader]["status"] = "Reached Destination"
+        # online party members in order
+        list_of_priorities = [x for x in party_members if x in connected_members]
+        db['ex'].send_message(title=f"Party Reached Destination",
+                             desc=f"{party_leader}'s party has reached their destination.",
+                             sender="[System]", receiver="Admin", messagetype="ignore",
+                             action=None)
 
 
 @socketio.on('path_from_user', namespace='/comms')
@@ -1079,6 +1097,7 @@ def get_party_leader(username):
         return "Admin"
 
     a = [person for person in parties if username in parties[person]["members"]]
+
     if a:
         return a[0]
     else:
