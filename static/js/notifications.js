@@ -20,7 +20,7 @@ $(document).ready(function(){
             <div class="mb-[10px] inbox_deletion_item" id="message-div-${id}">
                 <button type="button" class="collapsible mb-1" style="">${title}</button>
                 <div class="content white" style="display: none;">
-                    <div><p id="message_content_${id}" class="break-words" style="margin: 0 0 14px 0;"><b>Message from ${sender}:</b><br>${content}</p></div>
+                    <div><p id="message_content_${id}" class="break-words" style="max-width: 90%; margin: 0 0 14px 0;"><b>Message from ${sender}:</b><br>${content}</p></div>
                         <div style="margin: 0 auto; text-white">
             `
 

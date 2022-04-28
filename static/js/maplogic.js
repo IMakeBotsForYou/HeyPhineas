@@ -6,7 +6,8 @@ var all_markers = {        // all markers
     "suggestion": [],
     "users": [],
     "user_added_locations": [],
-    "directions": []
+    "directions": [],
+    "destination": null
 };
 var current_directions;    // current directions / path
 var destination = null;    // destination coordinates
@@ -342,7 +343,12 @@ function calculateAndDisplayRoute(
             // so ill just not render this tee hee　
 //          directionsRenderer.setDirections(result);
 
-
+         all_markers.destination = new google.maps.Marker({
+                        position: destination,
+                        label: name,
+                        map: map,
+                        icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
+                });
          document.getElementById('msg').innerHTML = " Walking distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
         })
     }

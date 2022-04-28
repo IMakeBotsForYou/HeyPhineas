@@ -36,11 +36,14 @@ function loadChat(room){
                                 .map(message => `${base}${message["author"]}: ${message["message"]}</p>`) // map array to messages
                                 .join("");  //join into one string
 }
+
 update_tabs();
 socket.on('create_chat', function(data){
-    chat_histories[data["id"]] = {"name": data["name"], "history": data["history"], "members": data["members"]};
+    if(!(data["id"] in chat_histories)){
     var tabs = document.getElementById('tabs');
     tabs.innerHTML += `<button class="my-2 tab_button _inactive" id="chat_${data['id']}" type="button">${data["name"]}</button>`;
+    }
+    chat_histories[data["id"]] = {"name": data["name"], "history": data["history"], "members": data["members"]};
 
     update_tabs();
     socket.emit('confirm_chat', data["id"])

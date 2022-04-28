@@ -583,9 +583,6 @@ def check_ping(*args):
         if online_user_colors:
             emit_to("Admin", event_name="user_colors", message=online_user_colors)
 
-    # notif_amount = db['ex'].get_notifs(session['user'])
-    # emit_to(session['user'], event_name="notifications",
-    #         message=notif_amount)
     party_coords(session['user'])
     messages = db['ex'].get_messages(user=session['user'])["messages"]
     message_amount = len(messages)
@@ -786,32 +783,32 @@ def party_coords(username):
     if data:
         # [emit_to(member, event_name='party_member_coords', namespace= '/comms',
         #          message=data) for member in members if member in connected_members]
-        emit_to("Admin", event_name='party_member_coords', namespace='/comms', message=data)
+        # emit_to("Admin", event_name='party_member_coords', namespace='/comms', message=data)
         emit_to_party(username, event_name='party_member_coords', namespace='/comms', message=data)
 
 
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
-    if session['user'] == "Admin":
-        members = db['ex'].get_all_names(remove_admin=True)
-        data = []
-        for member in members:
-            try:
-                lat, lng = connected_members[member]["loc"]
-                data.append({"name": member, "lat": lat, "lng": lng})
-            except KeyError:
-                pass
-                # loc = db['ex'].get_user_location(member)
-                # data.append((member, loc))
-            except Exception as e:
-                print("get coords error", e)
-
-        emit_to("Admin", 'party_member_coords', '/comms', message=data)
-
-    else:
+    # if session['user'] == "Admin":
+    #     members = db['ex'].get_all_names(remove_admin=True)
+    #     data = []
+    #     for member in members:
+    #         try:
+    #             lat, lng = connected_members[member]["loc"]
+    #             data.append({"name": member, "lat": lat, "lng": lng})
+    #         except KeyError:
+    #             pass
+    #             # loc = db['ex'].get_user_location(member)
+    #             # data.append((member, loc))
+    #         except Exception as e:
+    #             print("get coords error", e)
+    #
+    #     emit_to("Admin", 'party_member_coords', '/comms', message=data)
+    #
+    # else:
         # members = [p for p in get_party_members(session['user']) if p in connected_members]
-        leader = get_party_leader(session['user'])
-        party_coords(leader)
+    leader = get_party_leader(session['user'])
+    party_coords(leader)
 
 
 chatrooms = {"0": {"name": "Global", "history": [], "members": {}, "type": "global"}}
@@ -867,27 +864,28 @@ def logged_on_users():
         return redirect(url_for("login"))
 
     # reconnecting = session['user'] in connected_members
-    chatrooms["0"]["members"][session['user']] = False
-    for chat_id in get_all_user_chats(session['user']):
-        chatrooms[chat_id["id"]]["members"][session['user']] = False
+    for room in get_all_user_chats(session['user']):
+        chatrooms[room["id"]]["members"][session['user']] = False
+    if session['user'] not in connected_members:
+        connected_members[session['user']] = {
+            "last ping": int(time()),
+            "remote addr": request.remote_addr,
+            "sid": request.sid,
+            "loc": [0, 0],
+            "current_path": [None, None],
+        }
+        if session['user'] != "Admin":
+            connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
+    else:
+        connected_members[session['user']]['sid'] = request.sid
+        connected_members[session['user']]['last ping'] = int(time())
 
-    connected_members[session['user']] = {
-        "last ping": int(time()),
-        "remote addr": request.remote_addr,
-        "sid": request.sid,
-        "loc": [0, 0],
-        "current_path": [None, None],
-    }
     if session['user'] not in user_data:
         user_data[session['user']] = {
             "interests": {},
             "friends": {},
             "visited_locations": {}
         }
-
-    # reset place
-    if session['user'] != "Admin":
-        connected_members[session['user']]["loc"] = db['ex'].get_user_location(session['user'])
 
     broadcast_userdiff()
 
@@ -898,7 +896,8 @@ def logged_on_users():
         emit_to(session['user'], "message",
                 message={"id": "0", "message": "Welcome!", "author": "(System)"})
     else:
-        members = db['ex'].get_all_names(remove_admin=True)
+        # members = db['ex'].get_all_names(remove_admin=True)
+        members = list(connected_members.keys())
         for member in members:
             lat, lng = db['ex'].get_user_location(member) if member \
                                                              not in connected_members \
@@ -916,7 +915,7 @@ def logged_on_users():
 
     # Get all users that are online,
     # not in a group, and have not
-    # received a suggestion from the server
+    # received a suggestion from the serverdb
     # (have an active suggestion)
     def group_suggestion_filter(u):
         # Check if user is in a suggestion list
@@ -924,13 +923,15 @@ def logged_on_users():
             if u in party_suggestions[leader]["total"]:
                 return False
         # If user has a party return false
-        if get_party_leader(u) is not None:
+        leader = get_party_leader(u)
+        if leader is not None or leader == "Admin":
             return False
         # Return true, user fits qualifications
         return True
 
     dont_have_suggestions = filter_dict(d=connected_members, f=group_suggestion_filter)
     if len(dont_have_suggestions) > 1:
+        # only_these_values=filter_dict(db["knn"].values, lambda x: x in dont_have_suggestions),
         suggestion_groups = knn.find_optimal_clusters(
             only_these_values=filter_dict(db["knn"].values, lambda x: x in dont_have_suggestions),
             verbose=False
@@ -938,7 +939,7 @@ def logged_on_users():
         for center in suggestion_groups:
             names = [person[0] for person in suggestion_groups[center]]
             for name in names:
-                user_colors[name] = get_color(name, suggestion_groups)
+                user_colors[name] = get_color(name, suggestion_groups, len(parties.keys())+len(party_suggestions.keys()))
             suggest_party(names)
 
 
@@ -1059,10 +1060,10 @@ def suggest_party(users):
     for u in users:
         u_list = users.copy()
         u_list.remove(u)
-        desc = f"The system has invited you to join a party with {', '.join(u_list[:-1])}, and {u_list[-1]}" if len(
-            u_list) > 1 else \
-            f"The system has invited you to join a party with {u_list[0]}"
-        db['ex'].send_message(title=f"Party suggestion!",
+        base = "The system has invited you to join a party"
+        addition = f"with {', '.join(u_list[:-1])}, and {u_list[-1]}" if len(u_list) > 1 else f"with {u_list[0]}"
+        desc = f"{base} {addition}"
+        db['ex'].send_message(title=f"Party suggestion! {addition}",
                               desc=desc,
                               sender="Admin", receiver=u, messagetype="group_suggestion",
                               action=f"accept_suggestion/{users[0]}")
@@ -1123,7 +1124,7 @@ def chat_message(data):
     appropriate chat
     """
     room, message, author = data["room"], data["message"], session['user']
-    chatrooms[room]["history"].append(message)
+    chatrooms[room]["history"].append({"message": message, "author": author})
     room_members = list(chatrooms[room]["members"].keys())
 
     for member in room_members:
