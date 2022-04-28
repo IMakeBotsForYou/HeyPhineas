@@ -54,7 +54,7 @@ function initMap() {
             user_locations[name] = myLatLng;
 
         // update/display marker in updated location
-        if (name in all_markers["users"])
+        if (name in all_markers.users)
             all_markers.users[name].setPosition(myLatLng);
         else
             all_markers.users[name] = new google.maps.Marker({

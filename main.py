@@ -228,7 +228,7 @@ def join_party(owner, username):
             lat, lng = connected_members[member]["loc"]
             emit_to("Admin", 'my_location_from_server', message={
                 "name": member,
-                "location": {"lat": lat, "lng": lng}
+                "lat": lat, "lng": lng
             })
     # db['ex'].add_to_party(owner=owner, user_to_add=username)
 
@@ -573,10 +573,10 @@ def check_ping(*args):
             if member == "Admin":
                 continue
 
-            lat, lng = db['ex'].get_user_location(member)
+            lat, lng = connected_members[member]["loc"]
             emit_to("Admin", 'my_location_from_server', message={
                 "name": member,
-                "location": {"lat": lat, "lng": lng}
+                "lat": lat, "lng": lng
             })
 
         online_user_colors = {v: k for (v, k) in user_colors.items() if v in connected_members}
@@ -905,13 +905,13 @@ def logged_on_users():
                 else connected_members[member]["loc"]
             emit_to("Admin", 'my_location_from_server', message={
                 "name": member,
-                "location": {"lat": lat, "lng": lng}
+                "lat": lat, "lng": lng
             })
 
     lat, lng = connected_members[session['user']]["loc"]
     emit_to(session['user'], 'my_location_from_server', message={
         "name": session['user'],
-        "location": {"lat": lat, "lng": lng}
+        "lat": lat, "lng": lng
     })
 
     # Get all users that are online,
