@@ -14,6 +14,9 @@ function openChatTab(target_tab) {
   target_tab.className = target_tab.className.replace("_inactive", "_active");
   current_chat = target_tab.id.slice(5, target_tab.id.length);
   loadChat(current_chat);
+
+
+
 }
 
 function update_tabs(){
@@ -38,7 +41,11 @@ function loadChat(room){
     var tab_name = document.getElementById(`chat_${room}`).innerHTML;
     var start_bracket_index = tab_name.indexOf("(");
     // removes " (number)"
-    tab_name.innerHTML = tab_name.slice(0, start_bracket_index-1);
+    if (start_bracket_index != -1){
+        tab_name = tab_name.slice(0, start_bracket_index-1);
+        document.getElementById(`chat_${room}`).innerHTML = tab_name;
+    }
+
 }
 
 update_tabs();
@@ -69,21 +76,24 @@ socket.on('del_chat', function(chat_id){
 socket.on('message', function(data){
     var room = data["id"];
     chat_histories[room].history.push({"author": data["author"], "message": data["message"]});
+    var tab_name = document.getElementById(`chat_${room}`).innerHTML;
+//    console.log(tab_name, current_chat == room, current_chat, room);
     if(current_chat == room){
         loadChat(room);
     } else {
         // make it say TABNAME (1)
-        var tab_name = document.getElementById(`chat_${room}`).innerHTML;
-
-        if(tab_name[tab_name.length] == ")"){
+        if(tab_name[tab_name.length-1] == ")"){
             // already has the notification thing
             var start_bracket_index = tab_name.indexOf("(");
-            var number = parseInt(tab_name.slice(start_bracket_index, tab_name.length));
-            tab_name.innerHTML = tab_name.slice(0, start_bracket_index) +`(${number+1})`;
+            var number = parseInt(tab_name.slice(start_bracket_index+1, tab_name.length-1));
+            tab_name = tab_name.slice(0, start_bracket_index) +`(${number+1})`;
+//            console.log(tab_name.slice(0, start_bracket_index), start_bracket_index, number, tab_name);
         } else {
-            tab_name.innerHTML+=" (1)";
+            tab_name += " (1)";
+//            console.log(tab_name);
         }
     }
+    document.getElementById(`chat_${room}`).innerHTML = tab_name;
 });
 
 document.getElementById('chat_input_area').addEventListener('keydown', function(e) {

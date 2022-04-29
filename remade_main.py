@@ -12,7 +12,7 @@ from flask_socketio import SocketIO, emit
 from get_query_results import find_places
 from database_wrapper import smallest_free
 from database_wrapper import my_db as database
-from kmeans_wrapper import category_values, KMEANS
+from kmeans_wrapper import category_values, KMEANS, get_color
 
 Payload.max_decode_packets = 50
 
@@ -52,7 +52,6 @@ from this dictionary, and update their socket SID
 # Subset of members that are online.
 connected_members = {}
 
-
 parties = {}
 """
 parties[party_owner] = {
@@ -66,15 +65,17 @@ parties[party_owner] = {
                        }
 """
 
-
 party_suggestions = {}
 """
 party_suggestions[party_owner] = {
                                   "members": [member, ...],                        
-                                                
                                   }
 
+"""
 
+user_colors = {}
+"""
+user_colors[user] = "green"/"blue"...   str
 """
 
 
@@ -97,6 +98,21 @@ def get_all_user_chats(target):
             for room in connected_members[target]["chats"]]
 
 
+def suggest_party(users):
+    print(f"suggesting party for {users}")
+    party_suggestions[users[0]] = {"total": users, "accepted": [], "rejected": []}
+    for u in users:
+        u_list = users.copy()
+        u_list.remove(u)
+        base = "The system has invited you to join a party"
+        addition = f"with {', '.join(u_list[:-1])}, and {u_list[-1]}" if len(u_list) > 1 else f"with {u_list[0]}"
+        desc = f"{base} {addition}"
+        database.send_message(title=f"Party suggestion! {addition}",
+                              desc=desc,
+                              sender="Admin", receiver=u, messagetype="group_suggestion",
+                              action=f"accept_suggestion/{users[0]}")
+
+
 def get_place_recommendation_location(tp, radius, limit):
     radius = float(radius) * 1000
     limit = int(limit)
@@ -113,8 +129,7 @@ def get_place_recommendation_location(tp, radius, limit):
     return results_json
 
 
-def create_chat(*, name: str, party_members: list=None) -> str:
-
+def create_chat(*, name: str, party_members: list = None) -> str:
     smallest_free_chat_id = str(smallest_free(list(chat_rooms.keys())))
 
     parties[party_members[0]]["chat_id"] = smallest_free_chat_id
@@ -124,6 +139,7 @@ def create_chat(*, name: str, party_members: list=None) -> str:
 
     for member in party_members:
         connected_members[member]["chats"].append(smallest_free_chat_id)
+
     return smallest_free_chat_id
 
 
@@ -161,7 +177,6 @@ def create_party(user, members_to_add=None):
 
     emit_to(user=session['user'], event_name="party_members_list_get",
             message=get_party_members(session['user']))
-
     print(f"created party for {party_members} ID:{chat_id}")
     return chat_id
 
@@ -196,7 +211,6 @@ def get_messages(user):
 
 
 def get_party_members(username):
-
     owner = get_party_leader(username)
     print(owner, username)
     if owner not in parties:
@@ -334,6 +348,8 @@ def disconnect_user_from_party(user, chat_is_disbanded=False):
         # Send to remaining party to update member list
         members = get_party_members(current_leader)
         emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
+
+    connected_members[user]["party"] = None
 
 
 def update_destination(data, user):
@@ -514,6 +530,7 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
 
+
 """
 ====================================================
 """
@@ -551,6 +568,15 @@ def parse_action(command):
         party_owner = args[1]
         if party_owner not in connected_members:
             return
+
+        # they have no party
+        if connected_members[party_owner]["party"] is None:
+            return
+
+        if session['user'] in parties[party_owner]["members"]:
+            print(session['user'], "already in party", party_owner)
+            return
+
         if len(get_party_members(party_owner)) == 0:
             create_party(party_owner, members_to_add=[session['user']])
         else:
@@ -559,50 +585,60 @@ def parse_action(command):
         emit_to_party(party_owner, event_name="update_party_members", message=get_party_members(party_owner))
         send_message_to_party(party_owner, message=f'{session["user"]} joined!')
 
-    # if command_name == "accept_suggestion":
-    #     try:
-    #         party_owner = \
-    #             [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
-    #         if len(get_party_members(party_owner)) == 0:
-    #             create_party(session['user'])
-    #             if party_owner != session['user']:
-    #                 # copy over the data
-    #                 party_suggestions[session['user']] = party_suggestions[party_owner].copy()
-    #                 # delete old data
-    #                 del party_suggestions[party_owner]
-    #                 party_owner = session['user']
-    #
-    #             # make session user the first user in the list
-    #             members = party_suggestions[session['user']]["total"]
-    #             # remove user
-    #             members.remove(session['user'])
-    #             # add user in the beginning
-    #             members = [session['user']] + members
-    #             # update dictionary
-    #             party_suggestions[session['user']]["total"] = members
-    #
-    #         else:
-    #             # just join the party lol
-    #             join_party(party_owner, session['user'])
-    #
-    #         # append you to the people who accepted the suggestion
-    #         PSP = party_suggestions[party_owner]
-    #         PSP["accepted"].append(session['user'])
-    #         emit_to_party(party_owner, event_name="update_party_members", message=get_party_members(party_owner))
-    #         # if everyone reacted to it we don't need it anymore woooo
-    #         if len(PSP["accepted"]) + len(PSP["rejected"]) == len(PSP["total"]):
-    #             del party_suggestions[party_owner]
-    #     except IndexError:
-    #         print('lol sucks for u')
+    if command_name == "accept_suggestion":
+        try:
+            party_owner = \
+                [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+            if len(get_party_members(party_owner)) == 0:
+                create_party(session['user'])
+                if party_owner != session['user']:
+                    # copy over the data
+                    party_suggestions[session['user']] = party_suggestions[party_owner].copy()
+                    # delete old data
+                    del party_suggestions[party_owner]
+                    party_owner = session['user']
+
+                # make session user the first user in the list
+                members = party_suggestions[session['user']]["total"]
+                # remove user
+                members.remove(session['user'])
+                # add user in the beginning
+                members = [session['user']] + members
+                # update dictionary
+                party_suggestions[session['user']]["total"] = members
+
+            else:
+                # just join the party lol
+                join_party(party_owner, session['user'])
+
+            # append you to the people who accepted the suggestion
+            PSP = party_suggestions[party_owner]
+            PSP["accepted"].append(session['user'])
+            emit_to_party(party_owner, event_name="update_party_members", message=get_party_members(party_owner))
+            # if everyone reacted to it we don't need it anymore woooo
+            if len(PSP["accepted"]) + len(PSP["rejected"]) == len(PSP["total"]):
+                del party_suggestions[party_owner]
+        except IndexError:
+            print('lol sucks for u')
 
 
 def join_party(owner, username):
     if username in parties[owner]["members"]:
         return
+    connected_members[username]["party"] = owner
     parties[owner]["members"].append(username)
-    chat_rooms[parties[owner]["chat_id"]]["members"][username] = False
+
+    party_chat_id = parties[owner]["chat_id"]
+    chat_rooms[party_chat_id]["members"][username] = False
+
     parties[owner]["place_type"] = kmeans.find_best_category(parties[owner]["members"], category_values)
     party_coords(owner)
+
+    connected_members[username]["chats"].append(party_chat_id)
+
+
+    room = {"id": party_chat_id, **chat_rooms[party_chat_id]}
+    emit_to(session['user'], event_name="create_chat", message=room)
 
     members = parties[owner]["members"]
     for member in members:
@@ -651,7 +687,7 @@ def logged_on_users():
     if session['user'] not in members:
         members[session['user']] = {
             "sid": request.sid,  # the socket sid
-            "loc": database.get_user_location(session['user']),        # [0, 0],
+            "loc": database.get_user_location(session['user']),  # [0, 0],
             "current_path": [None, 0],
             "party": None,  # (party owner's name | None) ,
             "last ping": time_now(),
@@ -669,10 +705,44 @@ def logged_on_users():
     # chat ids that the user can see
     chat_ids = [room["id"] for room
                 in get_all_user_chats(session['user'])]
+
     for chat_id in chat_ids:
         # The user needs to create all of his channels again
         # Make it so all the user's channels aren't confirmed
         chat_rooms[chat_id]["members"][session['user']] = False
+
+    """
+    ============================= K MEANS =============================
+     Get all users that are online,
+     not in a group, and have not
+     received a suggestion from the server
+     (have an active suggestion)"""
+
+    def group_suggestion_filter(u):
+        # Check if user is in a suggestion list
+        for leader in party_suggestions:
+            if u in party_suggestions[leader]["total"]:
+                return False
+        # If user has a party return false
+        leader = get_party_leader(u)
+        if leader is not None or leader == "Admin":
+            return False
+        # Return true, user fits qualifications
+        return True
+
+    dont_have_suggestions = filter_dict(d=connected_members, f=group_suggestion_filter)
+    if len(dont_have_suggestions) > 1:
+
+        suggestion_groups = kmeans.find_optimal_clusters(
+            only_these_values=filter_dict(kmeans.values, lambda x: x in dont_have_suggestions),
+            verbose=False
+        )
+        for center in suggestion_groups:
+            names = [person[0] for person in suggestion_groups[center]]
+            for name in names:
+                user_colors[name] = get_color(name, suggestion_groups,
+                                              len(parties.keys()) + len(party_suggestions.keys()))
+            suggest_party(names)
 
 
 @socketio.on('ping', namespace='/comms')
@@ -705,6 +775,7 @@ def check_ping(online_users):
     emit_to(session['user'], event_name="inbox_update", message=messages)
     if len(connected_members.keys()) != len(online_users):
         broadcast_user_difference()
+
     # The ADMIN client doesn't need to see chats
 
     def client_has_confirmed(chat_id):
@@ -811,7 +882,7 @@ def get_destination():
     if connected_members[session['user']]["party"] is None:
         return
     if parties[get_party_leader(session['user'])]["destination"] is None:
-        raise ValueError
+        return
 
     lat, lng = parties[get_party_leader(session['user'])]["destination"]
     emit_to(session['user'], event_name='update_destination',
