@@ -6,15 +6,15 @@ from engineio.payload import Payload
 from flask import *
 from flask_socketio import SocketIO, emit
 import re
-from get_query_results import query, find_places
+from get_query_results import find_places
 import database_wrapper
 from database_wrapper import smallest_free
-from KNN import distance, category_values, get_color
+from kmeans_wrapper import category_values, get_color
 import threading
 
 # import pymongo
 
-Payload.max_decode_packets = 1000
+Payload.max_decode_packets = 50
 __author__ = 'Rock'
 last_time_pings_checked = time()
 
@@ -188,8 +188,6 @@ def get_party_members(username):
     if owner not in parties:
         return []
     return parties[owner]["members"].copy()
-    # return db['ex'].get_party_members(
-    #     owner=get_party_leader(username))
 
 
 def create_party(user, members=None):
@@ -206,12 +204,8 @@ def create_party(user, members=None):
         # db['ex'].add_to_party(owner=user, user_to_add=m)
     chat_id = create_chat(name="Party", members=members)
 
-    for m in members:
-        chatrooms[chat_id]["members"][m] = False
-
     party_coords(user)
 
-    # db['ex'].create_party(user, chat_id=chat_id)
     print(f"created party for {members}")
     return chat_id
 
@@ -401,7 +395,7 @@ def parse_action(command):
 
 
 def get_messages(user):
-    info = db['ex'].get_messages()
+    info = database.get_messages()
     if user in info['messages']:
         return [[message['id'], message['title'], message['content'], message['sender'], message['type']]
                 for message in info['messages'][session['user']]]
@@ -475,9 +469,7 @@ def broadcast_userdiff():
                               'offline': [friend for friend in fr if friend not in visible_users]}
 
     emit_to(session["user"], 'friend_data', message=session["friend_data"])
-    # [emit_to(us, 'user_diff',
-    #          message=visisble_uses) for us in
-    #  connected_members]
+
     emit_to_everyone(event_name='user_diff', message=visible_users)
     emit_to("Admin", "all_users", message={u: u in connected_members for u in db["ex"].get_all_names()})
     print("Data:")
@@ -522,26 +514,6 @@ def get_place_recommendation_location(tp, radius, limit):
     middle = middle_lat, middle_lng
 
     results_json = find_places(middle, radius, tp, limit)
-
-    # data = [
-    #     # a[0] = NAME: STR
-    #     # a[1] = LAT, LNG: STR
-    #     # a[2] = TYPE: STRs
-    #     (a[0], [float(x) for x in a[1].split(", ")], a[2])
-    #     for a in db['ex'].get_user_added_locations() if a[2] == tp
-    # ]
-    #
-    # for i in range(len(data)):
-    #     dat = data[i]
-    #     results_json[ord('a') + i] = {"name": dat[0], "location": dat[1]}
-    #
-    # places = list(results_json.keys())
-
-    # def get_distance(middle_point, place):
-    #     loc = results_json[place]["location"]
-    #     return np.linalg.norm(np.array(middle_point) - np.array([loc]))
-    #
-    # places.sort(key=lambda x: get_distance(middle, x))
 
     return results_json
 
@@ -613,18 +585,18 @@ def check_ping(*args):
              in delete_chats[session['user']]]
 
 
-def weight_values(name, value):
-    origin = db['knn'].origin
-    mult = 1
-    friends = db['ex'].get_friends(origin)
-    if name in friends:
-        mult += 0.3
-
-    friends_of_name = db['ex'].get_friends(name)
-    mutual_friends = [x for x in friends if x in friends_of_name]
-    mult += 0.05 * len(mutual_friends)
-
-    return value / mult
+# def weight_values(name, value):
+#     origin = db['knn'].origin
+#     mult = 1
+#     friends = db['ex'].get_friends(origin)
+#     if name in friends:
+#         mult += 0.3
+#
+#     friends_of_name = db['ex'].get_friends(name)
+#     mutual_friends = [x for x in friends if x in friends_of_name]
+#     mult += 0.05 * len(mutual_friends)
+#
+#     return value / mult
 
 
 @socketio.on('location_recommendation_request', namespace='/comms')
@@ -716,9 +688,9 @@ def send_path_to_party(user_to_track):
         # online party members in order
         list_of_priorities = [x for x in party_members if x in connected_members]
         db['ex'].send_message(title=f"Party Reached Destination",
-                             desc=f"{party_leader}'s party has reached their destination.",
-                             sender="[System]", receiver="Admin", messagetype="ignore",
-                             action=None)
+                              desc=f"{party_leader}'s party has reached their destination.",
+                              sender="[System]", receiver="Admin", messagetype="ignore",
+                              action=None)
 
 
 @socketio.on('path_from_user', namespace='/comms')
@@ -789,30 +761,11 @@ def party_coords(username):
 
 @socketio.on('get_coords_of_party', namespace='/comms')
 def get_coords_of_party():
-    # if session['user'] == "Admin":
-    #     members = db['ex'].get_all_names(remove_admin=True)
-    #     data = []
-    #     for member in members:
-    #         try:
-    #             lat, lng = connected_members[member]["loc"]
-    #             data.append({"name": member, "lat": lat, "lng": lng})
-    #         except KeyError:
-    #             pass
-    #             # loc = db['ex'].get_user_location(member)
-    #             # data.append((member, loc))
-    #         except Exception as e:
-    #             print("get coords error", e)
-    #
-    #     emit_to("Admin", 'party_member_coords', '/comms', message=data)
-    #
-    # else:
-        # members = [p for p in get_party_members(session['user']) if p in connected_members]
     leader = get_party_leader(session['user'])
     party_coords(leader)
 
 
 chatrooms = {"0": {"name": "Global", "history": [], "members": {}, "type": "global"}}
-
 
 def get_all_user_chats(target):
     return [{"id": room, **chatrooms[room]} for room in chatrooms if target in list(chatrooms[room]["members"].keys())]
@@ -828,19 +781,18 @@ def notification_parse(data):
     print(f"{reaction}: {title} | {msg_type}")
     if reaction != "mark_as_read":
         parse_action(action)
-        db['ex'].remove("messages", f'id={message_id}')
+        database.remove("messages", f'id={message_id}')
 
     session['inbox_messages'] = get_messages(session['user'])
 
 
-def create_chat(*, name, members=None, chat_type="party"):
+def create_chat(*, name: str, members: list = None) -> str:
     if members is None:
         members = []
     smallest_free_chat_id = str(smallest_free(list(chatrooms.keys())))
     if members:
         parties[members[0]]["chat_id"] = smallest_free_chat_id
-    chatrooms[smallest_free_chat_id] = {"name": name, "members": {m: False for m in members}, "history": [],
-                                        "type": chat_type}
+    chatrooms[smallest_free_chat_id] = {"name": name, "members": {m: False for m in members}, "history": []}
     return smallest_free_chat_id
 
 
@@ -859,9 +811,6 @@ def confirm_delete_chat(chat_id):
 
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
-    # request.sid
-    if 'user' not in session:
-        return redirect(url_for("login"))
 
     # reconnecting = session['user'] in connected_members
     for room in get_all_user_chats(session['user']):
@@ -970,13 +919,15 @@ def get_online_memb():
 
 def send_user_added_locations(username):
     data = [(name, [float(value) for value in latlng.split(", ")])
-            for name, latlng, type in db['ex'].get_user_added_locations()]
+            for name, latlng, type in database.get_user_added_locations()]
     emit_to(username, 'user_added_locations', message=data)
 
 
 @socketio.on('user_added_locations_get', namespace='/comms')
 def get_user_added_loc():
-    send_user_added_locations(session['user'])
+    data = [(name, [float(value) for value in latlng.split(", ")])
+            for name, latlng, type in database.get_user_added_locations()]
+    emit_to(username, 'user_added_locations', message=data)
 
 
 @socketio.on('reset_locations', namespace='/comms')
@@ -1044,14 +995,11 @@ def invite_user(receiver):
     print("inviting", receiver)
     if receiver == session['user']:
         return
-    # user has no party, this creates it.
-    # print(123, get_party_members(session['user']))
-    db['ex'].send_message(title=f"Party invite from {session['user']}!",
+
+    database.send_message(title=f"Party invite from {session['user']}!",
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
-    # db['ex'].add_notif(receiver)
-    # emit_to(receiver, 'notif', namespace='/comms', message='notification!')
 
 
 def suggest_party(users):
@@ -1073,8 +1021,8 @@ def suggest_party(users):
 
 @socketio.on('add_location', namespace='/comms')
 def add_location_func(data):
-    name, lat, lngm, loc_type = data.split(", ")
-    db['ex'].add_location(name, lat, lng, loc_type)
+    name, lat, lng, loc_type = data.split(", ")
+    database.add_location(name, lat, lng, loc_type)
     [send_user_added_locations(online_user) for online_user in connected_members]
 
 
@@ -1154,35 +1102,29 @@ def my_location(data):
     send_path_to_party(session['user'])
 
 
-if __name__ == '__main__':
-    from KNN import KNN
-
-    database_wrapper.main()
-    # initialize database
-    vls = {}
-
-    db = {"ex": database_wrapper.my_db}
-    for user in db["ex"].get("users", "username"):
-        if user == "Admin":
-            continue
-        # interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
-        lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
-        db['ex'].set_user_location(user, f"{lat}, {lng}")
-        # interests_list = ["sport", "theater", "computer", "park", "restaurant"]
-        # interests_dict = {}
-        # for i in interests_list:
-        #     interests_dict[i] = np.random.random_sample() * 5
-        #
-        interests = db['ex'].get("users", "interests", condition=f'username="{user}"')[0]
-        # db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
-        # vls[user] = [lat, lng]
-        # + [lat / 25, lng / 25]
-        vls[user] = [float(x) for x in interests.split("|")[1::2]]
-
-    # vls["__ideal_restaurant"] = np.array([3, 4, 2, 3, 5, None, None])
-    # vls["__ideal_park"] = np.array([4, 2, 1, 5, 2, None, None])
-
-    knn = KNN(vls=vls, k=3)
-    db["knn"] = knn
-
-    socketio.run(app, host="0.0.0.0", port=8080)
+# if __name__ == '__main__':
+#     from KNN import KNN
+#
+#     database_wrapper.main()
+#     # initialize database
+#     vls = {}
+#
+#     db = {"ex": database_wrapper.my_db}
+#     for user in db["ex"].get("users", "username"):
+#         if user == "Admin":
+#             continue
+#         # interests = db["ex"].get("users", "interests", f'username="{user}"')[0].strip()
+#         lat, lng = [float(x) for x in db["ex"].get("users", "loc", f'username="{user}"')[0].split(", ")]
+#         db['ex'].set_user_location(user, f"{lat}, {lng}")
+#
+#
+#         interests = db['ex'].get("users", "interests", condition=f'username="{user}"')[0]
+#         # db['ex'].edit("users", "interests", newvalue=interests, condition=f'username="{user}"')
+#         # vls[user] = [lat, lng]
+#         # + [lat / 25, lng / 25]
+#         vls[user] = [float(x) for x in interests.split("|")[1::2]]
+#
+#     knn = KMEANS(vls=vls, k=3)
+#     db["knn"] = knn
+#
+#     socketio.run(app, host="0.0.0.0", port=8080)

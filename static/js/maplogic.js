@@ -336,12 +336,7 @@ function calculateAndDisplayRoute(
           if (leader_of_party){
             socket.emit('send_dest', destination);
           }
-//          document.getElementById("warnings-panel").innerHTML =
-//          "<b>" + directionsData.warnings + "</b>";
 
-            // idk how to make it not show the A B markers
-            // so ill just not render this tee hee　
-//          directionsRenderer.setDirections(result);
 
          all_markers.destination = new google.maps.Marker({
                         position: destination,

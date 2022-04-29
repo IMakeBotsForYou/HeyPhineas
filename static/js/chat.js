@@ -35,6 +35,10 @@ function loadChat(room){
                                 .slice(0).reverse()  // reverse array
                                 .map(message => `${base}${message["author"]}: ${message["message"]}</p>`) // map array to messages
                                 .join("");  //join into one string
+    var tab_name = document.getElementById(`chat_${room}`).innerHTML;
+    var start_bracket_index = tab_name.indexOf("(");
+    // removes " (number)"
+    tab_name.innerHTML = tab_name.slice(0, start_bracket_index-1);
 }
 
 update_tabs();
@@ -67,6 +71,18 @@ socket.on('message', function(data){
     chat_histories[room].history.push({"author": data["author"], "message": data["message"]});
     if(current_chat == room){
         loadChat(room);
+    } else {
+        // make it say TABNAME (1)
+        var tab_name = document.getElementById(`chat_${room}`).innerHTML;
+
+        if(tab_name[tab_name.length] == ")"){
+            // already has the notification thing
+            var start_bracket_index = tab_name.indexOf("(");
+            var number = parseInt(tab_name.slice(start_bracket_index, tab_name.length));
+            tab_name.innerHTML = tab_name.slice(0, start_bracket_index) +`(${number+1})`;
+        } else {
+            tab_name.innerHTML+=" (1)";
+        }
     }
 });
 

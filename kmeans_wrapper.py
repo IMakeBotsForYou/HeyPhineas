@@ -83,7 +83,7 @@ def find_elbow(points):
         return -1
 
 
-class KNN:
+class KMEANS:
     def __init__(self, vls=None, k: int = 0):
 
         if vls is None:
@@ -312,13 +312,10 @@ if __name__ == "__main__":
     }
     # sport|theater|computer|park|restaurant|
 
-    knn = KNN(values)
+    kmeans = KMEANS(values)
 
-    knn.set_origin("Dan")
-    a = knn.find_optimal_clusters(draw_graphs=True)
-    print(a)
-    # for center in a:
-    #     print(knn.find_best_category([person[0] for person in a[center]], category_values))
+    kmeans.set_origin("Dan")
+    a = kmeans.find_optimal_clusters(draw_graphs=True)
 
     # i = 3
     # x = [3 + 1.5 * np.cos(2 * np.pi * j / i+0.25) for j in range(i)]

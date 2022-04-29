@@ -5,6 +5,8 @@
 # Pycharm files
 venv/*
 
+# API keys
+keys.py
 
 # Reqs for project
 req.txt

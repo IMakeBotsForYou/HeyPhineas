@@ -101,8 +101,23 @@ class Database:
         s = f"SELECT {column} FROM {table}"
         if condition: s += f" WHERE {condition}"
         if limit: s += f" LIMIT {limit}"
-        a = self.execute(s)
-        return [x[0] if first else x for x in a]
+        result = self.execute(s)
+
+        if result:
+            """
+            results are usually like this 
+            [(result, ), (result, ), (result, )...]
+            So by using the first=True parameter, can turn this into
+            [result, result, result ...]
+            Set this to FALSE when getting multiple columns
+            """
+            if first:
+                return [item[0] for item in result]
+            else:
+                return result
+
+        else:
+            return []
 
     def execute(self, line, fetch=None):
         """
@@ -343,17 +358,17 @@ class UserData(Database):
         :return: All messages to user in json format
         """
         mes = self.get('messages', '*', condition=f'receiver="{user}"' if user else None, first=False)
-        ret = {"messages": []}
+        ret = []
         for message in mes:
             message_id, title, content, sender, receiver, m_type, action = message
 
-            ret["messages"].append({"id": message_id,
-                                    "title": title,
-                                    "content": content,
-                                    "sender": sender,
-                                    "type": m_type,
-                                    "action": action
-                                    })
+            ret.append({"id": message_id,
+                        "title": title,
+                        "content": content,
+                        "sender": sender,
+                        "type": m_type,
+                        "action": action
+                        })
         return ret
 
     def get_friends(self, user):
@@ -450,23 +465,20 @@ def reset_locations():
         my_db.edit("users", "loc", newvalue=new_value, condition=f'username="{name}"')
 
 
-def main():
-    global my_db
-    global def_locations
-    my_db = UserData("database/data")
-    def_locations = Database('database/def_locations')
-    # for name in my_db.get_all_names():
-    #     def_locations.add("locations", reformat(name, my_db.get_user_location(name)))
+my_db = UserData("database/data")
+def_locations = Database('database/def_locations')
+
+# def main():
+#     global my_db, def_locations
+#     my_db = UserData("database/data")
+#     def_locations = Database('database/def_locations')
+# for name in my_db.get_all_names():
+#     def_locations.add("locations", reformat(name, my_db.get_user_location(name)))
 
 
 # my_db.remove_user("Guy", "123")
 # print(my_db.get_users())
 
 
-if __name__ == "__main__":
-    main()
-    # print(my_db.get("users", "notifications", condition=f'username="Dvir"'))
-    # names = ["Mike", "Manor", "Liza", "Maya", "Yakov"]
-    # import random
-    # for name in names:
-    #     my_db.add_user(name, "123", random.choice(names))
+# if __name__ == "__main__":
+#     main()
