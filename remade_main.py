@@ -12,7 +12,7 @@ from flask_socketio import SocketIO, emit
 from get_query_results import find_places
 from database_wrapper import smallest_free
 from database_wrapper import my_db as database
-from kmeans_wrapper import category_values, KMEANS, get_color
+from kmeans_wrapper import category_values, KMEANS
 
 Payload.max_decode_packets = 50
 
@@ -62,6 +62,8 @@ parties[party_owner] = {
                                         "voted_yes": [member, ...],
                                         "voted_no":  [member, ...]
                                         }
+                        "destination_status": "No Destination" | "Have Destination" | "Reached Destination",
+                        "arrived": []
                        }
 """
 
@@ -71,11 +73,6 @@ party_suggestions[party_owner] = {
                                   "members": [member, ...],                        
                                   }
 
-"""
-
-user_colors = {}
-"""
-user_colors[user] = "green"/"blue"...   str
 """
 
 
@@ -143,20 +140,32 @@ def create_chat(*, name: str, party_members: list = None) -> str:
     return smallest_free_chat_id
 
 
+def separate_into_colours(group_owners):
+    colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
+             'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
+    colors_amount = len(colors)
+    ret = []
+    for i, g in enumerate(sorted(group_owners)):
+        ret.append((colors[i % colors_amount], parties[g]["members"]))
+    return ret
+
+
 def create_party(user, members_to_add=None):
     if members_to_add is None:
         members_to_add = []
     party_members = [user] + members_to_add
     """
-        {
-        "members: [member, ...],
-        "destination": [lat, lng] | None
-        "vote_status": {"suggested_location": [lat, lng] | None,
-                        "during_vote": False, 
-                        "voted_yes": [member, ...],
-                        "voted_no":  [member, ...]
-                        }
-        }
+parties[party_owner] = {
+                        "members: [member, ...],
+                        "destination": [lat, lng] | None
+                        "vote_status": {"suggested_location": [lat, lng] | None,
+                                        "during_vote": False, 
+                                        "voted_yes": [member, ...],
+                                        "voted_no":  [member, ...]
+                                        }
+                        "destination_status": "No Destination" | "Have Destination" | "Reached Destination",
+                        "arrived": []
+                       }
     """
     parties[user] = {
         "members": party_members,
@@ -166,7 +175,9 @@ def create_party(user, members_to_add=None):
             "during_vote": False,
             "voted_yes": [],
             "voted_no": []
-        }
+        },
+        "destination_status": "No Destination",
+        "arrived": []
     }
 
     for m in party_members:
@@ -199,7 +210,7 @@ def get_party_leader(username):
         return "Admin"
 
     # a = [person for person in parties if username in parties[person]["members"]]
-    return members[username]["party"]
+    return connected_members[username]["party"]
 
 
 def get_messages(user):
@@ -212,7 +223,7 @@ def get_messages(user):
 
 def get_party_members(username):
     owner = get_party_leader(username)
-    print(owner, username)
+    print("party members", owner, username)
     if owner not in parties:
         return []
     return parties[owner]["members"].copy()
@@ -244,7 +255,7 @@ def emit_to(user: str, event_name: str, message=None, namespace: str = '/comms',
     try:
         emit(event_name, message, namespace=namespace, room=members[user]['sid'])
         if verbose:
-            print(f"Sent to {user}: {event_name} {message} {namespace} ")
+            print(f"Sent to data: {user}: {event_name} {message} {namespace} ")
     except Exception as e:
         print(f'Error in emitting to user {user},', e)
         print(f'Tried to send: ', event_name, message)
@@ -350,6 +361,7 @@ def disconnect_user_from_party(user, chat_is_disbanded=False):
         emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
 
     connected_members[user]["party"] = None
+    emit_to(user, event_name="reset_markers")
 
 
 def update_destination(data, user):
@@ -357,7 +369,7 @@ def update_destination(data, user):
     if not leader:
         return
     parties[leader]["destination"] = data
-    parties[leader]["status"] = "Has Destination"
+    parties[leader]["destination_status"] = "Has Destination"
     parties[leader]["arrived"] = []
     lat, lng = data
     emit_to_party(user, event_name='update_destination',
@@ -369,7 +381,7 @@ def parse_chat_command(command, chat_id):
     args = command[1:].split(" ")
 
     in_party_chat = chat_id == get_party_chat_id(session['user'])
-
+    print(2020, in_party_chat, args)
     if len(args) > 1:
         cmd, arguments = args[0], args[1:]
     else:
@@ -430,6 +442,7 @@ def parse_chat_command(command, chat_id):
         parties[leader]["destination"] = [loc_of_place["lat"], loc_of_place["lng"]]
 
         emit_to_party(session['user'], event_name='location_suggestion', message=location)
+
         send_message_to_party(session['user'],
                               message=f"How about < {location['name']} > ?  Vote now! (/vote y) ")
 
@@ -589,6 +602,7 @@ def parse_action(command):
         try:
             party_owner = \
                 [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+            print(9001, party_owner, get_party_members(party_owner), "\n", json.dumps(party_suggestions, indent=1))
             if len(get_party_members(party_owner)) == 0:
                 create_party(session['user'])
                 if party_owner != session['user']:
@@ -622,6 +636,61 @@ def parse_action(command):
             print('lol sucks for u')
 
 
+def send_path_to_party(user_to_track):
+    party_members = get_party_members(user_to_track)
+    party_leader = get_party_leader(user_to_track)
+    if len(party_members) == 0:
+        return
+# "destination_status": "No Destination" | "Have Destination" | "Reached Destination"
+    paths = []
+    if parties[party_leader]["destination_status"] in ["No Destination"]:
+        return
+
+    print(f"tracc {user_to_track}, {party_members}")
+    done = False
+
+    if len(parties[party_leader]["arrived"]) == len(party_members):
+        done = True
+
+    """ done = True
+    # meters = 5"""
+    for member in party_members:
+        if member in connected_members:
+            try:
+                a = connected_members[member]['current_path']
+                path, index = a["path"], a["index"]
+
+                # this still doesn't work
+
+                current_lat, current_lng = connected_members[member]['loc']
+                path_and_current_loc = [[current_lat, current_lng]] + path[index:]
+                print(f"123, {len(path_and_current_loc)}", index, f"{len(path[index:])}")
+                # this works
+                # path_and_current_loc = path[index:]
+
+                current_user_path = [{'lat': x[0], 'lng': x[1]} for x in path_and_current_loc]
+                paths.append((member, current_user_path))
+                """ min_distance = meters * 0.0000089  # convert to lng/lat scale
+                 if distance(connected_members[member]['loc'], path[index]) < min_distance:
+                     done = False"""
+
+                print(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
+            except Exception as e:
+                print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
+    emit_to(session["user"], 'user_paths', message=paths)
+    emit_to("Admin", 'user_paths', message=paths)
+
+    # all the paths are dones
+    if done and len(party_members) > 1 and parties[party_leader]["destination_status"] != "Reached Destination":
+        parties[party_leader]["destination_status"] = "Reached Destination"
+        # online party members in order
+        list_of_priorities = [x for x in party_members if x in connected_members]
+        database.send_message(title=f"Party Reached Destination",
+                              desc=f"{party_leader}'s party has reached their destination.",
+                              sender="[System]", receiver="Admin", messagetype="ignore",
+                              action=None)
+
+
 def join_party(owner, username):
     if username in parties[owner]["members"]:
         return
@@ -635,7 +704,6 @@ def join_party(owner, username):
     party_coords(owner)
 
     connected_members[username]["chats"].append(party_chat_id)
-
 
     room = {"id": party_chat_id, **chat_rooms[party_chat_id]}
     emit_to(session['user'], event_name="create_chat", message=room)
@@ -672,9 +740,9 @@ def broadcast_user_difference():
 
     emit_to("Admin", "all_users", message={u: u in connected_members for u in database.get_all_names()})
 
-    print("Data:")
-    print("\n".join([f"{name}, {int(time()) - members[name]['last ping']}" for name in visible_users]))
-    print({'amount': len(members.keys()), 'names': [user for user in members]})
+    print("Last ping data:")
+    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visible_users]))
+    print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
 
 """
@@ -684,19 +752,22 @@ def broadcast_user_difference():
 
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
+
     if session['user'] not in members:
         members[session['user']] = {
             "sid": request.sid,  # the socket sid
             "loc": database.get_user_location(session['user']),  # [0, 0],
-            "current_path": [None, 0],
+            "current_path": {"path": [], "index": 0},
             "party": None,  # (party owner's name | None) ,
             "last ping": time_now(),
             "chats": ["0"]  # 0 is the global chat
         }
     else:
+        print("RECONNECTED", session['user'], session['user'] in connected_members)
         # Reconnecting
         members[session['user']]["sid"] = request.sid
         members[session['user']]["last ping"]: time_now()
+
 
     # put userdata in the connected member dictionary
     # will be deleted when user is disconnected
@@ -739,21 +810,36 @@ def logged_on_users():
         )
         for center in suggestion_groups:
             names = [person[0] for person in suggestion_groups[center]]
-            for name in names:
-                user_colors[name] = get_color(name, suggestion_groups,
-                                              len(parties.keys()) + len(party_suggestions.keys()))
+
             suggest_party(names)
+
+
+@socketio.on('path_from_user', namespace='/comms')
+def return_path(data):
+    # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
+    connected_members[session['user']]['current_path'] = {"path": data, "index": 0}
+    print(f"Received path from {session['user']}")
+    send_path_to_party(user_to_track=session['user'])
 
 
 @socketio.on('ping', namespace='/comms')
 def check_ping(online_users):
     # update last pinged time for user
+
+    # put userdata in the connected member dictionary
+    # will be deleted when user is disconnected
+    if session['user'] not in connected_members:
+        return
+    members[session['user']] = connected_members[session['user']].copy()
+
     connected_members[session['user']]["last ping"] = time_now()
 
     # if we have users we need to update the online list
     # delete members that haven't pinged in 2 seconds
+
     for username in connected_members.copy():
         if time_now() - connected_members[username]["last ping"] > 2:
+            print(f"DELETING {username}")
             del connected_members[username]
             broadcast_user_difference()
 
@@ -777,9 +863,13 @@ def check_ping(online_users):
         broadcast_user_difference()
 
     # The ADMIN client doesn't need to see chats
+    send_path_to_party(session['user'])
 
     def client_has_confirmed(chat_id):
-        return chat_rooms[chat_id]["members"][session['user']]
+        try:
+            return chat_rooms[chat_id]["members"][session['user']]
+        except KeyError:
+            return True
 
     if session['user'] != "Admin":
 
@@ -796,6 +886,15 @@ def check_ping(online_users):
             [emit_to(session['user'], event_name="del_chat", message=chat_id)
              for chat_id
              in delete_chats_queue[session['user']]]
+
+        lat, lng = connected_members[session['user']]["loc"]
+        emit_to("Admin", 'my_location_from_server', message={
+            "name": session['user'],
+            "lat": lat, "lng": lng
+        })
+
+    data = separate_into_colours(parties.keys())
+    emit_to("Admin", event_name="user_colors", message=data)
 
 
 @socketio.on('invite_user', namespace='/comms')
@@ -834,8 +933,8 @@ def chat_message(data):
             "message": message
         })
     if message[0] == "/":
-        pass
-        # parse_chat_command(message, room)
+        # pass
+        parse_chat_command(message, room)
 
 
 @socketio.on('inbox_notification_react', namespace='/comms')
@@ -849,7 +948,7 @@ def notification_parse(data):
         print(f"{reaction}: {title} | {msg_type}")
         if reaction != "mark_as_read":
             parse_action(action)
-            database.remove("messages", f'id={message_id}')
+        database.remove("messages", f'id={message_id}')
 
         session['inbox_messages'] = get_messages(session['user'])
     except IndexError:
@@ -906,6 +1005,36 @@ def confirm_delete_chat(chat_id):
         delete_chats_queue[session['user']].remove(chat_id)
     except KeyError:
         pass
+
+
+@socketio.on('my_location_from_user', namespace='/comms')
+def my_location(data):
+    # set_user_location(session['user'], data[0], data[1])
+
+    connected_members[session['user']]['current_path']["index"] = data["index"]
+    connected_members[session['user']]['loc'] = data["lat"], data["lng"]
+    lat, lng = data["lat"], data["lng"]
+    location_obj = {
+        "name": session['user'],
+        "lat": lat, "lng": lng
+    }
+
+    emit_to("Admin", event_name='my_location_from_server', message=location_obj)
+    emit_to_party(session['user'], event_name='my_location_from_server', message=location_obj)
+    send_path_to_party(session['user'])
+
+
+@socketio.on('arrived', namespace='/comms')
+def arrived():
+    leader = get_party_leader(session['user'])
+    if session['user'] not in parties[leader]["arrived"]:
+        parties[leader]["arrived"].append(session['user'])
+        send_path_to_party(session['user'])
+
+
+@socketio.on('request_destination_update', namespace='/comms')
+def destination_update_request(data):
+    update_destination(data, session['user'])
 
 
 @socketio.on('disconnect', namespace='/comms')

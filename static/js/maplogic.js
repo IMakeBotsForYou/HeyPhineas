@@ -4,9 +4,8 @@ var calculateRoute = null; // get directions
 var user_locations = {}    // user locations
 var all_markers = {        // all markers
     "suggestion": [],
-    "users": [],
+    "users": {},
     "user_added_locations": [],
-    "directions": [],
     "destination": null
 };
 var current_directions;    // current directions / path
@@ -88,6 +87,26 @@ function initMap() {
     });
 
     // get location suggestions from server
+
+    for (const [username, marker] of Object.entries(all_markers.users)) {
+            marker.setIcon(color_dot_link("red"));
+    }
+
+    socket.on('reset_markers', function(data){
+       var suggestion_markers = all_markers.suggestion;
+
+       for (let i = 0; i < suggestion_markers.length; i++) {
+           suggestion_markers[i].setMap(null);
+       }
+       for (const [username, marker] of Object.entries(all_markers.users)) {
+           marker.setMap(null);
+       }
+       for (const [username, path] of Object.entries(all_markers.users)) {
+           path.setMap(null);
+       }
+       all_markers.destination.setMap(null);
+
+    });
     socket.on('location_suggestion', function(data){
        var suggestion_markers = all_markers.suggestion;
        // reset all suggestion markers
@@ -96,18 +115,17 @@ function initMap() {
        }
        // go over data that we received
        // from the server
-       for(let i = 0; i < data.length; i++){
-           var place = data[i];
-           var location = place.location;
-           var myLatLng = new google.maps.LatLng(location.lat, location.lng);
-           var marker = new google.maps.Marker({
-               position: myLatLng,
-               label: data[i].name,
-               map: map,
-               icon: place.icon
-           });
-           suggestion_markers.push(marker);
-       }
+
+       var location = data.location;
+       var myLatLng = new google.maps.LatLng(location.lat, location.lng);
+       var marker = new google.maps.Marker({
+           position: myLatLng,
+           label: data.name,
+           map: map
+//           icon: data.icon
+       });
+       suggestion_markers.push(marker);
+//       }
        /* not actually needed, maybe will serve
         a purpose later. currently only prints
         the label of the marker on click event. */
@@ -260,10 +278,21 @@ function initMap() {
     function color_dot_link(colour){
         return "https://maps.google.com/mapfiles/ms/icons/"+ colour + "-dot.png"
     }
+
     socket.on('user_colors', function(data){
-      for (const [username, colour] of Object.entries(data)) {
-        if (username in all_markers.users)
-        all_markers.users[username].setIcon(color_dot_link(colour));
+//      for (let i = 0; i < all_markers.users.length; i++) {
+//        all_markers.users[i].setIcon(color_dot_link("red"));
+//      }
+      for (const [username, marker] of Object.entries(all_markers.users)) {
+            marker.setIcon(color_dot_link("red"));
+      }
+      for (let i = 0; i < data.length; i++) {
+        var color = data[i][0];
+        var same_color_users = data[i][1];
+        for (let j = 0; j < users.length; j++){
+            if(same_color_users[j] in all_markers.users)
+           all_markers.users[same_color_users[j]].setIcon(color_dot_link(color));
+        }
       }
     });
 
@@ -340,10 +369,8 @@ function calculateAndDisplayRoute(
 
          all_markers.destination = new google.maps.Marker({
                         position: destination,
-                        label: name,
                         map: map,
-                        icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png"
-                });
+         });
          document.getElementById('msg').innerHTML = " Walking distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
         })
     }

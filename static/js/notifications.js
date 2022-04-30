@@ -52,16 +52,13 @@ $(document).ready(function(){
                         <script>
                         // accept suggestion made by server
                         document.getElementById("accept-suggestion-button_${id}").addEventListener("click", function() {
-                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept_suggestion"});
-                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept"});
-                           document.getElementById("message-div-${id}").remove();
+                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept_suggestion"});                           document.getElementById("message-div-${id}").remove();
                            delete message_logs[${id}]
                         });
 //                        console.log(document.getElementById("accept-suggestion-button_${id}"));
                         // reject suggestion made by server
                         document.getElementById("reject-button_${id}").addEventListener("click", function() {
                            socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "mark_as_read"});
-                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept"});
                            document.getElementById("message-div-${id}").remove();
                            delete message_logs[${id}]
                         });

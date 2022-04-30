@@ -166,7 +166,7 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="restaurant
     reverse_geocoded_data = json.loads(get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key={apikey}").text)
     reverse_geocoded_city = reverse_geocoded_data["results"][0]["address_components"][2]["long_name"]
 
-    req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry", "place_id"]
+    req_fields = ["formatted_address", "name", "rating", "opening_hours", "geometry", "place_id", "icon"]
     req_comp = [f"input={place_type}s in {reverse_geocoded_city}", "inputtype=textquery",
                 f"limit={limit}", f"fields={','.join(req_fields)}", f"key={apikey}",
                 f"locationbias=circle:{radius}@{lat},{lng}"]
