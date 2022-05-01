@@ -826,10 +826,12 @@ def return_path(data):
 def check_ping(online_users):
     # update last pinged time for user
 
-    # put userdata in the connected member dictionary
-    # will be deleted when user is disconnected
+    # idfk is going on here. this shouldn't ever happen
+    # but it does
     if session['user'] not in connected_members:
-        return
+        print("Logged in in ping event")
+        logged_on_users()
+
     members[session['user']] = connected_members[session['user']].copy()
 
     connected_members[session['user']]["last ping"] = time_now()
