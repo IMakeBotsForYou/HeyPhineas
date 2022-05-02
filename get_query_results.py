@@ -170,17 +170,17 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="restaurant
     req_comp = [f"input={place_type}s in {reverse_geocoded_city}", "inputtype=textquery",
                 f"limit={limit}", f"fields={','.join(req_fields)}", f"key={apikey}",
                 f"locationbias=circle:{radius}@{lat},{lng}"]
-
-    req_url = f"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?{'&'.join(req_comp)}"
+# findplacefromtext
+    req_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{'&'.join(req_comp)}"
     print(req_url)
     req_res = get(req_url)
     json_res = json.loads(req_res.text)
     final_results = []
     # print(req_url, json.dumps(json_res, indent=4))
     if limit != -1:
-        api_responds = json_res["candidates"][:limit]
+        api_responds = json_res["results"][:limit]
     else:
-        api_responds = json_res["candidates"]
+        api_responds = json_res["results"]
     geometry = ["location"]
     for result in api_responds:
         info = {}

@@ -767,6 +767,7 @@ def get_coords_of_party():
 
 chatrooms = {"0": {"name": "Global", "history": [], "members": {}, "type": "global"}}
 
+
 def get_all_user_chats(target):
     return [{"id": room, **chatrooms[room]} for room in chatrooms if target in list(chatrooms[room]["members"].keys())]
 

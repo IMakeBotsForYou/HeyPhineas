@@ -101,7 +101,10 @@ function initMap() {
        for (const [username, marker] of Object.entries(all_markers.users)) {
            marker.setMap(null);
        }
-       for (const [username, path] of Object.entries(all_markers.users)) {
+       for (const [username, marker] of Object.entries(all_markers.users)) {
+           marker.setMap(null);
+       }
+       for (const [username, path] of Object.entries(paths)) {
            path.setMap(null);
        }
        all_markers.destination.setMap(null);
@@ -267,8 +270,11 @@ function initMap() {
                 all_markers.user_added_locations.push(m);
                 user_added_locations.push(`${latlng[0]}, ${latlng[1]}`)
                 all_markers.user_added_locations[i].addListener("click", () => {
-                    socket.emit('request_destination_update', [all_markers.user_added_locations[i].getPosition().lat(),
-                                                               all_markers.user_added_locations[i].getPosition().lng()])
+                // request_destination_update;
+                    var marker = all_markers.user_added_locations[i];
+                    socket.emit('suggest_location', {"lat": marker.getPosition().lat(),
+                                                     "lng": marker.getPosition().lng(),
+                                                     "name": marker.label})
                     map.setCenter(all_markers.user_added_locations[i].getPosition());
                 });
             }
@@ -330,11 +336,9 @@ function calculateAndDisplayRoute(
         socket.emit('user_added_locations_get');
         socket.emit('party_members_list_get');
         socket.emit('online_members_get');
-        socket.emit('get_destination')
-        // TEMP
-
-        socket.emit('get_coords_of_party')
-        console.log("pussy")
+        socket.emit('get_destination');
+        // TEMP;
+        socket.emit('get_coords_of_party');
         return;
   } else {
   var origin = user_locations[user];

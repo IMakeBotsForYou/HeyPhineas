@@ -376,6 +376,15 @@ def update_destination(data, user):
                   message={"lat": lat, "lng": lng})
 
 
+def start_vote_on_place(leader, location_data):
+    parties[leader]["in_vote"] = True
+    parties[leader]["votes"] = {}
+    parties[leader]["destination"] = [location_data["lat"], location_data["lng"]]
+    send_message_to_party(session['user'],
+                          message=f"How about < {location_data['name']} > ?  Vote now! (/vote y) ")
+    emit_to_party(leader, event_name='location_suggestion', message=location_data)
+
+
 def parse_chat_command(command, chat_id):
     # try:
     args = command[1:].split(" ")
@@ -433,18 +442,16 @@ def parse_chat_command(command, chat_id):
         location = get_place_recommendation_location(
             tp=parties[leader]["place_type"],
             radius=2,
-            limit=5
+            limit=10
         )
         index = np.random.randint(0, len(location))
         location = location[index]
 
-        loc_of_place = location["location"]
-        parties[leader]["destination"] = [loc_of_place["lat"], loc_of_place["lng"]]
-
-        emit_to_party(session['user'], event_name='location_suggestion', message=location)
-
-        send_message_to_party(session['user'],
-                              message=f"How about < {location['name']} > ?  Vote now! (/vote y) ")
+        start_vote_on_place(leader=leader,
+                            # lat=loc_of_place["lat"],
+                            # lng=loc_of_place["lng"],
+                            # name=location['name'],
+                            location_data=location)
 
     if cmd == "leave_group" and in_party_chat:
         disconnect_user_from_party(session['user'])
@@ -464,7 +471,8 @@ def parse_chat_command(command, chat_id):
             disconnect_user_from_party(session['user'])
             # Not a trace ....
             del parties[session['user']]
-            del chat_rooms[chat_id]
+            chat_rooms[chat_id] = {"members": []}
+
 
 
 """
@@ -768,7 +776,6 @@ def logged_on_users():
         members[session['user']]["sid"] = request.sid
         members[session['user']]["last ping"]: time_now()
 
-
     # put userdata in the connected member dictionary
     # will be deleted when user is disconnected
     connected_members[session['user']] = members[session['user']]
@@ -820,6 +827,12 @@ def return_path(data):
     connected_members[session['user']]['current_path'] = {"path": data, "index": 0}
     print(f"Received path from {session['user']}")
     send_path_to_party(user_to_track=session['user'])
+
+
+@socketio.on('suggest_location', namespace='/comms')
+def check_ping(data):
+    start_vote_on_place(leader=get_party_leader(session['user']),
+                        location_data=data)
 
 
 @socketio.on('ping', namespace='/comms')
