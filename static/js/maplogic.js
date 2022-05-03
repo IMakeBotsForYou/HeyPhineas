@@ -110,6 +110,7 @@ function initMap() {
        all_markers.destination.setMap(null);
 
     });
+
     socket.on('location_suggestion', function(data){
        var suggestion_markers = all_markers.suggestion;
        // reset all suggestion markers
