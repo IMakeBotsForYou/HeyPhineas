@@ -38,7 +38,7 @@ $(document).ready(function(){
                     <button type="button" class="form_button mb-[10px] bg-white text-black hover:text-white hover:bg-black transition-300" id="confirm-button_${id}" >Accept</button>
                             <script>
                             document.getElementById("confirm-button_${id}").addEventListener("click", function() {
-                               socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept"});
+                               socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "join_party"});
                                document.getElementById("message-div-${id}").remove();
                                delete message_logs[${id}]
                             });
@@ -70,7 +70,7 @@ $(document).ready(function(){
                     <script>
                         document.getElementById("close-button_${id}").addEventListener("click", function() {
                            socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "mark_as_read"});
-                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "accept"});
+                           socket.emit('inbox_notification_react', {"message_id": ${id}, "reaction": "join_party"});
                            document.getElementById("message-div-${id}").remove();
                            delete message_logs[${id}]
                         });

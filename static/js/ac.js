@@ -1,5 +1,10 @@
+function filter_users(target){
+    return !party_users.includes(target) && user != target;
+}
+
 function autocomplete(inp) {
   var arr = online_users;
+  arr = arr.filter(filter_users);
   /*the autocomplete function takes two arguments,
   the text field element and an array of possible autocompleted values:*/
   var currentFocus;

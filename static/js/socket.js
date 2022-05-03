@@ -207,7 +207,6 @@ $(document).ready(function(){
         $("#invite_user_popup").fadeOut()
         $("#invite_user").prop("disabled", false);
     });
-
      $("#confirm_loc").on("click", function() {
         var name = document.getElementById("add_loc_name").value;
         var lat = document.getElementById("add_loc_lat").value;
@@ -220,29 +219,5 @@ $(document).ready(function(){
     $('#reset_locs').on("click", function() {
         socket.emit('reset_locations');
     });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 });

@@ -141,9 +141,17 @@
     {% else %}
         <div title="online-boya" class="flex flex-col w-[25%] panel">
             <div title="buttons" class="flex flex-row justify-around">
-               <button title="reset_loc" id="reset_locs" class="my-2 tab_button bg-gray-light text-white" type="button">
+               <button title="Reset user locations" id="reset_locs" class="my-2 tab_button bg-gray-light text-white" type="button">
                    Reset Locations
                </button>
+               <button title="Suggest groups online users" id="sugg_groups" class="my-2 tab_button bg-gray-light text-white" type="button">
+                   Run K-Means
+               </button>
+                <script>
+                        $("#sugg_groups").on("click", function() {
+                            socket.emit('start_grouping_users')
+                        });
+                </script>
             </div>
             <div title="online-users" id="user_data" class="mx-2">
 

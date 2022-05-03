@@ -439,14 +439,14 @@ def parse_chat_command(command, chat_id):
         parties[leader]["in_vote"] = True
         parties[leader]["votes"] = {}
         # radius is in KM(Kilometres)
-        location = get_place_recommendation_location(
+        locations = get_place_recommendation_location(
             tp=parties[leader]["place_type"],
             radius=2,
             limit=10
         )
-        index = np.random.randint(0, len(location))
-        location = location[index]
-
+        index = np.random.randint(0, len(locations))
+        location = locations[index]
+        print(json.dumps(location, indent=2))
         start_vote_on_place(leader=leader,
                             # lat=loc_of_place["lat"],
                             # lng=loc_of_place["lng"],
@@ -598,10 +598,7 @@ def parse_action(command):
             print(session['user'], "already in party", party_owner)
             return
 
-        if len(get_party_members(party_owner)) == 0:
-            create_party(party_owner, members_to_add=[session['user']])
-        else:
-            join_party(party_owner, session['user'])
+        join_party(party_owner, session['user'])
 
         emit_to_party(party_owner, event_name="update_party_members", message=get_party_members(party_owner))
         send_message_to_party(party_owner, message=f'{session["user"]} joined!')
@@ -610,7 +607,6 @@ def parse_action(command):
         try:
             party_owner = \
                 [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
-            print(9001, party_owner, get_party_members(party_owner), "\n", json.dumps(party_suggestions, indent=1))
             if len(get_party_members(party_owner)) == 0:
                 create_party(session['user'])
                 if party_owner != session['user']:
@@ -640,6 +636,9 @@ def parse_action(command):
             # if everyone reacted to it we don't need it anymore woooo
             if len(PSP["accepted"]) + len(PSP["rejected"]) == len(PSP["total"]):
                 del party_suggestions[party_owner]
+
+            send_message_to_party(party_owner, message=f'{session["user"]} joined!')
+
         except IndexError:
             print('lol sucks for u')
 
@@ -789,37 +788,6 @@ def logged_on_users():
         # Make it so all the user's channels aren't confirmed
         chat_rooms[chat_id]["members"][session['user']] = False
 
-    """
-    ============================= K MEANS =============================
-     Get all users that are online,
-     not in a group, and have not
-     received a suggestion from the server
-     (have an active suggestion)"""
-
-    def group_suggestion_filter(u):
-        # Check if user is in a suggestion list
-        for leader in party_suggestions:
-            if u in party_suggestions[leader]["total"]:
-                return False
-        # If user has a party return false
-        leader = get_party_leader(u)
-        if leader is not None or leader == "Admin":
-            return False
-        # Return true, user fits qualifications
-        return True
-
-    dont_have_suggestions = filter_dict(d=connected_members, f=group_suggestion_filter)
-    if len(dont_have_suggestions) > 1:
-
-        suggestion_groups = kmeans.find_optimal_clusters(
-            only_these_values=filter_dict(kmeans.values, lambda x: x in dont_have_suggestions),
-            verbose=False
-        )
-        for center in suggestion_groups:
-            names = [person[0] for person in suggestion_groups[center]]
-
-            suggest_party(names)
-
 
 @socketio.on('path_from_user', namespace='/comms')
 def return_path(data):
@@ -957,17 +925,14 @@ def notification_parse(data):
     message_id, reaction = data["message_id"], data["reaction"]
 
     # first grab the message to see what we need to do with it
-    try:
-        _id, title, content, sender, receiver, msg_type, action = \
-            database.get('messages', '*', f'id={message_id}', first=False)[0]
-        print(f"{reaction}: {title} | {msg_type}")
-        if reaction != "mark_as_read":
-            parse_action(action)
-        database.remove("messages", f'id={message_id}')
+    _id, title, content, sender, receiver, msg_type, action = \
+        database.get('messages', '*', f'id={message_id}', first=False)[0]
+    print(f"{reaction}: {title} | {msg_type}")
+    if reaction != "mark_as_read":
+        parse_action(action)
+    database.remove("messages", f'id={message_id}')
 
-        session['inbox_messages'] = get_messages(session['user'])
-    except IndexError:
-        pass
+    session['inbox_messages'] = get_messages(session['user'])
 
 
 @socketio.on('user_added_locations_get', namespace='/comms')
@@ -1045,6 +1010,40 @@ def arrived():
     if session['user'] not in parties[leader]["arrived"]:
         parties[leader]["arrived"].append(session['user'])
         send_path_to_party(session['user'])
+
+
+@socketio.on('start_grouping_users', namespace="/comms")
+def suggest_admin_event():
+    """
+        ============================= K MEANS =============================
+         Get all users that are online,
+         not in a group, and have not
+         received a suggestion from the server
+         (have an active suggestion)"""
+
+    def group_suggestion_filter(u):
+        # Check if user is in a suggestion list
+        for leader in party_suggestions:
+            if u in party_suggestions[leader]["total"]:
+                return False
+        # If user has a party return false
+        leader = get_party_leader(u)
+        if leader is not None or leader == "Admin":
+            return False
+        # Return true, user fits qualifications
+        return True
+
+    dont_have_suggestions = filter_dict(d=connected_members, f=group_suggestion_filter)
+    if len(dont_have_suggestions) > 1:
+
+        suggestion_groups = kmeans.find_optimal_clusters(
+            only_these_values=filter_dict(kmeans.values, lambda x: x in dont_have_suggestions),
+            verbose=False
+        )
+        for center in suggestion_groups:
+            names = [person[0] for person in suggestion_groups[center]]
+
+            suggest_party(names)
 
 
 @socketio.on('request_destination_update', namespace='/comms')
