@@ -812,7 +812,6 @@ def confirm_delete_chat(chat_id):
 
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
-
     # reconnecting = session['user'] in connected_members
     for room in get_all_user_chats(session['user']):
         chatrooms[room["id"]]["members"][session['user']] = False

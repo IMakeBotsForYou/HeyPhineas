@@ -247,5 +247,6 @@ def decode_polyline(polyline_str):
         coordinates.append((lat / 100000.0, lng / 100000.0))
     return coordinates
 
+
 if __name__ == "__main__":
     print(find_places())

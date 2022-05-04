@@ -75,6 +75,14 @@ party_suggestions[party_owner] = {
 
 """
 
+app = Flask(__name__)
+
+app.config['SECRET_KEY'] = 'secret!'
+app.config['DEBUG'] = True
+
+# turn the flask app into a socketio app
+socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
+
 
 def filter_dict(d, f):
     """ Filters dictionary d by function f. """
@@ -194,15 +202,6 @@ parties[party_owner] = {
 
 def time_now():
     return int(time())
-
-
-app = Flask(__name__)
-
-app.config['SECRET_KEY'] = 'secret!'
-app.config['DEBUG'] = True
-
-# turn the flask app into a socketio app
-socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
 
 def get_party_leader(username):
