@@ -114,6 +114,7 @@ $(document).ready(function(){
 //        $('#current_time').html(formatTime);
         socket.emit("ping", online_users);
     };
+
     const createClock = setInterval(ping_every_second, 1000);
     //update online user count
     socket.on('user_diff', function(msg) {

@@ -1,259 +1,268 @@
 PYTHON FUNCTIONS
-./database_wrapper.py, def st2int(array):
 
-./database_wrapper.py, def int2st(array):
+database_wrapper.py
+def st2int(array):
 
-./database_wrapper.py, def smallest_free(array):
+def int2st(array):
 
-./database_wrapper.py, def reformat(*args):
+def smallest_free(array):
 
-./database_wrapper.py, def reset_locations():
+def reformat(*args):
 
-./database_wrapper.py, def_locations = Database('database/def_locations')
+def reset_locations():
 
-./database_wrapper_barel.py, def st2int(array):
 
-./database_wrapper_barel.py, def int2st(array):
+database_wrapper_barel.py
+def st2int(array):
 
-./database_wrapper_barel.py, def smallest_free(array):
+def int2st(array):
 
-./database_wrapper_barel.py, def reformat(*args):
+def smallest_free(array):
 
-./database_wrapper_barel.py, def main():
+def reformat(*args):
 
-./get_query_results.py, def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="restaurant", limit=-1):
+def main():
 
-./get_query_results.py, def decode_polyline(polyline_str):
 
-./kmeans_wrapper.py, def distance(a, b):
+get_query_results.py
+def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="restaurant", limit=-1):
 
-./kmeans_wrapper.py, def calculate_error(clusters):
+def decode_polyline(polyline_str):
 
-./kmeans_wrapper.py, def recenter_centroids(centroids):
+def distance(a, b):
 
-./kmeans_wrapper.py, def display_points(values, centroids):
+def calculate_error(clusters):
 
-./kmeans_wrapper.py, def find_elbow(points):
+def recenter_centroids(centroids):
 
-./kmeans_wrapper.py, def get_intersection(a, b):
+def display_points(values, centroids):
 
-./kmeans_wrapper.py, def get_color(target, clusters, add):
+def find_elbow(points):
 
-./main.py, def filter_dict(d, f):
+get_intersection(a, b):
 
-./main.py, def parse_chat_command(command, chat_id):
+def get_color(target, clusters, add):
 
-./main.py, def emit_to_everyone(**kwargs):
 
-./main.py, def emit_to_party(member, **kwargs):
+main.py
+def filter_dict(d, f):
 
-./main.py, def random_location():
+def parse_chat_command(command, chat_id):
 
-./main.py, def get_party_members(username):
+def emit_to_everyone(**kwargs):
 
-./main.py, def create_party(user, members=None):
+def emit_to_party(member, **kwargs):
 
-./main.py, def join_party(owner, username):
+def random_location():
 
-./main.py, def disconnect_user_from_party(user, chat_is_disbanded=False):
+def get_party_members(username):
 
-./main.py, def login():
+def create_party(user, members=None):
 
-./main.py, def fav():
+def join_party(owner, username):
 
-./main.py, def get_party_chat_id(user):
+def disconnect_user_from_party(user, chat_is_disbanded=False):
 
-./main.py, def parse_action(command):
+def login():
 
-./main.py, def get_messages(user):
+def fav():
 
-./main.py, def register():
+def get_party_chat_id(user):
 
-./main.py, def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None, verbose=True):
+def parse_action(command):
 
-./main.py, def main_page():
+def get_messages(user):
 
-./main.py, def friends_func():
+def register():
 
-./main.py, def logout():
+def emit_to(user: str, event_name: str, namespace: str = '/comms', message=None, verbose=True):
 
-./main.py, def broadcast_userdiff():
+def main_page():
 
-./main.py, def update_destination(data, user):
+def friends_func():
 
-./main.py, def arrived():
+def logout():
 
-./main.py, def destination_update_request(data):
+def broadcast_userdiff():
 
-./main.py, def get_place_recommendation_location(tp, radius, limit):
+def update_destination(data, user):
 
-./main.py, def check_ping(*args):
+def arrived():
 
-./main.py, def location_recommendation_request():
+def destination_update_request(data):
 
-./main.py, def send_message_to_party(member, message, author="(System)"):
+def get_place_recommendation_location(tp, radius, limit):
 
-./main.py, def send_path_to_party(user_to_track):
+def check_ping(*args):
 
-./main.py, def return_path(data):
+def location_recommendation_request():
 
-./main.py, def return_path(data):
+def send_message_to_party(member, message, author="(System)"):
 
-./main.py, def try_reset_first(user):
+def send_path_to_party(user_to_track):
 
-./main.py, def step():
+def return_path(data):
 
-./main.py, def knn_select_user(selected_user):
+def return_path(data):
 
-./main.py, def party_coords(username):
+def try_reset_first(user):
 
-./main.py, def get_coords_of_party():
+def step():
 
-./main.py, def get_all_user_chats(target):
+def knn_select_user(selected_user):
 
-./main.py, def notification_parse(data):
+def party_coords(username):
 
-./main.py, def create_chat(*, name: str, members: list = None) -> str:
+def get_coords_of_party():
 
-./main.py, def confirm_chat(chat_id):
+def get_all_user_chats(target):
 
-./main.py, def confirm_delete_chat(chat_id):
+def notification_parse(data):
 
-./main.py, def logged_on_users():
+def create_chat(*, name: str, members: list = None) -> str:
 
-./main.py, def get_party_memb():
+def confirm_chat(chat_id):
 
-./main.py, def get_online_memb():
+def confirm_delete_chat(chat_id):
 
-./main.py, def send_user_added_locations(username):
+def logged_on_users():
 
-./main.py, def get_user_added_loc():
+def get_party_memb():
 
-./main.py, def reset_locs():
+def get_online_memb():
 
-./main.py, def interest(data):
+def send_user_added_locations(username):
 
-./main.py, def disconnect_event():
+def get_user_added_loc():
 
-./main.py, def invite_user(receiver):
+def reset_locs():
 
-./main.py, def suggest_party(users):
+def interest(data):
 
-./main.py, def add_location_func(data):
+def disconnect_event():
 
-./main.py, def get_destination():
+def invite_user(receiver):
 
-./main.py, def get_party_leader(username):
+def suggest_party(users):
 
-./main.py, def set_user_location(username, lat, lng):
+def add_location_func(data):
 
-./main.py, def chat_message(data):
+def get_destination():
 
-./main.py, def my_location(data):
+def get_party_leader(username):
 
-./remade_main.py, def filter_dict(d, f):
+def set_user_location(username, lat, lng):
 
-./remade_main.py, def get_all_user_chats(target):
+def chat_message(data):
 
-./remade_main.py, def suggest_party(users):
+def my_location(data):
 
-./remade_main.py, def get_place_recommendation_location(tp, radius, limit):
 
-./remade_main.py, def create_chat(*, name: str, party_members: list = None) -> str:
+remade_main.py
 
-./remade_main.py, def separate_into_colours(group_owners):
+def filter_dict(d, f):
 
-./remade_main.py, def create_party(user, members_to_add=None):
+def get_all_user_chats(target):
 
-./remade_main.py, def time_now():
+def suggest_party(users):
 
-./remade_main.py, def get_party_leader(username):
+def get_place_recommendation_location(tp, radius, limit):
 
-./remade_main.py, def get_messages(user):
+def create_chat(*, name: str, party_members: list = None) -> str:
 
-./remade_main.py, def get_party_members(username):
+def separate_into_colours(group_owners):
 
-./remade_main.py, def split_interests(input_str):
+def create_party(user, members_to_add=None):
 
-./remade_main.py, def prepare_kmeans_values():
+def time_now():
 
-./remade_main.py, def emit_to(user: str, event_name: str, message=None, namespace: str = '/comms', verbose=True):
+def get_party_leader(username):
 
-./remade_main.py, def emit_to_everyone(**kwargs):
+def get_messages(user):
 
-./remade_main.py, def emit_to_party(member, **kwargs):
+def get_party_members(username):
 
-./remade_main.py, def send_user_added_locations(username):
+def split_interests(input_str):
 
-./remade_main.py, def party_coords(username):
+def prepare_kmeans_values():
 
-./remade_main.py, def disconnect_user_from_party(user, chat_is_disbanded=False):
+def emit_to(user: str, event_name: str, message=None, namespace: str = '/comms', verbose=True):
 
-./remade_main.py, def update_destination(data, user):
+def emit_to_everyone(**kwargs):
 
-./remade_main.py, def start_vote_on_place(leader, location_data):
+def emit_to_party(member, **kwargs):
 
-./remade_main.py, def parse_chat_command(command, chat_id):
+def send_user_added_locations(username):
 
-./remade_main.py, def main_page():
+def party_coords(username):
 
-./remade_main.py, def register():
+def disconnect_user_from_party(user, chat_is_disbanded=False):
 
-./remade_main.py, def login():
+def update_destination(data, user):
 
-./remade_main.py, def logout():
+def start_vote_on_place(leader, location_data):
 
-./remade_main.py, def get_party_chat_id(user):
+def parse_chat_command(command, chat_id):
 
-./remade_main.py, def send_message_to_party(member, message, author="(System)"):
+def main_page():
 
-./remade_main.py, def parse_action(command):
+def register():
 
-./remade_main.py, def send_path_to_party(user_to_track):
+def login():
 
-./remade_main.py, def join_party(owner, username):
+def logout():
 
-./remade_main.py, def broadcast_user_difference():
+def get_party_chat_id(user):
 
-./remade_main.py, def logged_on_users():
+def send_message_to_party(member, message, author="(System)"):
 
-./remade_main.py, def return_path(data):
+def parse_action(command):
 
-./remade_main.py, def check_ping(data):
+def send_path_to_party(user_to_track):
 
-./remade_main.py, def check_ping(online_users):
+def join_party(owner, username):
 
-./remade_main.py, def invite_user(receiver):
+def broadcast_user_difference():
 
-./remade_main.py, def add_location_func(data):
+def logged_on_users():
 
-./remade_main.py, def chat_message(data):
+def return_path(data):
 
-./remade_main.py, def notification_parse(data):
+def check_ping(data):
 
-./remade_main.py, def get_user_added_loc():
+def check_ping(online_users):
 
-./remade_main.py, def emit_party_members():
+def invite_user(receiver):
 
-./remade_main.py, def get_online_memb():
+def add_location_func(data):
 
-./remade_main.py, def get_destination():
+def chat_message(data):
 
-./remade_main.py, def get_coords_of_party():
+def notification_parse(data):
 
-./remade_main.py, def confirm_chat(chat_id):
+def get_user_added_loc():
 
-./remade_main.py, def confirm_delete_chat(chat_id):
+def emit_party_members():
 
-./remade_main.py, def my_location(data):
+def get_online_memb():
 
-./remade_main.py, def arrived():
+def get_destination():
 
-./remade_main.py, def suggest_admin_event():
+def get_coords_of_party():
 
-./remade_main.py, def destination_update_request(data):
+def confirm_chat(chat_id):
 
-./remade_main.py, def disconnect_event():
+def confirm_delete_chat(chat_id):
+
+def my_location(data):
+
+def arrived():
+
+def suggest_admin_event():
+
+def destination_update_request(data):
+
+def disconnect_event():
 
 
 
@@ -261,54 +270,59 @@ PYTHON FUNCTIONS
 
 
 JS FUNCTIONS
+ac.js
+function filter_users(target){
 
-./static/js\ac.js, 		function filter_users(target){
+function autocomplete(inp) {
 
-./static/js\ac.js, 		function autocomplete(inp) {
+function addActive(x) {
 
-./static/js\ac.js, 		function addActive(x) {
+function removeActive(x) {
 
-./static/js\ac.js, 		function removeActive(x) {
-
-./static/js\ac.js, 		function closeAllLists(elmnt) {
-
-./static/js\chat.js, 		function openChatTab(target_tab) {
-
-./static/js\chat.js, 		function update_tabs(){
-
-./static/js\chat.js, 		function loadChat(room){
-
-./static/js\icons.js, 		function get_icon(name){
-
-./static/js\loadscripts.js, 	function seq (arr, callback, index) {
-
-./static/js\loadscripts.js, 	function scriptsDone () {
-
-./static/js\loadscripts.js, 	function insertScript ($script, callback) {
-
-./static/js\loadscripts.js, 	function runScripts ($container) {
-
-./static/js\maplogic.js, 	function initMap() {
-
-./static/js\maplogic.js, 	function update_user(data){
-
-./static/js\maplogic.js, 	function distance(lat1, lng1, lat2, lng2){
-
-./static/js\maplogic.js, 	function move_towards_next_point() {
-
-./static/js\maplogic.js, 	function color_dot_link(colour){
-
-./static/js\maplogic.js, 	function calculateAndDisplayRoute(
-
-./static/js\maplogic.js, 	function attachInstructionText(stepDisplay, marker, text, map) {
-
-./static/js\socket.js, 		function update_party_members(data){
-
-./static/js\socket.js, 		function ping_every_second(){
-
-./static/js\socket.js, 		function addtofriends(name, online){
+function closeAllLists(elmnt) {
 
 
+chat.js
+function openChatTab(target_tab) {
+
+function update_tabs(){
+
+function loadChat(room){
 
 
-P
+icons.js
+function get_icon(name){
+
+
+loadscripts.js
+function seq (arr, callback, index) {
+
+function scriptsDone () {
+
+function insertScript ($script, callback) {
+
+function runScripts ($container) {
+
+
+maplogic.js
+function initMap() {
+
+function update_user(data){
+
+function distance(lat1, lng1, lat2, lng2){
+
+function move_towards_next_point() {
+
+function color_dot_link(colour){
+
+function calculateAndDisplayRoute(
+
+function attachInstructionText(stepDisplay, marker, text, map) {
+
+
+socket.js
+function update_party_members(data){
+
+function ping_every_second(){
+
+function addtofriends(name, online){

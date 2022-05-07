@@ -565,6 +565,7 @@ def get_party_chat_id(user):
 
 def send_message_to_party(member, message, author="(System)"):
     chat_id = get_party_chat_id(member)
+    chat_rooms[chat_id]["history"].append({"message": message, "author": author})
     emit_to_party(member, event_name="message",
                   message={"id": chat_id, "message": message, "author": author})
 
