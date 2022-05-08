@@ -43,7 +43,6 @@ function initMap() {
         var name = data.name;
 
 //        console.log("update_user", data, name, location);
-
         // create latlng object
         var myLatLng = new google.maps.LatLng(data.lat, data.lng);
 
@@ -65,6 +64,7 @@ function initMap() {
     }
 
     socket.on('my_location_from_server', function(data){
+        console.log(data.name);
         update_user(data);
     });
 

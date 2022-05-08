@@ -2,7 +2,9 @@ var chat_histories = {}
 var current_chat = "0";
 
 $(document).ready(function(){
-
+if (user == "Admin"){
+return;
+}
 function openChatTab(target_tab) {
   var i, tab_links;
   var tab_element = document.getElementById('tabs');
@@ -23,7 +25,7 @@ function update_tabs(){
     var tab_element = document.getElementById('tabs')
     var tablinks = Array.from(tab_element.querySelectorAll(".tab_button"));
     tablinks.forEach(function(item){
-        console.log(1, item);
+//        console.log(1, item);
         item.addEventListener('click', function(event, a){
             openChatTab(item);
         }, false);
@@ -33,7 +35,7 @@ function update_tabs(){
 function loadChat(room){
     chatroom_element = document.getElementById("chat_room_messages");
     var base = `<p class="mx-[5px] mb-[5px] text-left text-white w-[95%] hover:bg-gray-light rounded-md">`
-    console.log(room);
+//    console.log(room);
     chatroom_element.innerHTML = chat_histories[room].history //get history
                                 .slice(0).reverse()  // reverse array
                                 .map(message => `${base}${message["author"]}: ${message["message"]}</p>`) // map array to messages

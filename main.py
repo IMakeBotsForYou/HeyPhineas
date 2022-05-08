@@ -1,7 +1,7 @@
 # general use modules
 from time import time
 import numpy as np
-
+from time import gmtime, strftime
 from engineio.payload import Payload
 
 # flask modules
@@ -117,6 +117,8 @@ def suggest_party(users):
                               sender="Admin", receiver=u, messagetype="group_suggestion",
                               action=f"accept_suggestion/{users[0]}")
 
+        database.add_admin_message(type="p_sug", title=f"Suggested party to {u_list}", message=f"Suggested party to {u_list}", time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+
 
 def get_place_recommendation_location(tp, radius, limit):
     radius = float(radius) * 1000
@@ -213,11 +215,12 @@ def get_party_leader(username):
 
 
 def get_messages(user):
-    info = database.get_messages()
-    if user in info:
-        return [[message['id'], message['title'], message['content'], message['sender'], message['type']]
-                for message in info['messages'][session['user']]]
-    return []
+    info = database.get_messages(user)
+    # if user in info:
+    #     return [[message['id'], message['title'], message['content'], message['sender'], message['type']]
+    #             for message in info['messages'][session['user']]]
+    return info
+    # return []
 
 
 def get_party_members(username):
@@ -793,6 +796,13 @@ def logged_on_users():
         # The user needs to create all of his channels again
         # Make it so all the user's channels aren't confirmed
         chat_rooms[chat_id]["members"][session['user']] = False
+    if session['user'] != "Admin":
+        lat, lng = connected_members[session['user']]["loc"]
+        emit_to(session['user'], 'my_location_from_server', message={
+            "name": session['user'],
+            "lat": lat, "lng": lng
+        })
+
 
 
 @socketio.on('path_from_user', namespace='/comms')
@@ -881,9 +891,11 @@ def check_ping(online_users):
             "name": session['user'],
             "lat": lat, "lng": lng
         })
+    else:
+        data = separate_into_colours(parties.keys())
+        emit_to("Admin", event_name="user_colors", message=data)
 
-    data = separate_into_colours(parties.keys())
-    emit_to("Admin", event_name="user_colors", message=data)
+        emit_to("Admin", event_name="history_update", message=database.get_history())
 
 
 @socketio.on('invite_user', namespace='/comms')
@@ -996,8 +1008,8 @@ def confirm_delete_chat(chat_id):
 @socketio.on('my_location_from_user', namespace='/comms')
 def my_location(data):
     # set_user_location(session['user'], data[0], data[1])
-
-    connected_members[session['user']]['current_path']["index"] = data["index"]
+    if "index" in data:
+        connected_members[session['user']]['current_path']["index"] = data["index"]
     connected_members[session['user']]['loc'] = data["lat"], data["lng"]
     lat, lng = data["lat"], data["lng"]
     location_obj = {
@@ -1016,6 +1028,10 @@ def arrived():
     if session['user'] not in parties[leader]["arrived"]:
         parties[leader]["arrived"].append(session['user'])
         send_path_to_party(session['user'])
+
+    database.add_admin_message(type="u_arr", title=f"User arrived",
+                               message=f"{session['user']} has arrived at {parties[leader]['destination']}",
+                               time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
 
 @socketio.on('start_grouping_users', namespace="/comms")

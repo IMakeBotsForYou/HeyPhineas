@@ -203,6 +203,9 @@ class UserData(Database):
 
         return self.get("users", "username")
 
+    def add_admin_message(self, typ, title, message, time):
+        self.add("admin_messages (type, title, message, time)", values=reformat(typ, title, message, time))
+
     def send_message(self, title, desc, sender, receiver, messagetype, action):
         """
         :param title: Title of message
@@ -351,6 +354,20 @@ class UserData(Database):
             a = a[0].split(", ")
             a.remove(owner)
             return [owner] + a
+
+    def get_history(self):
+        mes = self.get('messages', '*', first=False)
+        ret = []
+        for message in mes:
+            message_id, typ, title, message, time = message
+
+            ret.append({"id": message_id,
+                        "type": typ,
+                        "title": title,
+                        "message": message,
+                        "time": time
+                        })
+        return ret
 
     def get_messages(self, user=None):
         """
