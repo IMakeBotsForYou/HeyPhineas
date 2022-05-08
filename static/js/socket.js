@@ -122,7 +122,7 @@ $(document).ready(function(){
         if (typeof(msg.length) != "undefined"){
             online_users_num = msg.length;
         } else {
-            console.log(online_users_num);
+//            console.log(online_users_num);
         }
         online_users = msg;
         $('#users_online').html(`${online_users_num} User(s) Online`);
@@ -153,7 +153,7 @@ $(document).ready(function(){
     });
 
     socket.on('friend_data', function(data){
-        console.log(data)
+//        console.log(data)
         function addtofriends(name, online){
             friends[name] = online;
         }

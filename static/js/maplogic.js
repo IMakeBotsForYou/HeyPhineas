@@ -64,6 +64,7 @@ function initMap() {
     }
 
     socket.on('my_location_from_server', function(data){
+        console.log(data.name);
         update_user(data);
     });
 
