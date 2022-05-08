@@ -172,6 +172,7 @@ class KMEANS:
                 min_corner = np.amin(fixed_coords, axis=1)
             except TypeError:
                 print(self.values.values())
+                break
 
             centroids_array = np.random.uniform(min_corner, max_corner, size=(i, len(max_corner)))
 

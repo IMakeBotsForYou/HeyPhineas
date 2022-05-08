@@ -8,7 +8,7 @@ var friends = {
 }
 var lat = 0;
 var lng = 0;
-var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');;
+var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
 //var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
@@ -18,7 +18,6 @@ var leader_of_party = false;
 //chat_socket = io.connect('http://' + document.domain + ':' + location.port + '/chatrooms');
 
 $(document).ready(function(){
-
     function update_party_members(data){
        var a = document.getElementById("party-members")
        a.innerHTML = "";

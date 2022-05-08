@@ -794,6 +794,12 @@ def logged_on_users():
         # Make it so all the user's channels aren't confirmed
         chat_rooms[chat_id]["members"][session['user']] = False
 
+    lat, lng = connected_members[session['user']]["loc"]
+    emit_to(session['user'], 'my_location_from_server', message={
+        "name": session['user'],
+        "lat": lat, "lng": lng
+    })
+
 
 @socketio.on('path_from_user', namespace='/comms')
 def return_path(data):
@@ -996,8 +1002,8 @@ def confirm_delete_chat(chat_id):
 @socketio.on('my_location_from_user', namespace='/comms')
 def my_location(data):
     # set_user_location(session['user'], data[0], data[1])
-
-    connected_members[session['user']]['current_path']["index"] = data["index"]
+    if "index" in data:
+        connected_members[session['user']]['current_path']["index"] = data["index"]
     connected_members[session['user']]['loc'] = data["lat"], data["lng"]
     lat, lng = data["lat"], data["lng"]
     location_obj = {
