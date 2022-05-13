@@ -77,6 +77,8 @@ socket.on('del_chat', function(chat_id){
 
 socket.on('message', function(data){
     var room = data["id"];
+    if (!(room in chat_histories))
+        return;
     chat_histories[room].history.push({"author": data["author"], "message": data["message"]});
     var tab_name = document.getElementById(`chat_${room}`).innerHTML;
 //    console.log(tab_name, current_chat == room, current_chat, room);
