@@ -19,6 +19,8 @@ var leader_of_party = false;
 
 $(document).ready(function(){
     function update_party_members(data){
+       if(user == "Admin")
+        return;
        var a = document.getElementById("party-members")
        a.innerHTML = "";
        if (data.length == 0){
