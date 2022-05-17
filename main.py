@@ -117,7 +117,7 @@ def suggest_party(users: list) -> None:
                               sender="Admin", receiver=u, messagetype="group_suggestion",
                               action=f"accept_suggestion/{users[0]}")
 
-        database.add_admin_message(type="p_sug", title=f"Suggested party to {u_list}", message=f"Suggested party to {u_list}", time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    database.add_admin_message(type="p_sug", title=f"Suggested party to {users}", message=f"Suggested party to {users}", time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
 
 def get_place_recommendation_location(tp: str, radius: float, limit: int) -> dict:
@@ -372,12 +372,12 @@ def update_destination(data, user):
     parties[leader]["destination"] = data
     parties[leader]["destination_status"] = "Has Destination"
     parties[leader]["arrived"] = []
-    lat, lng = data
+
     emit_to_party(user, event_name='update_destination',
-                  message={"lat": lat, "lng": lng})
+                  message=data)
 
 
-def start_vote_on_place(leader, location_data):
+def start_vote_on_place(leader, location_data, add_marker=True):
     parties[leader]["in_vote"] = True
     parties[leader]["votes"] = {}
 
@@ -389,7 +389,8 @@ def start_vote_on_place(leader, location_data):
     parties[leader]["destination"] = [location_data["lat"], location_data["lng"]]
     send_message_to_party(session['user'],
                           message=f"How about < {location_data['name']} > ?  Vote now! (/vote y) ")
-    emit_to_party(leader, event_name='location_suggestion', message=location_data)
+    if add_marker:
+        emit_to_party(leader, event_name='location_suggestion', message=location_data)
 
 
 def parse_chat_command(command, chat_id):
@@ -432,7 +433,8 @@ def parse_chat_command(command, chat_id):
             parties[party_owner]["in_vote"] = False
 
         if votes_required == len(voted_yes):
-            update_destination(parties[party_owner]["destination"], session['user'])
+            lat, lng = parties[party_owner]["destination"]
+            update_destination({"lat": lat, "lng": lng}, session['user'])
             send_message_to_party(session['user'],
                                   message=f"{len(voted_yes)} people have voted YES.<br>"
                                           f"Calculating route...")
@@ -453,7 +455,6 @@ def parse_chat_command(command, chat_id):
         )
         index = np.random.randint(0, len(locations))
         location = locations[index]
-        print(json.dumps(location, indent=2))
         start_vote_on_place(leader=leader,
                             # lat=loc_of_place["lat"],
                             # lng=loc_of_place["lng"],
@@ -658,6 +659,22 @@ def parse_action(command: str) -> None:
                                        time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
         except IndexError:
             print('lol sucks for u')
+
+    if command_name == "decline_group_suggestion" or command_name == "decline_group_invite":
+        try:
+            party_owner = \
+                [owner for owner in party_suggestions if session['user'] in party_suggestions[owner]["total"]][0]
+            message = f'{session["user"]} was invited to join {party_owner}s party and declined.',
+
+            message += " this was a KNN suggestion." if command_name == "decline_group_suggestion" else \
+                       " this was a group invite."
+
+            send_message_to_party(party_owner, message=f'{session["user"]} declined.')
+            database.add_admin_message(type="u_decline", title=f"{session['user']} did not join {party_owner}'s party",
+                                       message=message,
+                                       time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+        except IndexError:
+            pass
 
 
 def send_path_to_party(user_to_track: str) -> None:
@@ -1066,6 +1083,7 @@ def suggest_admin_event():
     if len(dont_have_suggestions) > 1:
 
         suggestion_groups = kmeans.find_optimal_clusters(
+            reps=100,
             only_these_values=filter_dict(kmeans.values, lambda x: x in dont_have_suggestions),
             verbose=False
         )
@@ -1077,7 +1095,8 @@ def suggest_admin_event():
 
 @socketio.on('request_destination_update', namespace='/comms')
 def destination_update_request(data):
-    update_destination(data, session['user'])
+    # update_destination(data, session['user'])
+    start_vote_on_place(get_party_leader(session['user']), data, add_marker=False)
 
 
 @socketio.on('disconnect', namespace='/comms')

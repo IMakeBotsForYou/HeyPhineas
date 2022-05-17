@@ -49,7 +49,10 @@ html {
   font-family: Graphik, sans-serif;
   /* 4 */
 }
-
+p {
+    word-break: break-all;
+    white-space: normal;
+}
 /*
 1. Remove the margin in all browsers.
 2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
@@ -813,8 +816,16 @@ Ensure the default browser behavior of the `hidden` attribute.
   height: 10%;
 }
 
+.h-\[20\%\]{
+  height: 20%;
+}
+
 .max-h-\[590px\]{
   max-height: 590px;
+}
+
+.max-h-\[30\%\]{
+  max-height: 30%;
 }
 
 .w-\[40\%\]{

@@ -267,9 +267,12 @@ function initMap() {
                 all_markers.user_added_locations.push(m);
                 user_added_locations.push(`${latlng[0]}, ${latlng[1]}`)
                 all_markers.user_added_locations[i].addListener("click", () => {
-                    socket.emit('request_destination_update', [all_markers.user_added_locations[i].getPosition().lat(),
-                                                               all_markers.user_added_locations[i].getPosition().lng()])
+                if (in_party){
+                    socket.emit('request_destination_update', {"lat": all_markers.user_added_locations[i].getPosition().lat(),
+                                                               "lng": all_markers.user_added_locations[i].getPosition().lng(),
+                                                               "name": all_markers.user_added_locations[i].label})
                     map.setCenter(all_markers.user_added_locations[i].getPosition());
+                }
                 });
             }
         }
