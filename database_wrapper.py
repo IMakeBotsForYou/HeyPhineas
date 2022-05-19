@@ -44,7 +44,7 @@ def smallest_free(array):
             lowest = value
         else:
             return lowest + 1
-    return lowest
+    return lowest + 1
 
 
 def reformat(*args):

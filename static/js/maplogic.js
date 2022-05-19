@@ -63,13 +63,66 @@ function initMap() {
             });
     }
 
+
+
+    socket.on('update_party_members', function(data){
+
+       response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+       for(let i = 0; i < party_users.length; i++){
+           if(  !(data.includes(party_users[i]))  )
+            all_markers.users[party_users[i]].setMap(null);
+       }
+
+
+       update_party_members(data);
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     socket.on('my_location_from_server', function(data){
-        console.log(data.name);
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
         update_user(data);
     });
 
       // get updated destination from the server
     socket.on('update_destination', function(data){
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+
         var lat = data.lat;
         var lng = data.lng;
         destination = new google.maps.LatLng(lat, lng);
@@ -81,6 +134,13 @@ function initMap() {
     });
 
     socket.on('party_member_coords', function(data){
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
         data.forEach(function(item){
             update_user(item);
         });
@@ -93,6 +153,13 @@ function initMap() {
     }
 
     socket.on('reset_markers', function(data){
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
        var suggestion_markers = all_markers.suggestion;
 
        for (let i = 0; i < suggestion_markers.length; i++) {
@@ -108,6 +175,12 @@ function initMap() {
 
     });
     socket.on('location_suggestion', function(data){
+       response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
        var suggestion_markers = all_markers.suggestion;
        // reset all suggestion markers
        for (let i = 0; i < suggestion_markers.length; i++) {
@@ -210,6 +283,13 @@ function initMap() {
 
 
     socket.on('user_paths', function(data){
+      response = validate_message(data);
+      if (response.status == "new"){
+          data = response.data;
+      } else {
+          return;
+      }
+
       for(let i = 0; i < data.length; i++){
           // this loop goes through users
           // get current user
@@ -248,7 +328,16 @@ function initMap() {
         }
     });
 
+
+
     socket.on('user_added_locations', function(data){
+      response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
       var user_added_locations = all_markers
                                  .user_added_locations
                                  .map(x => `${x.getPosition().lat()}, ${x.getPosition().lng()}`)
@@ -283,6 +372,16 @@ function initMap() {
     }
 
     socket.on('user_colors', function(data){
+
+
+      response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+
 //      for (let i = 0; i < all_markers.users.length; i++) {
 //        all_markers.users[i].setIcon(color_dot_link("red"));
 //      }

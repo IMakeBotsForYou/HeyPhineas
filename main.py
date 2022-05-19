@@ -3,7 +3,6 @@ from time import time
 import numpy as np
 from time import gmtime, strftime
 from engineio.payload import Payload
-
 # flask modules
 from flask import *
 from flask_socketio import SocketIO, emit
@@ -15,6 +14,14 @@ from database_wrapper import my_db as database
 from kmeans_wrapper import category_values, KMEANS
 
 Payload.max_decode_packets = 50
+
+# message_ids = {}
+# """
+# message_ids[id] = {
+#                     message data
+#                   }
+# """
+
 
 chat_rooms = {"0": {"name": "Global", "history": [], "members": {}, "type": "global"}}
 """
@@ -84,7 +91,28 @@ app.config['DEBUG'] = True
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
 
-def filter_dict(d: dict, f: object) ->  dict:
+# def send_all_data_to_everyone():
+#     pass
+#     global app
+#     with app.app_context():
+#         while 1:
+#             sleep(1)
+#
+#             for user in connected_members:
+#                 emit_to(user=user, event_name=event_name,
+#                         message=message, namespace=namespace)
+
+
+#         for message_id, data in message_ids.copy().items():
+#             user, event_name, message, namespace = data.copy().values()
+#             custom_id = message["__message_id"]
+#             message = message["__payload"]
+#             emit_to(user=user, event_name=event_name,
+#                     message=message, namespace=namespace,
+#                     add_to_list=False, custom_id=custom_id)
+
+
+def filter_dict(d: dict, f) -> dict:
     """ Filters dictionary d by function f. """
     new_dict = dict()
 
@@ -117,7 +145,8 @@ def suggest_party(users: list) -> None:
                               sender="Admin", receiver=u, messagetype="group_suggestion",
                               action=f"accept_suggestion/{users[0]}")
 
-    database.add_admin_message(type="p_sug", title=f"Suggested party to {users}", message=f"Suggested party to {users}", time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+    database.add_admin_message(type="p_sug", title=f"Suggested party to {users}", message=f"Suggested party to {users}",
+                               time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
 
 def get_place_recommendation_location(tp: str, radius: float, limit: int) -> dict:
@@ -125,8 +154,8 @@ def get_place_recommendation_location(tp: str, radius: float, limit: int) -> dic
     limit = int(limit)
 
     middle_lat, middle_lng = sum(
-        [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
-         member in connected_members]) / len(get_party_members(session['user'])), \
+                                [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
+                                 member in connected_members]) / len(get_party_members(session['user'])), \
                              sum([connected_members[member]["loc"][1] for member in get_party_members(session['user'])
                                   if member in connected_members]) / len(get_party_members(session['user']))
     middle = middle_lat, middle_lng
@@ -152,7 +181,7 @@ def create_chat(*, name: str, party_members: list = None) -> str:
 
 def separate_into_colours(group_owners: list) -> list:
     colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
-             'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
+              'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
     colors_amount = len(colors)
     ret = []
     for i, g in enumerate(sorted(group_owners)):
@@ -252,8 +281,28 @@ HELPER FUNCTIONS FOR EMITTING (SOCKET.IO) PURPOSES
 """
 
 
-def emit_to(user: str, event_name: str, message=None, namespace: str = '/comms', verbose=True) -> None:
+def emit_to(user: str, event_name: str, message=None,
+            namespace: str = '/comms', verbose=True) -> None:
+    # add_to_list=True, custom_id=None) -> None:
+
+    # temp
+    if user == "Admin" and "Admin" not in connected_members:
+        return
+
     try:
+        """    if custom_id is None:
+                keys = list(message_ids.keys())
+                new_id = len(keys)
+            else:
+                new_id = custom_id
+            message = {"__message_id": new_id, "__payload": message}
+            if add_to_list:
+                message_ids[new_id] = {"user": user,
+                                       "event_name": event_name,
+                                       "message": message,
+                                       "namespace": namespace}
+        """
+
         emit(event_name, message, namespace=namespace, room=members[user]['sid'])
         if verbose:
             print(f"Sent to data: {user}: {event_name} {message} {namespace} ")
@@ -313,7 +362,7 @@ def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
             # Disband party, kick last user
             chat_is_disbanded = True
         else:
-            print("Not disbanded")
+
             # Remove user from members
             all_members.remove(user)
             # Pick new leader
@@ -360,7 +409,6 @@ def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
         # Send to remaining party to update member list
         members = get_party_members(current_leader)
         emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
-
     connected_members[user]["party"] = None
     emit_to(user, event_name="reset_markers")
 
@@ -480,7 +528,6 @@ def parse_chat_command(command, chat_id):
             # Not a trace ....
             del parties[session['user']]
             chat_rooms[chat_id] = {"members": []}
-
 
 
 """
@@ -667,7 +714,7 @@ def parse_action(command: str) -> None:
             message = f'{session["user"]} was invited to join {party_owner}s party and declined.',
 
             message += " this was a KNN suggestion." if command_name == "decline_group_suggestion" else \
-                       " this was a group invite."
+                " this was a group invite."
 
             send_message_to_party(party_owner, message=f'{session["user"]} declined.')
             database.add_admin_message(type="u_decline", title=f"{session['user']} did not join {party_owner}'s party",
@@ -682,7 +729,7 @@ def send_path_to_party(user_to_track: str) -> None:
     party_leader = get_party_leader(user_to_track)
     if len(party_members) == 0:
         return
-# "destination_status": "No Destination" | "Have Destination" | "Reached Destination"
+    # "destination_status": "No Destination" | "Have Destination" | "Reached Destination"
     paths = []
     if parties[party_leader]["destination_status"] in ["No Destination"]:
         return
@@ -793,7 +840,6 @@ def broadcast_user_difference() -> None:
 
 @socketio.on('connect', namespace='/comms')
 def logged_on_users():
-
     if session['user'] not in members:
         members[session['user']] = {
             "sid": request.sid,  # the socket sid
@@ -845,6 +891,8 @@ def check_ping(data):
 
 @socketio.on('ping', namespace='/comms')
 def check_ping(online_users):
+    emit_to(session['user'], event_name="ping_reply", message=float(time()))
+
     # update last pinged time for user
 
     # idfk is going on here. this shouldn't ever happen
@@ -857,7 +905,7 @@ def check_ping(online_users):
 
     connected_members[session['user']]["last ping"] = time_now()
 
-    # if we have users we need to update the online list
+    # we need to update the online list
     # delete members that haven't pinged in 2 seconds
 
     for username in connected_members.copy():
@@ -918,7 +966,6 @@ def check_ping(online_users):
     else:
         data = separate_into_colours(list(parties.keys()))
         emit_to("Admin", event_name="user_colors", message=data)
-
         emit_to("Admin", event_name="history_update", message=database.get_history())
 
 
@@ -967,8 +1014,11 @@ def notification_parse(data):
     message_id, reaction = data["message_id"], data["reaction"]
 
     # first grab the message to see what we need to do with it
-    _id, title, content, sender, receiver, msg_type, action = \
-        database.get('messages', '*', f'id={message_id}', first=False)[0]
+    try:
+        _id, title, content, sender, receiver, msg_type, action = \
+            database.get('messages', '*', f'id={message_id}', first=False)[0]
+    except IndexError:
+        return
     print(f"{reaction}: {title} | {msg_type}")
     if reaction != "mark_as_read":
         parse_action(action)
@@ -1099,10 +1149,19 @@ def destination_update_request(data):
     start_vote_on_place(get_party_leader(session['user']), data, add_marker=False)
 
 
+@socketio.on('confirm_message', namespace='/comms')
+def confirm_message(message_id):
+    pass
+    # message_ids[message_id]["confirmed"] = True
+
+
 @socketio.on('disconnect', namespace='/comms')
 def disconnect_event():
-    broadcast_user_difference()
+    connected_members.pop(session['user'])
     pass
 
 
+# resend_messages_thread = Thread(target=send_all_data_to_everyone)
+# resend_messages_thread.deamon = True
+# resend_messages_thread.start()
 socketio.run(app, host="0.0.0.0", port=8080)

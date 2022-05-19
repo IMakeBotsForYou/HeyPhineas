@@ -1,6 +1,7 @@
 var online_users = [];
-var current_time;
+var message_ids = [];
 var online_users_num = 0;
+var last_reply = 0;
 
 var party_users = [];
 var friends = {
@@ -8,14 +9,21 @@ var friends = {
 }
 var lat = 0;
 var lng = 0;
-var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
+var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms', {
+      reconnection: true,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity,
+      //our site options
+      timeout: 60000
+    });
+//socket.eio.pingTimeout = 5*60000; // 5 minutes
+//socket.eio.pingInterval = 2000;   // 2 seconds
+
 //var party_text = '<h2 class="white">Party Members</h2> <button id="invite_user"><span class="fa fa-user-plus"></span></button><br><br>';
 var members_text = "";
 var in_party = false;
 var leader_of_party = false;
-
-//connect to the socket server.
-//chat_socket = io.connect('http://' + document.domain + ':' + location.port + '/chatrooms');
 
 $(document).ready(function(){
     function update_party_members(data){
@@ -41,7 +49,17 @@ $(document).ready(function(){
        }
       a.style.visibility = 'visible';
     }
+    socket.on('update_party_members', function(data){
 
+       response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+       update_party_members(data);
+    });
     if(window.location.href.split("/")[3] == '' || window.location.href.split("/")[3] == '#'){
         socket.emit('user_added_locations_get');
         socket.emit('party_members_list_get');
@@ -65,46 +83,41 @@ $(document).ready(function(){
 //
 
     socket.on('party_members_list_get', function(data){
-        update_party_members(data)
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+
+        update_party_members(data);
     });
 
     socket.on('online_members_get', function(data){
-        online_users = data
-        if(user == "Admin"){
-//        document.getElementById("users_admin_list").innerHTML = "";
-//            for(let i = 0; i < online_users.length; i++){
-//                document.getElementById("users_admin_list").innerHTML += `<a>${online_users[i]}</a><b>`;
-//            }
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
         } else {
+            return;
+        }
+
+
+        online_users = data
+        if(user != "Admin"){
             autocomplete(document.getElementById("invite_user_input"))
         }
-//        autocomplete(document.getElementById("invite_user_input"), online_users);
     });
-
-
-//    function add_listener_chat(element){
-//        element.onclick = function(event){
-//            chat_room_name = element.id.split("_")[0];
-//            document.getElementById("chatroom-name").innerHTML = chat_room_name;
-//            chatroom_element = document.getElementById("chat_room_messages");
-//            chatroom_element.innerHTML = "";
-//            for(let i = 0; i < chat_histories[chat_room_name].length; i++){
-//                 var message = chat_histories[chat_room_name][i]["message"];
-//                 var author =  chat_histories[chat_room_name][i]["author"];
-//                 chatroom_element.innerHTML += `<p style="order: ${i};">${author}: {message}</p>`;
-//            }
-//            openChatTab(event)
-//        };
-//    }
-//
-//    var collection = document.getElementsByClassName("button-40");
-//    var arr = Array.prototype.slice.call( collection, 0 );
-//
-//    arr.forEach(element => add_listener_chat(element));
-//
-//    for (let i = 0; i < collection.length; i++) {
-//      collection[i].style.backgroundColor = "red";
-//    }
+    socket.on('ping_reply', function(data){
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+        last_reply = data*1000;
+    });
 
     function ping_every_second(){
         let date = new Date;
@@ -112,15 +125,22 @@ $(document).ready(function(){
         let minutes = "0" + date.getMinutes();
         let seconds = "0" + date.getSeconds();
         let formatTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
-//        $('#current_time').html(formatTime);
+
         socket.emit("ping", online_users);
     };
+//    const secondClock = setInterval(check_ping_reply, 2000);
 
-    const createClock = setInterval(ping_every_second, 1000);
     //update online user count
-    socket.on('user_diff', function(msg) {
-//        alert("User diff")
-//        console.log(msg);
+    socket.on('user_diff', function(data) {
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+
         if (typeof(msg.length) != "undefined"){
             online_users_num = msg.length;
         } else {
@@ -139,8 +159,16 @@ $(document).ready(function(){
 //        });
 
     });
-
     socket.on('all_users', function(data){
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+
         var d = document.getElementById('user_data');
         d.innerHTML = `Online users (${online_users_num}) <br>`;
         Object.keys(data).forEach(function(name) {
@@ -150,11 +178,16 @@ $(document).ready(function(){
 
 
     });
-    socket.on('update_party_members', function(data){
-       update_party_members(data);
-    });
 
     socket.on('friend_data', function(data){
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
 //        console.log(data)
         function addtofriends(name, online){
             friends[name] = online;
@@ -178,30 +211,28 @@ $(document).ready(function(){
 
 
 
-    socket.on('best_3_locations', function(msg) {
-        $('#recommended').html(msg);
+    socket.on('best_3_locations', function(data) {
+
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+
+        $('#recommended').html(data);
     });
     socket.on('reset_first', function(msg) {
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
         first=false;
     });
 
 
-
-//    $("#create_party").on("click", function() {
-//        var a = document.getElementById("members_panel")
-//        if (!in_party){
-//           update_party_members([user])
-//           socket.emit("joined", "__self__");
-//           a.style.visibility = 'visible';
-//       } else {
-//           in_party = false;
-//           leader_of_party = false;
-//           socket.emit("left_party", 'foo');
-//           a.innerHTML = party_text;
-//           a.style.visibility = 'hidden';
-//           party_users=[];
-//        }
-//    });
     $("#confirm_invite").on("click", function() {
         var invite_user_input = document.getElementById("invite_user_input")
         socket.emit('invite_user', invite_user_input.value);
@@ -209,7 +240,7 @@ $(document).ready(function(){
         $("#invite_user_popup").fadeOut()
         $("#invite_user").prop("disabled", false);
     });
-     $("#confirm_loc").on("click", function() {
+    $("#confirm_loc").on("click", function() {
         var name = document.getElementById("add_loc_name").value;
         var lat = document.getElementById("add_loc_lat").value;
         var lng = document.getElementById("add_loc_lng").value;
@@ -221,5 +252,14 @@ $(document).ready(function(){
     $('#reset_locs').on("click", function() {
         socket.emit('reset_locations');
     });
-
+    const createClock = setInterval(ping_every_second, 1000);
 });
+
+window.onbeforeunload = function () {
+    socket.emit('disconnect');
+//    socket.disconnect();
+//    socket = null;
+//    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
+//    console.log("attempted reconnect");
+//    window.location.reload();
+}

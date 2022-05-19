@@ -52,6 +52,12 @@ function loadChat(room){
 
 update_tabs();
 socket.on('create_chat', function(data){
+    response = validate_message(data);
+    if (response.status == "new"){
+        data = response.data;
+    } else {
+        return;
+    }
     if(!(data["id"] in chat_histories)){
     var tabs = document.getElementById('tabs');
     tabs.innerHTML += `<button class="my-2 tab_button _inactive" id="chat_${data['id']}" type="button">${data["name"]}</button>`;
@@ -67,6 +73,12 @@ socket.on('create_chat', function(data){
 });
 
 socket.on('del_chat', function(chat_id){
+      response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
    delete chat_histories.chat_id;
    var chat_tab = document.getElementById(`chat_${chat_id}`);
    chat_tab.parentNode.removeChild(chat_tab);
@@ -76,6 +88,12 @@ socket.on('del_chat', function(chat_id){
 });
 
 socket.on('message', function(data){
+      response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
     var room = data["id"];
     if (!(room in chat_histories))
         return;
