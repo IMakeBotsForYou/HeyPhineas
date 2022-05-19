@@ -51,6 +51,7 @@ function loadChat(room){
 }
 
 update_tabs();
+
 socket.on('create_chat', function(data){
     response = validate_message(data);
     if (response.status == "new"){
@@ -58,6 +59,7 @@ socket.on('create_chat', function(data){
     } else {
         return;
     }
+
     if(!(data["id"] in chat_histories)){
     var tabs = document.getElementById('tabs');
     tabs.innerHTML += `<button class="my-2 tab_button _inactive" id="chat_${data['id']}" type="button">${data["name"]}</button>`;

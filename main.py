@@ -1,5 +1,6 @@
 # general use modules
-from time import time
+from threading import Thread
+from time import time, sleep
 import numpy as np
 from time import gmtime, strftime
 from engineio.payload import Payload
@@ -87,6 +88,80 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 app.config['DEBUG'] = True
 
+
+def send_all_data_to_everyone():
+    with app.app_context():
+        while 1:
+            for username in connected_members.copy():
+                print(f"SENDING DATA TO {username}")
+                """
+                We will need to do a few actions for every user.
+                1: Check if they are still online. If they are not, 
+                   remove them.
+                2: Send them all of the data they need. This includes:
+                   NORMAL USER:
+                      current party users, location, 
+                      paths, chat tabs and history, 
+                      online friends, current users
+                   ADMIN: 
+                      all online users, locations,
+                      paths
+                """
+                #   Check if online
+                #   Hasn't responded for 2 seconds
+                if time_now() - connected_members[username]["last ping"] > 2:
+                    print(f"DELETING {username}")
+                    del connected_members[username]
+                    broadcast_user_difference(username)
+                    continue
+
+                # If user has a party, send them the party coords.
+                # Even if the party is currently running a simulation,
+                # this shouldn't disturb it.
+                if get_party_leader(username) is not None and username != "Admin":
+                    party_coords(username)
+
+                messages = database.get_messages(user=username)
+                emit_to(username, event_name="inbox_update", message=messages)
+
+                # The ADMIN client doesn't need to see chats
+                send_path_to_party(username)
+
+                def client_has_confirmed(chat_id):
+                    try:
+                        return chat_rooms[chat_id]["members"][username]
+                    except KeyError:
+                        return True
+
+                if username != "Admin":
+
+                    # CREATE CHATS that have not yet been confirmed by the client
+                    # run over all chats user should have, and check if they've been
+                    # confirmed.
+                    [emit_to(username, "create_chat", message=room)
+                     for room in get_all_user_chats(username)
+                     if not client_has_confirmed(room["id"])]
+
+                    # DELETE CHATS that need to be deleted, them remove them from
+                    # the deletion queue. repeats until confirmed by user.
+                    if username in delete_chats_queue:
+                        [emit_to(username, event_name="del_chat", message=chat_id)
+                         for chat_id
+                         in delete_chats_queue[username]]
+
+                    lat, lng = connected_members[username]["loc"]
+                    emit_to("Admin", 'my_location_from_server', message={
+                        "name": username,
+                        "lat": lat, "lng": lng
+                    })
+                else:
+                    data = separate_into_colours(list(parties.keys()))
+                    emit_to("Admin", event_name="user_colors", message=data)
+                    emit_to("Admin", event_name="history_update", message=database.get_history())
+
+            sleep(1)
+
+
 # turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
@@ -154,8 +229,8 @@ def get_place_recommendation_location(tp: str, radius: float, limit: int) -> dic
     limit = int(limit)
 
     middle_lat, middle_lng = sum(
-                                [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
-                                 member in connected_members]) / len(get_party_members(session['user'])), \
+        [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
+         member in connected_members]) / len(get_party_members(session['user'])), \
                              sum([connected_members[member]["loc"][1] for member in get_party_members(session['user'])
                                   if member in connected_members]) / len(get_party_members(session['user']))
     middle = middle_lat, middle_lng
@@ -806,8 +881,8 @@ def join_party(owner: str, username: str) -> None:
             })
 
 
-def broadcast_user_difference() -> None:
-    friends = database.get_friends(session["user"])
+def broadcast_user_difference(username: str) -> None:
+    friends = database.get_friends(username)
     visible_users = [x for x in connected_members if x != "Admin"]
     online_friends, offline_friends = [], []
 
@@ -820,10 +895,10 @@ def broadcast_user_difference() -> None:
     for user in friends:
         filter_online(user)
 
-    session["friend_data"] = {'online': online_friends,
-                              'offline': offline_friends}
+    friends_data = {'online': online_friends,
+                    'offline': offline_friends}
 
-    emit_to(session["user"], 'friend_data', message=session["friend_data"])
+    emit_to(username, 'friend_data', message=friends_data)
     emit_to_everyone(event_name='user_diff', message=visible_users)
 
     emit_to("Admin", "all_users", message={u: u in connected_members for u in database.get_all_names()})
@@ -905,68 +980,8 @@ def check_ping(online_users):
 
     connected_members[session['user']]["last ping"] = time_now()
 
-    # we need to update the online list
-    # delete members that haven't pinged in 2 seconds
-
-    for username in connected_members.copy():
-        if time_now() - connected_members[username]["last ping"] > 2:
-            print(f"DELETING {username}")
-            del connected_members[username]
-            broadcast_user_difference()
-
-    # If user has a party, send them the party coords.
-    # Even if the party is currently running a simulation,
-    # this shouldn't disturb it.
-    if get_party_leader(session['user']) is not None:
-        party_coords(session['user'])
-
-    """ The user will filter what notifications they already have by
-        the message ID. That way the user won't need to constantly update
-        all of the messages, but rather only the messages that are new.
-        
-        Also, the user will have to delete messages that are not in 
-        this message, but are displayed on the user's screen.              """
-
-    messages = database.get_messages(user=session['user'])
-
-    emit_to(session['user'], event_name="inbox_update", message=messages)
     if len(connected_members.keys()) != len(online_users):
-        broadcast_user_difference()
-
-    # The ADMIN client doesn't need to see chats
-    send_path_to_party(session['user'])
-
-    def client_has_confirmed(chat_id):
-        try:
-            return chat_rooms[chat_id]["members"][session['user']]
-        except KeyError:
-            return True
-
-    if session['user'] != "Admin":
-
-        # CREATE CHATS that have not yet been confirmed by the client
-        # run over all chats user should have, and check if they've been
-        # confirmed.
-        [emit_to(session['user'], "create_chat", message=room)
-         for room in get_all_user_chats(session['user'])
-         if not client_has_confirmed(room["id"])]
-
-        # DELETE CHATS that need to be deleted, them remove them from
-        # the deletion queue. repeats until confirmed by user.
-        if session['user'] in delete_chats_queue:
-            [emit_to(session['user'], event_name="del_chat", message=chat_id)
-             for chat_id
-             in delete_chats_queue[session['user']]]
-
-        lat, lng = connected_members[session['user']]["loc"]
-        emit_to("Admin", 'my_location_from_server', message={
-            "name": session['user'],
-            "lat": lat, "lng": lng
-        })
-    else:
-        data = separate_into_colours(list(parties.keys()))
-        emit_to("Admin", event_name="user_colors", message=data)
-        emit_to("Admin", event_name="history_update", message=database.get_history())
+        broadcast_user_difference(session['user'])
 
 
 @socketio.on('invite_user', namespace='/comms')
@@ -1157,11 +1172,15 @@ def confirm_message(message_id):
 
 @socketio.on('disconnect', namespace='/comms')
 def disconnect_event():
+    if get_party_leader(session['user']) is not None:
+        emit_to_party(session['user'], event_name="user_colors", message=["gray", session['user']])
     connected_members.pop(session['user'])
     pass
 
 
-# resend_messages_thread = Thread(target=send_all_data_to_everyone)
-# resend_messages_thread.deamon = True
-# resend_messages_thread.start()
+
+resend_messages_thread = Thread(target=send_all_data_to_everyone)
+resend_messages_thread.deamon = True
+resend_messages_thread.start()
+
 socketio.run(app, host="0.0.0.0", port=8080)

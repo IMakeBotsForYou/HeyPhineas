@@ -373,7 +373,6 @@ function initMap() {
 
     socket.on('user_colors', function(data){
 
-
       response = validate_message(data);
         if (response.status == "new"){
             data = response.data;
@@ -385,8 +384,10 @@ function initMap() {
 //      for (let i = 0; i < all_markers.users.length; i++) {
 //        all_markers.users[i].setIcon(color_dot_link("red"));
 //      }
-      for (const [username, marker] of Object.entries(all_markers.users)) {
-            marker.setIcon(color_dot_link("red"));
+      if (user=="Admin"){
+          for (const [username, marker] of Object.entries(all_markers.users)) {
+                marker.setIcon(color_dot_link("red"));
+          }
       }
       for (let i = 0; i < data.length; i++) {
         var color = data[i][0];
@@ -476,6 +477,9 @@ function calculateAndDisplayRoute(
          document.getElementById('msg').innerHTML = " Walking distance is " + directionsData.legs[0].distance.text + " (" + directionsData.legs[0].duration.text + ").";
         })
     }
+
+
+
 }
 
 function attachInstructionText(stepDisplay, marker, text, map) {
@@ -486,3 +490,14 @@ function attachInstructionText(stepDisplay, marker, text, map) {
     stepDisplay.open(map, marker);
   });
 }
+
+window.onbeforeunload = function () {
+    socket.emit('disconnect');
+    all_markers.users[user].setIcon(color_dot_link("gray"));
+    document.getElementById('overlay-dude').style.background = "rgba(128,128,128,0.75);";
+//    socket.disconnect();
+//    socket = null;
+//    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
+//    console.log("attempted reconnect");
+//    window.location.reload();
+};

@@ -255,11 +255,3 @@ $(document).ready(function(){
     const createClock = setInterval(ping_every_second, 1000);
 });
 
-window.onbeforeunload = function () {
-    socket.emit('disconnect');
-//    socket.disconnect();
-//    socket = null;
-//    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');
-//    console.log("attempted reconnect");
-//    window.location.reload();
-}
