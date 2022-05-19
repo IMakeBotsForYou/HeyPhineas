@@ -42,28 +42,26 @@ function initMap() {
     function update_user(data){
         var name = data.name;
 
-//        console.log("update_user", data, name, location);
+        //console.log("update_user", data, name, location);
         // create latlng object
         var myLatLng = new google.maps.LatLng(data.lat, data.lng);
 
         // update user_locations dictionary under name
-        if (name in user_locations)
-            user_locations[name] = myLatLng;
-        else
-            user_locations[name] = myLatLng;
+        user_locations[name] = myLatLng;
 
         // update/display marker in updated location
         if (name in all_markers.users)
             all_markers.users[name].setPosition(myLatLng);
-        else
+        else {
             all_markers.users[name] = new google.maps.Marker({
                 position: myLatLng,
                 label: name,
                 map: map
             });
+        }
+        socket.emit('yes_i_got_my_loc');
+
     }
-
-
 
     socket.on('update_party_members', function(data){
 
@@ -108,7 +106,6 @@ function initMap() {
         } else {
             return;
         }
-
         update_user(data);
     });
 
@@ -494,7 +491,8 @@ function attachInstructionText(stepDisplay, marker, text, map) {
 window.onbeforeunload = function () {
     socket.emit('disconnect');
     all_markers.users[user].setIcon(color_dot_link("gray"));
-    document.getElementById('overlay-dude').style.background = "rgba(128,128,128,0.75);";
+    document.getElementById('overlay-dude').style.display = "block;";
+    document.getElementById('main-div-dude').style.display = "none;";
 //    socket.disconnect();
 //    socket = null;
 //    socket = io.connect('http://' + document.domain + ':' + location.port + '/comms');

@@ -14,7 +14,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(128,128,128,0);
+  background-color: rgba(128,128,128,0.75);
+  display: none;
 }
 </style>
 
@@ -26,8 +27,8 @@
     <title id="title">{% block title %}{% endblock %}</title>
 </head>
 <body class="bg-gray font-varela overflow-hidden">
-<div id="overlay-dude" class="img-overlay">
-<div title="main" class="bg-gray color text-white">
+<img id="overlay-dude" class="img-overlay" src="{{url_for('static', filename='reload_page.png')}}">
+<div id="main-div-dude" title="main" class="bg-gray color text-white">
     <div title="navbar" class="block">
        {% if 'user' in session %}
       <div title="nav_bar_user" class="text-right text-3xl my-9">
@@ -40,6 +41,6 @@
       {% endif %}<br>
     </div>
     {% block content_area %}{% endblock %}
-</div>
+</img>
 </div>
 
