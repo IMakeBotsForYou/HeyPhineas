@@ -59,7 +59,10 @@ function initMap() {
                 map: map
             });
         }
+        user_locations[name] = myLatLng;
+        if (user==name){
         socket.emit('yes_i_got_my_loc');
+        }
 
     }
 
@@ -76,7 +79,6 @@ function initMap() {
            if(  !(data.includes(party_users[i]))  )
             all_markers.users[party_users[i]].setMap(null);
        }
-
 
        update_party_members(data);
     });
@@ -107,6 +109,7 @@ function initMap() {
             return;
         }
         update_user(data);
+
     });
 
       // get updated destination from the server
@@ -138,8 +141,18 @@ function initMap() {
             return;
         }
 
+//        for (const [username, marker] of Object.entries(all_markers.users)) {
+//           marker.setMap(null);
+//        }
         data.forEach(function(item){
-            update_user(item);
+            if (!(item.name in party_users))
+                all_markers.users[item.name].setMap(null);
+            else{
+                update_user(item);
+                if(!item.is_online){
+                    all_markers.users[item.name].setIcon(color_dot_link("gray"));
+                }
+            }
         });
     });
 

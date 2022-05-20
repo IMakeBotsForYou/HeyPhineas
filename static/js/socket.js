@@ -141,22 +141,16 @@ $(document).ready(function(){
         }
 
 
-        if (typeof(msg.length) != "undefined"){
-            online_users_num = msg.length;
+        if (typeof(data.length) != "undefined"){
+            online_users_num = data.length;
         } else {
 //            console.log(online_users_num);
         }
-        online_users = msg;
+        online_users = data;
         $('#users_online').html(`${online_users_num} User(s) Online`);
-        autocomplete(document.getElementById("invite_user_input"))
+        if (user != "Admin")
+            autocomplete(document.getElementById("invite_user_input"))
 
-        // autofill
-//        $(function() {
-//            $("#user_to_invite").autocomplete({
-//                source: online_users,
-//                delay: 100,
-//            });
-//        });
 
     });
     socket.on('all_users', function(data){
@@ -167,7 +161,6 @@ $(document).ready(function(){
         } else {
             return;
         }
-
 
         var d = document.getElementById('user_data');
         d.innerHTML = `Online users (${online_users_num}) <br>`;

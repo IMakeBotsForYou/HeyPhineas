@@ -92,6 +92,19 @@ app.config['DEBUG'] = True
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
 
+
+# I don't wanna use the usual logger so I'll just make my own
+def log(*args, _type="[LOG]", format="time\ttype\tmessage"):
+    message = " ".join([str(a) for a in args])
+    _time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    print(format.replace("time", _time)
+                .replace("type", _type)
+                .replace("message", message))
+
+
+
+
+
 # def send_all_data_to_everyone():
 #     pass
 #     global app
@@ -133,7 +146,7 @@ def get_all_user_chats(target: str) -> list:
 
 
 def suggest_party(users: list) -> None:
-    print(f"suggesting party for {users}")
+    log(f"suggesting party for {users}")
     party_suggestions[users[0]] = {"total": users, "accepted": [], "rejected": []}
     for u in users:
         u_list = users.copy()
@@ -228,7 +241,7 @@ parties[party_owner] = {
 
     emit_to(user=session['user'], event_name="party_members_list_get",
             message=get_party_members(session['user']))
-    print(f"created party for {party_members} ID:{chat_id}")
+    log(f"created party for {party_members} ID:{chat_id}")
     return chat_id
 
 
@@ -254,9 +267,9 @@ def get_messages(user: str) -> dict:
 
 def get_party_members(username: str) -> list:
     owner = get_party_leader(username)
-    print("party members", owner, username)
     if owner not in parties:
         return []
+    log(username, parties[owner]["members"], _type="[PARTY MEMBERS]")
     return parties[owner]["members"].copy()
 
 
@@ -306,10 +319,10 @@ def emit_to(user: str, event_name: str, message=None,
 
         emit(event_name, message, namespace=namespace, room=members[user]['sid'])
         if verbose:
-            print(f"Sent to data: {user}: {event_name} {message} {namespace} ")
+            log(f"Sent to data: {user}: {event_name} {message} {namespace} ")
     except Exception as e:
-        print(f'Error in emitting to user {user},', e)
-        print(f'Tried to send: ', event_name, message)
+        log(f'Error in emitting to user {user},', e, _type="[ERROR]")
+        log(f'Tried to send: ', event_name, message, _type="[ERROR]")
 
 
 def emit_to_everyone(**kwargs) -> None:
@@ -341,7 +354,7 @@ def party_coords(username: str) -> None:
                          "lat": lat, "lng": lng,
                          "is_online": member in connected_members})
         except Exception as e:
-            print("get coords error", e, members)
+            log("get coords error", e, members, _type="[ERROR]")
 
     if data:
         emit_to_party(username, event_name='party_member_coords', namespace='/comms', message=data)
@@ -352,7 +365,7 @@ def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
     current_leader = get_party_leader(user)
     # Get party members
     all_members = get_party_members(current_leader)
-    print('disconnecting', user, 'from', current_leader)
+    log('disconnecting', user, 'from', current_leader)
 
     # Send message to party, announcing the user that left
     send_message_to_party(current_leader, f"{user} left!")
@@ -406,7 +419,7 @@ def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
         try:
             parties[current_leader]["members"].remove(user)
         except (ValueError, KeyError):
-            print("already removed :)")
+            log("already removed :)", _type="[WARNING]")
         # Send to remaining party to update member list
         members = get_party_members(current_leader)
         emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
@@ -447,7 +460,7 @@ def parse_chat_command(command, chat_id):
     args = command[1:].split(" ")
 
     in_party_chat = chat_id == get_party_chat_id(session['user'])
-    print(2020, in_party_chat, args)
+
     if len(args) > 1:
         cmd, arguments = args[0], args[1:]
     else:
@@ -594,7 +607,7 @@ def login():
                 # Login successful, redirect to /
                 return redirect("/")
         except Exception as e:
-            print(e)
+            log("Either the name, or the password are wrong.", e, _type="[ERROR]")
             flash("Either the name, or the password are wrong.")
             return render_template("login.html")
     else:
@@ -650,7 +663,7 @@ def parse_action(command: str) -> None:
 
         if party_owner in parties:
             if session['user'] in parties[party_owner]["members"]:
-                print(session['user'], "already in party", party_owner)
+                log(session['user'], "already in party", party_owner)
                 return
 
         # they have no party
@@ -706,7 +719,7 @@ def parse_action(command: str) -> None:
                                                f'This was a K-MEANS suggestion',
                                        time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
         except IndexError:
-            print('lol sucks for u')
+            log('lol sucks for u', _type="[???]")
 
     if command_name == "decline_group_suggestion" or command_name == "decline_group_invite":
         try:
@@ -735,7 +748,7 @@ def send_path_to_party(user_to_track: str) -> None:
     if parties[party_leader]["destination_status"] in ["No Destination"]:
         return
 
-    print(f"tracc {user_to_track}, {party_members}")
+    log(f"tracc {user_to_track}, {party_members}")
     done = False
 
     if len(parties[party_leader]["arrived"]) == len(party_members):
@@ -753,7 +766,7 @@ def send_path_to_party(user_to_track: str) -> None:
 
                 current_lat, current_lng = connected_members[member]['loc']
                 path_and_current_loc = [[current_lat, current_lng]] + path[index:]
-                print(f"123, {len(path_and_current_loc)}", index, f"{len(path[index:])}")
+                log(f"123, {len(path_and_current_loc)}", index, f"{len(path[index:])}")
                 # this works
                 # path_and_current_loc = path[index:]
 
@@ -763,9 +776,9 @@ def send_path_to_party(user_to_track: str) -> None:
                  if distance(connected_members[member]['loc'], path[index]) < min_distance:
                      done = False"""
 
-                print(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
+                log(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
             except Exception as e:
-                print(f"Error in drawing path from {member} on {session['user']}'s screen | {e}")
+                log(f"Error in drawing path from {member} on {session['user']}'s screen | {e}", _type="[ERROR]")
     emit_to(session["user"], 'user_paths', message=paths)
     emit_to("Admin", 'user_paths', message=paths)
 
@@ -829,9 +842,9 @@ def broadcast_user_difference() -> None:
 
     emit_to("Admin", "all_users", message={u: u in connected_members for u in database.get_all_names()})
 
-    print("Last ping data:")
-    print("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visible_users]))
-    print({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
+    log("Last ping data:")
+    log("\n".join([f"{name}, {int(time()) - connected_members[name]['last ping']}" for name in visible_users]))
+    log({'amount': len(connected_members.keys()), 'names': [user for user in connected_members]})
 
 
 """
@@ -857,10 +870,12 @@ def logged_on_users():
             "confirmed_location": False
         }
     else:
-        print("RECONNECTED", session['user'], session['user'] in connected_members)
+        log("RECONNECTED", session['user'], session['user'] in connected_members)
+
         # Reconnecting
         members[session['user']]["sid"] = request.sid
         members[session['user']]["last ping"]: time_now()
+        members[session['user']]["confirmed_location"] = False
 
     # put userdata in the connected member dictionary
     # will be deleted when user is disconnected
@@ -874,6 +889,7 @@ def logged_on_users():
         # The user needs to create all of his channels again
         # Make it so all the user's channels aren't confirmed
         chat_rooms[chat_id]["members"][session['user']] = False
+
     if session['user'] != "Admin":
         lat, lng = connected_members[session['user']]["loc"]
         emit_to(session['user'], 'my_location_from_server', message={
@@ -886,7 +902,7 @@ def logged_on_users():
 def return_path(data):
     # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
     connected_members[session['user']]['current_path'] = {"path": data, "index": 0}
-    print(f"Received path from {session['user']}")
+    log(f"Received path from {session['user']}")
     send_path_to_party(user_to_track=session['user'])
 
 
@@ -919,7 +935,7 @@ def check_ping(online_users):
     # idfk is going on here. this shouldn't ever happen
     # but it does
     if session['user'] not in connected_members:
-        print("Logged in in ping event")
+        log("Logged in in ping event")
         logged_on_users()
 
     members[session['user']] = connected_members[session['user']].copy()
@@ -929,6 +945,7 @@ def check_ping(online_users):
     # If user has a party, send them the party coords.
     # Even if the party is currently running a simulation,
     # this shouldn't disturb it.
+
     if get_party_leader(session['user']) is not None:
         party_coords(session['user'])
 
@@ -937,7 +954,6 @@ def check_ping(online_users):
     emit_to(session['user'], event_name="inbox_update", message=messages)
 
     # The ADMIN client doesn't need to see chats
-    send_path_to_party(session['user'])
 
     def client_has_confirmed(chat_id):
         try:
@@ -975,7 +991,7 @@ def check_ping(online_users):
 
 @socketio.on('invite_user', namespace='/comms')
 def invite_user(receiver):
-    print("inviting", receiver)
+    log("inviting", receiver)
     if receiver == session['user']:
         return
 
@@ -1023,7 +1039,7 @@ def notification_parse(data):
             database.get('messages', '*', f'id={message_id}', first=False)[0]
     except IndexError:
         return
-    print(f"{reaction}: {title} | {msg_type}")
+    log(f"{reaction}: {title} | {msg_type}")
     if reaction != "mark_as_read":
         parse_action(action)
     database.remove("messages", f'id={message_id}')
@@ -1105,7 +1121,6 @@ def arrived():
     leader = get_party_leader(session['user'])
     if session['user'] not in parties[leader]["arrived"]:
         parties[leader]["arrived"].append(session['user'])
-        send_path_to_party(session['user'])
 
     database.add_admin_message(type="u_arr", title=f"User arrived",
                                message=f"{session['user']} has arrived at {parties[leader]['destination']}",
@@ -1168,28 +1183,33 @@ def disconnect_event():
 
 
 def keep_sending_user_diff():
-    while 1:
-        sleep(1)
-        changed = False
-        for username in connected_members.copy():
-            print(username)
-            if not connected_members[username]["confirmed_location"]:
-                lat, lng = connected_members[username]["loc"]
-                emit_to(username, 'my_location_from_server', message={
-                    "name": username,
-                    "lat": lat, "lng": lng
-                })
+    global app
+    with app.app_context():
+        while 1:
+            sleep(1)
+            for username in connected_members.copy():
+                log("sending data to", username)
+                if not connected_members[username]["confirmed_location"] and username != "Admin":
+                    lat, lng = connected_members[username]["loc"]
+                    emit_to(username, 'my_location_from_server', message={
+                        "name": username,
+                        "lat": lat, "lng": lng
+                    })
 
-            if time_now() - connected_members[username]["last ping"] > 2:
-                print(f"DELETING {username}")
-                del connected_members[username]
-                changed = True
+                if time_now() - connected_members[username]["last ping"] > 2:
+                    log(f"DELETING {username}")
+                    del connected_members[username]
 
-        if changed:
+                emit_to(user=username, event_name="party_members_list_get",
+                        message=get_party_members(username))
+
+                send_path_to_party(username)
+
             broadcast_user_difference()
 
 
-user_diff_thread = Thread(target=broadcast_user_difference)
+
+user_diff_thread = Thread(target=keep_sending_user_diff)
 user_diff_thread.deamon = True
 user_diff_thread.start()
 socketio.run(app, host="0.0.0.0", port=8080)

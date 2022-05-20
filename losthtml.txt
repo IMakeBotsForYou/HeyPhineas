@@ -1,4 +1,4 @@
-<!--<div class="panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">-->
+!--<div class="panel" id="create_party_panel" style="width: 50%; margin-left: 25%;margin-bottom: 100px;">-->
 <!--    <button type="button" id="create_party" class="action_button" name="create_party" style="width: 30%;">Create Your Own Party</button><br>-->
 <!--</div>-->
 <!--<button style="" type="button" class="center" id="add_loc_button">-->
