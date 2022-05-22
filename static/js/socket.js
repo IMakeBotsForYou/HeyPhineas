@@ -7,9 +7,10 @@ var party_users = [];
 var friends = {
 
 }
+
 var lat = 0;
 var lng = 0;
-var socket = io.connect('http://' + document.domain + ':' + location.port + '/comms', {
+var socket = io.connect('http://' + document.domain + ':' + location.port + '/', {
       reconnection: true,
       reconnectionDelay: 500,
       reconnectionDelayMax: 5000,
@@ -17,6 +18,16 @@ var socket = io.connect('http://' + document.domain + ':' + location.port + '/co
       //our site options
       timeout: 60000
     });
+
+function ping_every_second(){
+    let date = new Date;
+    let hours = date.getHours();
+    let minutes = "0" + date.getMinutes();
+    let seconds = "0" + date.getSeconds();
+    let formatTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+
+    socket.emit("ping", online_users);
+};
 //socket.eio.pingTimeout = 5*60000; // 5 minutes
 //socket.eio.pingInterval = 2000;   // 2 seconds
 
@@ -119,15 +130,6 @@ $(document).ready(function(){
         last_reply = data*1000;
     });
 
-    function ping_every_second(){
-        let date = new Date;
-        let hours = date.getHours();
-        let minutes = "0" + date.getMinutes();
-        let seconds = "0" + date.getSeconds();
-        let formatTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
-
-        socket.emit("ping", online_users);
-    };
 //    const secondClock = setInterval(check_ping_reply, 2000);
 
     //update online user count
@@ -245,6 +247,5 @@ $(document).ready(function(){
     $('#reset_locs').on("click", function() {
         socket.emit('reset_locations');
     });
-    const createClock = setInterval(ping_every_second, 1000);
 });
 

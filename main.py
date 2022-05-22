@@ -296,7 +296,7 @@ HELPER FUNCTIONS FOR EMITTING (SOCKET.IO) PURPOSES
 
 
 def emit_to(user: str, event_name: str, message=None,
-            namespace: str = '/comms', verbose=True) -> None:
+            namespace: str = '/', verbose=True) -> None:
     # add_to_list=True, custom_id=None) -> None:
 
     # temp
@@ -357,7 +357,7 @@ def party_coords(username: str) -> None:
             log("get coords error", e, members, _type="[ERROR]")
 
     if data:
-        emit_to_party(username, event_name='party_member_coords', namespace='/comms', message=data)
+        emit_to_party(username, event_name='party_member_coords', message=data)
 
 
 def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
@@ -390,12 +390,12 @@ def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
             send_message_to_party(new_leader, f"{new_leader} is now the party leader")
             # Change current_leader to the new leader
             current_leader = new_leader
-            emit_to(user, event_name="update_party_members", namespace="/comms", message=[])
+            emit_to(user, event_name="update_party_members", message=[])
 
     # If the chat is disbanded
     if chat_is_disbanded:
         # Update leader's party members to an empty array
-        emit_to(current_leader, event_name="update_party_members", namespace="/comms", message=[])
+        emit_to(current_leader, event_name="update_party_members", message=[])
 
         # Add chat_id to delete queue
         if user not in delete_chats_queue:
@@ -422,7 +422,7 @@ def disconnect_user_from_party(user: str, chat_is_disbanded=False) -> None:
             log("already removed :)", _type="[WARNING]")
         # Send to remaining party to update member list
         members = get_party_members(current_leader)
-        emit_to_party(current_leader, event_name="update_party_members", namespace="/comms", message=members)
+        emit_to_party(current_leader, event_name="update_party_members", message=members)
     connected_members[user]["party"] = None
     emit_to(user, event_name="reset_markers")
 
@@ -530,7 +530,7 @@ def parse_chat_command(command, chat_id):
         if session['user'] == get_party_leader(session['user']):
             chat_id = get_party_chat_id(session['user'])
             # First disconnect everyone else
-            emit_to_party(session['user'], event_name="update_party_members", namespace="/comms", message=[])
+            emit_to_party(session['user'], event_name="update_party_members",  message=[])
             # Get party members
             users_without_admin = get_party_members(session['user'])
             # Remove admin
@@ -653,7 +653,7 @@ def parse_action(command: str) -> None:
                               action="ignore")
         # db['ex'].add_notif(requester)
 
-        # emit_to(requester, 'notif', '/comms', 'notification!')
+        # emit_to(requester, 'notif', '/', 'notification!')
 
     if command_name == "join_party":
         party_owner = args[1]
@@ -852,12 +852,12 @@ def broadcast_user_difference() -> None:
 """
 
 
-@socketio.on('yes_i_got_my_loc', namespace='/comms')
+@socketio.on('yes_i_got_my_loc', namespace='/')
 def confirm_loc():
     connected_members[session['user']]['confirmed_location'] = True
 
 
-@socketio.on('connect', namespace='/comms')
+@socketio.on('connect', namespace='/')
 def logged_on_users():
     if session['user'] not in members:
         members[session['user']] = {
@@ -898,7 +898,7 @@ def logged_on_users():
         })
 
 
-@socketio.on('path_from_user', namespace='/comms')
+@socketio.on('path_from_user', namespace='/')
 def return_path(data):
     # # # # # # # # # # # # # # # # # # # # # # # # # # #.data, step_index
     connected_members[session['user']]['current_path'] = {"path": data, "index": 0}
@@ -906,13 +906,13 @@ def return_path(data):
     send_path_to_party(user_to_track=session['user'])
 
 
-@socketio.on('suggest_location', namespace='/comms')
+@socketio.on('suggest_location', namespace='/')
 def check_ping(data):
     start_vote_on_place(leader=get_party_leader(session['user']),
                         location_data=data)
 
 
-@socketio.on('ping', namespace='/comms')
+@socketio.on('ping', namespace='/')
 def check_ping(online_users):
     emit_to(session['user'], event_name="ping_reply", message=float(time()))
 
@@ -989,7 +989,7 @@ def check_ping(online_users):
         emit_to("Admin", event_name="history_update", message=database.get_history())
 
 
-@socketio.on('invite_user', namespace='/comms')
+@socketio.on('invite_user', namespace='/')
 def invite_user(receiver):
     log("inviting", receiver)
     if receiver == session['user']:
@@ -1001,14 +1001,14 @@ def invite_user(receiver):
                           action=f"join_party/{session['user']}")
 
 
-@socketio.on('add_location', namespace='/comms')
+@socketio.on('add_location', namespace='/')
 def add_location_func(data):
     name, lat, lng, loc_type = data.split(", ")
     database.add_location(name, lat, lng, loc_type)
     [send_user_added_locations(online_user) for online_user in connected_members]
 
 
-@socketio.on('chat_message', namespace='/comms')
+@socketio.on('chat_message', namespace='/')
 def chat_message(data):
     """
     Multicast message from user to
@@ -1029,7 +1029,7 @@ def chat_message(data):
         parse_chat_command(message, room)
 
 
-@socketio.on('inbox_notification_react', namespace='/comms')
+@socketio.on('inbox_notification_react', namespace='/')
 def notification_parse(data):
     message_id, reaction = data["message_id"], data["reaction"]
 
@@ -1047,26 +1047,26 @@ def notification_parse(data):
     session['inbox_messages'] = get_messages(session['user'])
 
 
-@socketio.on('user_added_locations_get', namespace='/comms')
+@socketio.on('user_added_locations_get', namespace='/')
 def get_user_added_loc():
     data = [(name, [float(value) for value in latlng.split(", ")])
             for name, latlng, type in database.get_user_added_locations()]
     emit_to(user=session["user"], event_name='user_added_locations', message=data)
 
 
-@socketio.on('party_members_list_get', namespace='/comms')
+@socketio.on('party_members_list_get', namespace='/')
 def emit_party_members():
     emit_to(user=session['user'], event_name="party_members_list_get",
             message=get_party_members(session['user']))
 
 
-@socketio.on('online_members_get', namespace='/comms')
+@socketio.on('online_members_get', namespace='/')
 def get_online_memb():
     emit_to(user=session['user'], event_name="online_members_get",
             message=[x for x in connected_members if x != "Admin"])
 
 
-@socketio.on('get_destination', namespace='/comms')
+@socketio.on('get_destination', namespace='/')
 def get_destination():
     if session['user'] == "Admin":
         return
@@ -1080,18 +1080,18 @@ def get_destination():
             message={"lat": lat, "lng": lng})
 
 
-@socketio.on('get_coords_of_party', namespace='/comms')
+@socketio.on('get_coords_of_party', namespace='/')
 def get_coords_of_party():
     leader = get_party_leader(session['user'])
     party_coords(leader)
 
 
-@socketio.on('confirm_chat', namespace='/comms')
+@socketio.on('confirm_chat', namespace='/')
 def confirm_chat(chat_id):
     chat_rooms[chat_id]["members"][session['user']] = True
 
 
-@socketio.on('confirm_del_chat', namespace='/comms')
+@socketio.on('confirm_del_chat', namespace='/')
 def confirm_delete_chat(chat_id):
     try:
         delete_chats_queue[session['user']].remove(chat_id)
@@ -1099,7 +1099,7 @@ def confirm_delete_chat(chat_id):
         pass
 
 
-@socketio.on('my_location_from_user', namespace='/comms')
+@socketio.on('my_location_from_user', namespace='/')
 def my_location(data):
     # set_user_location(session['user'], data[0], data[1])
     if "index" in data:
@@ -1116,7 +1116,7 @@ def my_location(data):
     send_path_to_party(session['user'])
 
 
-@socketio.on('arrived', namespace='/comms')
+@socketio.on('arrived', namespace='/')
 def arrived():
     leader = get_party_leader(session['user'])
     if session['user'] not in parties[leader]["arrived"]:
@@ -1127,7 +1127,7 @@ def arrived():
                                time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
 
-@socketio.on('start_grouping_users', namespace="/comms")
+@socketio.on('start_grouping_users', namespace="/")
 def suggest_admin_event():
     """
         ============================= K MEANS =============================
@@ -1162,19 +1162,19 @@ def suggest_admin_event():
             suggest_party(names)
 
 
-@socketio.on('request_destination_update', namespace='/comms')
+@socketio.on('request_destination_update', namespace='/')
 def destination_update_request(data):
     # update_destination(data, session['user'])
     start_vote_on_place(get_party_leader(session['user']), data, add_marker=False)
 
 
-@socketio.on('confirm_message', namespace='/comms')
+@socketio.on('confirm_message', namespace='/')
 def confirm_message(message_id):
     pass
     # message_ids[message_id]["confirmed"] = True
 
 
-@socketio.on('disconnect', namespace='/comms')
+@socketio.on('disconnect', namespace='/')
 def disconnect_event():
     if get_party_leader(session['user']) is not None:
         emit_to_party(session['user'], event_name="user_colors", message=["gray", session['user']])
@@ -1187,7 +1187,9 @@ def keep_sending_user_diff():
     with app.app_context():
         while 1:
             sleep(1)
+            broadcast = False
             for username in connected_members.copy():
+                broadcast = True
                 log("sending data to", username)
                 if not connected_members[username]["confirmed_location"] and username != "Admin":
                     lat, lng = connected_members[username]["loc"]
@@ -1205,8 +1207,8 @@ def keep_sending_user_diff():
 
                 send_path_to_party(username)
 
-            broadcast_user_difference()
-
+            if broadcast:
+                broadcast_user_difference()
 
 
 user_diff_thread = Thread(target=keep_sending_user_diff)
