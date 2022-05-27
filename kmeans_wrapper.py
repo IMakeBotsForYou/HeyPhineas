@@ -284,12 +284,13 @@ def get_intersection(a, b):
 
 
 def get_color(target, clusters, add):
-    colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
-             'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
+    # colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
+    #          'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
+    colors = ['blu', 'grn', 'pink', 'whit', 'purple']
     for i, cluster in enumerate(clusters):
         if target in [b[0] for b in clusters[cluster]]:
             return colors[i+add]
-    return 'pink'
+    return 'red'
 
 
 if __name__ == "__main__":

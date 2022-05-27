@@ -1,12 +1,14 @@
 var paths = {} ;            // user paths
 
+let user_colors = {};
 var calculateRoute = null; // get directions
 var user_locations = {}    // user locations
 var all_markers = {        // all markers
     "suggestion": [],
     "users": {},
     "user_added_locations": [],
-    "destination": null
+    "destination": null,
+    "user_dests": {}
 };
 var current_directions;    // current directions / path
 var destination = null;    // destination coordinates
@@ -57,14 +59,45 @@ function initMap() {
                 position: myLatLng,
                 label: name,
                 map: map
+//                labelOrigin: new google.maps.Point(100, 10)
             });
         }
+//        if(user != "Admin")
+//        all_markers.users[name].setIcon(color_dot_link("red"))
         user_locations[name] = myLatLng;
         if (user==name){
         socket.emit('yes_i_got_my_loc');
         }
-
     }
+
+
+
+    function _update_p_members(data){
+       if(user == "Admin")
+        return;
+       var a = document.getElementById("party-members")
+       a.innerHTML = "";
+       if (data.length == 0){
+            in_party = false;
+            leader_of_party = false;
+            party_users = [];
+            return;
+       }
+       in_party = true;
+       a.innerHTML += `<div class="hover:bg-gray-light rounded"><span style="color:red">${data[0]}</span><span style="color:white"> (owner)</span><br></div>`;
+       leader_of_party = data[0] == user;
+       if(leader_of_party){
+        $("#start_origin").visibility = 'visible';
+       }
+
+       for(let i = 1; i < data.length; i++){
+           a.innerHTML += `<div class="hover:bg-gray-light rounded"><p class="white">${data[i]}</p></div>`
+       }
+      a.style.visibility = 'visible';
+    }
+
+
+
 
     socket.on('update_party_members', function(data){
 
@@ -79,8 +112,8 @@ function initMap() {
            if(  !(data.includes(party_users[i]))  )
             all_markers.users[party_users[i]].setMap(null);
        }
-
-       update_party_members(data);
+       party_users = data;
+       _update_p_members(data);
     });
 
 
@@ -145,22 +178,20 @@ function initMap() {
 //           marker.setMap(null);
 //        }
         data.forEach(function(item){
-            if (!(item.name in party_users))
-                all_markers.users[item.name].setMap(null);
-            else{
-                update_user(item);
+            update_user(item);
+//            if (!(item.name in party_users))
+//                all_markers.users[item.name].setMap(null);
+//            else{
                 if(!item.is_online){
-                    all_markers.users[item.name].setIcon(color_dot_link("gray"));
+                    all_markers.users[item.name].setIcon(color_dot_link("yellow"));
+//                }
+                } else {
+                    all_markers.users[item.name].setIcon(color_dot_link("red"));
                 }
-            }
         });
     });
 
-    // get location suggestions from server
 
-    for (const [username, marker] of Object.entries(all_markers.users)) {
-            marker.setIcon(color_dot_link("red"));
-    }
 
     socket.on('reset_markers', function(data){
         response = validate_message(data);
@@ -184,6 +215,41 @@ function initMap() {
        all_markers.destination.setMap(null);
 
     });
+
+    socket.on('party_destination', function(data){
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+        var suggestion_markers = all_markers.user_dests;
+        for (const [username, marker] of Object.entries(suggestion_markers)) {
+          marker.setMap(null);
+        };
+        for (let i = 0; i < data.length; i++){
+           let a = data[i];
+           let name = a[1];
+           let myLatLng = new google.maps.LatLng(a[i][0], a[i][1]);
+           suggestion_markers[a] = new google.maps.Marker({
+               position: myLatLng,
+               label: "Destination",
+               map: map
+           });
+           var icon = {
+                url: all_markers.users[name].icon.url,
+                scaledSize: new google.maps.Size(40, 40), // scaled size
+                origin: new google.maps.Point(0, -5), // origin
+                anchor: new google.maps.Point(20, 40) // anchor
+            }
+           suggestion_markers[a].setIcon(icon);
+       };
+
+
+
+    });
+
+
     socket.on('location_suggestion', function(data){
        response = validate_message(data);
         if (response.status == "new"){
@@ -378,7 +444,25 @@ function initMap() {
       });
 
     function color_dot_link(colour){
-        return "https://maps.google.com/mapfiles/ms/icons/"+ colour + "-dot.png"
+//        return "https://maps.google.com/mapfiles/ms/icons/"+ colour + "-dot.png"
+        if(colour == "yellow"){
+            //            return "https://maps.google.com/mapfiles/kml/paddle/pause.png";
+            var icon = {
+                url: "https://maps.google.com/mapfiles/kml/paddle/pause.png", // url
+                scaledSize: new google.maps.Size(40, 40), // scaled size
+                origin: new google.maps.Point(0, -5), // origin
+                anchor: new google.maps.Point(-20, 20) // anchor
+            };
+            return icon;
+        }
+        return {
+                url: "https://maps.google.com/mapfiles/kml/paddle/" + colour + "-blank.png",
+                scaledSize: new google.maps.Size(40, 40), // scaled size
+                origin: new google.maps.Point(0, -5), // origin
+                anchor: new google.maps.Point(20, 40) // anchor
+            };
+//        return "https://maps.google.com/mapfiles/kml/paddle/" + colour + "-blank.png"
+
     }
 
     socket.on('user_colors', function(data){
@@ -394,6 +478,7 @@ function initMap() {
 //      for (let i = 0; i < all_markers.users.length; i++) {
 //        all_markers.users[i].setIcon(color_dot_link("red"));
 //      }
+      user_colors = data;
       if (user=="Admin"){
           for (const [username, marker] of Object.entries(all_markers.users)) {
                 marker.setIcon(color_dot_link("red"));
@@ -503,7 +588,7 @@ function attachInstructionText(stepDisplay, marker, text, map) {
 
 window.onbeforeunload = function () {
     socket.emit('disconnect');
-    all_markers.users[user].setIcon(color_dot_link("gray"));
+    all_markers.users[user].setIcon(color_dot_link("yellow"));
     document.getElementById('overlay-dude').style.display = "block;";
     document.getElementById('main-div-dude').style.display = "none;";
 //    socket.disconnect();

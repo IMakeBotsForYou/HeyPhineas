@@ -35,7 +35,7 @@ def smallest_free(array):
     """
     lowest = 1
     if not array:
-        return 1
+        return 0
     m = min(array)
     if m != 1:
         return 1

@@ -827,6 +827,9 @@ Ensure the default browser behavior of the `hidden` attribute.
 .max-h-\[30\%\]{
   max-height: 30%;
 }
+.max-h-\[90\%\]{
+  max-height: 90%;
+}
 
 .w-\[40\%\]{
   width: 40%;

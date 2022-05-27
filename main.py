@@ -92,17 +92,13 @@ app.config['DEBUG'] = True
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True, async_handlers=True)
 
 
-
 # I don't wanna use the usual logger so I'll just make my own
 def log(*args, _type="[LOG]", format="time\ttype\tmessage"):
     message = " ".join([str(a) for a in args])
     _time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
     print(format.replace("time", _time)
-                .replace("type", _type)
-                .replace("message", message))
-
-
-
+          .replace("type", _type)
+          .replace("message", message))
 
 
 # def send_all_data_to_everyone():
@@ -168,8 +164,8 @@ def get_place_recommendation_location(tp: str, radius: float, limit: int) -> dic
     limit = int(limit)
 
     middle_lat, middle_lng = sum(
-                                [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
-                                 member in connected_members]) / len(get_party_members(session['user'])), \
+        [connected_members[member]["loc"][0] for member in get_party_members(session['user']) if
+         member in connected_members]) / len(get_party_members(session['user'])), \
                              sum([connected_members[member]["loc"][1] for member in get_party_members(session['user'])
                                   if member in connected_members]) / len(get_party_members(session['user']))
     middle = middle_lat, middle_lng
@@ -180,7 +176,7 @@ def get_place_recommendation_location(tp: str, radius: float, limit: int) -> dic
 
 
 def create_chat(*, name: str, party_members: list = None) -> str:
-    smallest_free_chat_id = str(smallest_free(list(chat_rooms.keys())))
+    smallest_free_chat_id = str(len(list(chat_rooms.keys())))
 
     parties[party_members[0]]["chat_id"] = smallest_free_chat_id
     chat_rooms[smallest_free_chat_id] = {"name": name,
@@ -194,8 +190,9 @@ def create_chat(*, name: str, party_members: list = None) -> str:
 
 
 def separate_into_colours(group_owners: list) -> list:
-    colors = ['green', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
-              'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
+    # colors = ['grn', 'orange', 'fuchsia', 'magenta', 'olive', 'teal', 'violet',
+    #           'skyblue', 'gray', 'darkorange', 'cyan', 'royal_blue']
+    colors = ['blu', 'grn', 'pink', 'whit', 'purple']
     colors_amount = len(colors)
     ret = []
     for i, g in enumerate(sorted(group_owners)):
@@ -357,6 +354,8 @@ def party_coords(username: str) -> None:
             log("get coords error", e, members, _type="[ERROR]")
 
     if data:
+        emit_to_party(username, event_name="update_party_members", message=[x["name"] for x in data])
+
         emit_to_party(username, event_name='party_member_coords', message=data)
 
 
@@ -451,8 +450,11 @@ def start_vote_on_place(leader, location_data, add_marker=True):
     parties[leader]["destination"] = [location_data["lat"], location_data["lng"]]
     send_message_to_party(session['user'],
                           message=f"How about < {location_data['name']} > ?  Vote now! (/vote y) ")
+
     if add_marker:
         emit_to_party(leader, event_name='location_suggestion', message=location_data)
+        emit_to("Admin", event_name='party_destination',
+                message=[(parties[leader]['destination'], leader) for leader in parties])
 
 
 def parse_chat_command(command, chat_id):
@@ -530,7 +532,7 @@ def parse_chat_command(command, chat_id):
         if session['user'] == get_party_leader(session['user']):
             chat_id = get_party_chat_id(session['user'])
             # First disconnect everyone else
-            emit_to_party(session['user'], event_name="update_party_members",  message=[])
+            emit_to_party(session['user'], event_name="update_party_members", message=[])
             # Get party members
             users_without_admin = get_party_members(session['user'])
             # Remove admin
@@ -616,6 +618,7 @@ def login():
 
 @app.route('/logout')
 def logout():
+    del connected_members[session['user']]
     session.pop("user", None)
     flash("You have been logged out.", "info")
     return redirect(url_for("login"))
@@ -779,7 +782,8 @@ def send_path_to_party(user_to_track: str) -> None:
                 log(f"Adding path from {member}[:{index}], sending to {user_to_track} ({party_members})")
             except Exception as e:
                 log(f"Error in drawing path from {member} on {session['user']}'s screen | {e}", _type="[ERROR]")
-    emit_to(session["user"], 'user_paths', message=paths)
+
+    emit_to(user_to_track, 'user_paths', message=paths)
     emit_to("Admin", 'user_paths', message=paths)
 
     # all the paths are dones
@@ -819,6 +823,10 @@ def join_party(owner: str, username: str) -> None:
                 "lat": lat, "lng": lng
             })
 
+    lat, lng = parties[owner]["destination"]
+    emit_to(username, event_name='update_destination',
+            message={"lat": lat, "lng": lng})
+
 
 def broadcast_user_difference() -> None:
     # friends = database.get_friends(username)
@@ -854,7 +862,10 @@ def broadcast_user_difference() -> None:
 
 @socketio.on('yes_i_got_my_loc', namespace='/')
 def confirm_loc():
-    connected_members[session['user']]['confirmed_location'] = True
+    try:
+        connected_members[session['user']]['confirmed_location'] = True
+    except KeyError:
+        pass
 
 
 @socketio.on('connect', namespace='/')
@@ -945,9 +956,6 @@ def check_ping(online_users):
     # If user has a party, send them the party coords.
     # Even if the party is currently running a simulation,
     # this shouldn't disturb it.
-
-    if get_party_leader(session['user']) is not None:
-        party_coords(session['user'])
 
     messages = database.get_messages(user=session['user'])
 
@@ -1164,7 +1172,6 @@ def suggest_admin_event():
 
 @socketio.on('request_destination_update', namespace='/')
 def destination_update_request(data):
-    # update_destination(data, session['user'])
     start_vote_on_place(get_party_leader(session['user']), data, add_marker=False)
 
 
@@ -1176,39 +1183,47 @@ def confirm_message(message_id):
 
 @socketio.on('disconnect', namespace='/')
 def disconnect_event():
-    if get_party_leader(session['user']) is not None:
-        emit_to_party(session['user'], event_name="user_colors", message=["gray", session['user']])
-    connected_members.pop(session['user'])
-    pass
+    try:
+        if get_party_leader(session['user']) is not None:
+            emit_to_party(session['user'], event_name="user_colors", message=["gray", session['user']])
+        connected_members.pop(session['user'])
+    except KeyError:
+        pass
 
 
 def keep_sending_user_diff():
     global app
     with app.app_context():
         while 1:
-            sleep(1)
-            broadcast = False
-            for username in connected_members.copy():
-                broadcast = True
-                log("sending data to", username)
-                if not connected_members[username]["confirmed_location"] and username != "Admin":
-                    lat, lng = connected_members[username]["loc"]
-                    emit_to(username, 'my_location_from_server', message={
-                        "name": username,
-                        "lat": lat, "lng": lng
-                    })
+            try:
+                sleep(1)
+                broadcast = False
+                for username in connected_members.copy():
+                    broadcast = True
+                    log("sending data to", username)
+                    if not connected_members[username]["confirmed_location"] and username != "Admin":
+                        lat, lng = connected_members[username]["loc"]
+                        emit_to(username, 'my_location_from_server', message={
+                            "name": username,
+                            "lat": lat, "lng": lng
+                        })
 
-                if time_now() - connected_members[username]["last ping"] > 2:
-                    log(f"DELETING {username}")
-                    del connected_members[username]
+                    if time_now() - connected_members[username]["last ping"] > 2:
+                        log(f"DELETING {username}")
+                        del connected_members[username]
 
-                emit_to(user=username, event_name="party_members_list_get",
-                        message=get_party_members(username))
+                    emit_to(user=username, event_name="party_members_list_get",
+                            message=get_party_members(username))
 
-                send_path_to_party(username)
+                    # if get_party_members(username):
+                    party_coords(username)
+                    send_path_to_party(username)
 
-            if broadcast:
-                broadcast_user_difference()
+                if broadcast:
+                    broadcast_user_difference()
+
+            except Exception as e:
+                log(e, _type="[ERROR]")
 
 
 user_diff_thread = Thread(target=keep_sending_user_diff)

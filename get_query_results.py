@@ -88,7 +88,7 @@ class query:
     def get_all_pages(self, limit=-1):
         query_results = find_places((self.lat, self.lng), self.radius, place_type=self.type, limit=limit)
 
-        print("\n\n\n", query_results, "\n\n\n")
+        # print("\n\n\n", query_results, "\n\n\n")
         for place in query_results:
             # data_points = ["name", "icon", "place_id"]
             try:
@@ -96,9 +96,9 @@ class query:
                 icon = place["icon"]
                 place_id = place['place_id']
             except TypeError:
-                print("\n\n\n\n")
-                print(place)
-                print("\n\n\n\n")
+                # print("\n\n\n\n")
+                # print(place)
+                # print("\n\n\n\n")
                 continue
 
             try:
@@ -172,7 +172,7 @@ def find_places(loc=(31.904052, 34.815355), radius=2_000, place_type="restaurant
                 f"locationbias=circle:{radius}@{lat},{lng}"]
 # findplacefromtext
     req_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{'&'.join(req_comp)}"
-    print(req_url)
+    # print(req_url)
     req_res = get(req_url)
     json_res = json.loads(req_res.text)
     final_results = []
