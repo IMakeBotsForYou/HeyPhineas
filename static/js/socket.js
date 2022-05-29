@@ -60,6 +60,19 @@ $(document).ready(function(){
        }
       a.style.visibility = 'visible';
     }
+    socket.on('popular_places', function(data){
+        response = validate_message(data);
+        if (response.status == "new"){
+            data = response.data;
+        } else {
+            return;
+        }
+        document.getElementById("popular_places").innerHTML = "<br>Most Popular Places:<br>";
+        for(let i = 0; i < data.length; i++){
+            document.getElementById("popular_places").innerHTML += `※ ${data[i]}<br>`;
+        }
+    });
+
     socket.on('update_party_members', function(data){
 
        response = validate_message(data);

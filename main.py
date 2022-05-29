@@ -23,7 +23,7 @@ Payload.max_decode_packets = 50
 #                   }
 # """
 
-
+popular_places = {}
 chat_rooms = {"0": {"name": "Global", "history": [], "members": {}, "type": "global"}}
 """
 chat_rooms[id] = {
@@ -451,6 +451,11 @@ def start_vote_on_place(leader, location_data, add_marker=True):
     send_message_to_party(session['user'],
                           message=f"How about < {location_data['name']} > ?  Vote now! (/vote y) ")
 
+    if location_data["name"] not in popular_places:
+        popular_places[location_data['name']] = 0
+    else:
+        popular_places[location_data['name']] += 1
+
     if add_marker:
         emit_to_party(leader, event_name='location_suggestion', message=location_data)
         emit_to("Admin", event_name='party_destination',
@@ -499,6 +504,7 @@ def parse_chat_command(command, chat_id):
         if votes_required == len(voted_yes):
             lat, lng = parties[party_owner]["destination"]
             update_destination({"lat": lat, "lng": lng}, session['user'])
+
             send_message_to_party(session['user'],
                                   message=f"{len(voted_yes)} people have voted YES.<br>"
                                           f"Calculating route...")
@@ -519,11 +525,14 @@ def parse_chat_command(command, chat_id):
         )
         index = np.random.randint(0, len(locations))
         location = locations[index]
+
         start_vote_on_place(leader=leader,
                             # lat=loc_of_place["lat"],
                             # lng=loc_of_place["lng"],
                             # name=location['name'],
                             location_data=location)
+
+
 
     if cmd == "leave_group" and in_party_chat:
         disconnect_user_from_party(session['user'])
@@ -618,9 +627,12 @@ def login():
 
 @app.route('/logout')
 def logout():
-    del connected_members[session['user']]
-    session.pop("user", None)
-    flash("You have been logged out.", "info")
+    try:
+        del connected_members[session['user']]
+        session.pop("user", None)
+        flash("You have been logged out.", "info")
+    except:
+        flash("An error has occured.", "info")
     return redirect(url_for("login"))
 
 
@@ -822,10 +834,14 @@ def join_party(owner: str, username: str) -> None:
                 "name": member,
                 "lat": lat, "lng": lng
             })
+    if parties[owner]["destination"]:
+        lat, lng = parties[owner]["destination"]
+        emit_to(username, event_name='update_destination',
+                message={"lat": lat, "lng": lng})
 
-    lat, lng = parties[owner]["destination"]
-    emit_to(username, event_name='update_destination',
-            message={"lat": lat, "lng": lng})
+    database.add_admin_message(type="p_sug", title=f"{session['user']} joined {owner}",
+                               message=f"{session['user']} joined {owner}'s party.",
+                               time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
 
 def broadcast_user_difference() -> None:
@@ -1007,6 +1023,10 @@ def invite_user(receiver):
                           desc=f"{session['user']} has invited you to join their party, wanna hang out?",
                           sender=session["user"], receiver=receiver, messagetype="question",
                           action=f"join_party/{session['user']}")
+
+    database.add_admin_message(type="p_sug", title=f"{session['user']} invited {receiver}",
+                               message=f"{session['user']} has sent a party invite to {receiver} through the mail",
+                               time=strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 
 
 @socketio.on('add_location', namespace='/')
@@ -1218,6 +1238,10 @@ def keep_sending_user_diff():
                     # if get_party_members(username):
                     party_coords(username)
                     send_path_to_party(username)
+
+                    if username == "Admin":
+                        best_3 = sorted(list(popular_places.keys()), key=lambda x: popular_places[x])[-3:]
+                        emit_to("Admin", event_name="popular_places", message=best_3)
 
                 if broadcast:
                     broadcast_user_difference()

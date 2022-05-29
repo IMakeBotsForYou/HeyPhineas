@@ -3,6 +3,18 @@ import json
 import threading
 
 
+# I don't wanna use the usual logger so I'll just make my own
+from time import strftime, gmtime
+
+
+def log(*args, _type="[LOG]", message_format="time\ttype\tmessage"):
+    message = " ".join([str(a) for a in args])
+    _time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    print(message_format.replace("time", _time)
+          .replace("type", f"[{_type}]")
+          .replace("message", message))
+
+
 def st2int(array):
     """
     :param array: An array of objects(strings) that can be converted to ints
@@ -19,25 +31,29 @@ def int2st(array):
     return [str(x) for x in array]
 
 
-def smallest_free(array):
+def smallest_free(array, already_sorted=True):
     """
+    :param already_sorted: Sorted array or not
     :param array: An array of integers
     :return: The lowest "free" integer.
     E.g:
-    <- [1, 3, 4]
+    <- [0, 1, 3, 4]
     -> 2
 
-    <- [1, 2, 3]
+    <- [0, 1, 2, 3]
     -> 4
 
     <- [2, 3]
-    -> 1
+    -> 0
     """
-    lowest = 1
+
     if not array:
-        return 0
-    m = min(array)
-    if m != 1:
+        return 1
+
+    lowest = array[0] if already_sorted else min(array)
+    array = array if already_sorted else sorted(array.copy())
+
+    if lowest != 1:
         return 1
     for i, value in enumerate(array[1:]):
         if value - lowest == 1:
@@ -87,6 +103,7 @@ class Database:
         self.path = path.split(".")[0] + '.db'
         self.data = sqlite3.connect(self.path, check_same_thread=False)
         self.cursor = self.data.cursor()
+        self.fix_seq()
 
     def get(self, table, column, condition=None, limit=None, first=True):
         """
@@ -121,7 +138,6 @@ class Database:
 
     def execute(self, line, fetch=None):
         """
-
         :param line: SQL command
         :param fetch: Number to of results to return
         :return: The results
@@ -141,15 +157,8 @@ class Database:
             # do something
         finally:
             self.lock.release()
-            if ret is None:
-                print(f"Returning None, {line}")
+            log(f"Returning {ret}, {line}")
             return ret
-
-    def fix_seq(self):
-        columns = ["users", "messages"]
-        for na in columns:
-            a = self.get(na, "id")
-            self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
 
     def add(self, table, values):
         """
@@ -158,9 +167,8 @@ class Database:
         :return: None
         """
         self.fix_seq()
-        print(F"INSERT INTO {table} VALUES {values}")
+        log(F"INSERT INTO {table} VALUES {values}")
         self.execute(F"INSERT INTO {table} VALUES {values}")
-        self.fix_seq()
         # except Exception as e:
         #     print(1, e)
         self.data.commit()
@@ -174,10 +182,23 @@ class Database:
         self.execute(f'DELETE FROM {table} WHERE {"1=1" if not condition else condition}')
         self.fix_seq()
 
-    def edit(self, table, column, newvalue, condition=None):
-        s = f'UPDATE {table} SET {column} = "{newvalue}"'
-        s += f" WHERE {condition}" if condition else " WHERE 1=1"
+    def edit(self, table, column, new_value, condition=None):
+        s = f'UPDATE {table} SET {column} = "{new_value}"'
+        s += f" WHERE {condition}" if condition else ""
         self.execute(s)
+
+    def fix_seq(self):
+        """
+        When deleting things like messages,
+        the sequence number gets really high.
+        This function fixes it, bringing it back down
+        to the lowest free integer.
+        :return: None
+        """
+        columns = ["users", "messages", "admin_history", "user_added_locations"]
+        for name in columns:
+            a = self.get(name, "id")
+            self.edit("sqlite_sequence", "seq", smallest_free(a), f'name="{name}"')
 
 
 class UserData(Database):
@@ -229,16 +250,16 @@ class UserData(Database):
 
     def fix_seq(self):
         """
-        When deleting things like messsages,
+        When deleting things like messages,
         the sequence number gets really high.
         This function fixes it, bringing it back down
         to the lowest free integer.
         :return: None
         """
-        columns = ["users", "messages"]
-        for na in columns:
-            a = self.get(na, "id")
-            self.edit("sqlite_sequence", "seq", smallest_free(a) if a else 0, f'name="{na}"')
+        columns = ["users", "messages", "admin_history", "user_added_locations"]
+        for name in columns:
+            a = self.get(name, "id")
+            self.edit("sqlite_sequence", "seq", smallest_free(a), f'name="{name}"')
 
     def get_user_location(self, username):
         """
@@ -255,7 +276,7 @@ class UserData(Database):
         :param newvalue: Newvalue of location
         :return: None
         """
-        self.edit('users', 'loc', newvalue=newvalue, condition=f'username="{username}"')
+        self.edit('users', 'loc', new_value=newvalue, condition=f'username="{username}"')
 
     def create_party(self, user, chat_id=-1):
         """
@@ -279,7 +300,7 @@ class UserData(Database):
         :param newvalue: New status
         :return: None
         """
-        self.edit('parties', 'status', newvalue=newvalue, condition=f'creator="{creator}"')
+        self.edit('parties', 'status', new_value=newvalue, condition=f'creator="{creator}"')
 
     def get_party_status(self, creator):
         """
@@ -328,8 +349,8 @@ class UserData(Database):
             members = members[0].split(", ")
         members.append(user_to_add)
         members = list({x for x in [a for a in members if a != ""]})  # remove dupes
-        self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
-        self.edit('users', 'current_party', newvalue=owner, condition=f'username="{user_to_add}"')
+        self.edit('parties', 'members', new_value=", ".join(members), condition=f'creator="{owner}"')
+        self.edit('users', 'current_party', new_value=owner, condition=f'username="{user_to_add}"')
 
     def remove_from_party(self, owner, user_to_remove):
         """
@@ -339,8 +360,8 @@ class UserData(Database):
         """
         members = self.get('parties', 'members', condition=f'creator="{owner}"')[0].split(", ")
         members.remove(user_to_remove)
-        self.edit('parties', 'members', newvalue=", ".join(members), condition=f'creator="{owner}"')
-        self.edit('users', 'current_party', newvalue="", condition=f'username="{user_to_remove}"')
+        self.edit('parties', 'members', new_value=", ".join(members), condition=f'creator="{owner}"')
+        self.edit('users', 'current_party', new_value="", condition=f'username="{user_to_remove}"')
 
     def get_party_members(self, owner):
         """
@@ -480,7 +501,7 @@ def reset_locations():
         if name == "Admin":
             continue
         new_value = def_locations.get("locations", "latlng", condition=f'username="{name}"')[0]
-        my_db.edit("users", "loc", newvalue=new_value, condition=f'username="{name}"')
+        my_db.edit("users", "loc", new_value=new_value, condition=f'username="{name}"')
 
 
 my_db = UserData("database/data")

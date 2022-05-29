@@ -1,1 +1,1 @@
-var users = ["Dan", "Dvir", "Guy", "Mike", "Manor", "Liza", "Maya", "Yakov", "Fefer", "Admin"]
+var users = ["food1", "food2", "food3", "food4", "park1", "park2", "Maya", "Yakov", "Fefer", "Admin"]
