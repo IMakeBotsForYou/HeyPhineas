@@ -1,4 +1,4 @@
-# HeyPhinis
+# HeyPhineas
 [READ ME IN PROGRESS]
 Hey phinis is my final year programming course project.
 
